@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "jina-ai-mcp-server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "jina-ai-mcp-server",
+        "--key",
+        "e8ced6dc-80a9-440c-a08d-55f46469a00d",
+        "--profile",
+        "attractive-basilisk-xLz5pT"
+      ]
+    }
+  }
+}
