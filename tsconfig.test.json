@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vitest/globals", "chrome", "node", "@testing-library/dom"]
+  },
+  "include": ["tests/**/*", "src/**/*"]
+}

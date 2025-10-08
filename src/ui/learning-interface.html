@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Language Learning Interface</title>
+  <link rel="stylesheet" href="learning-interface.css">
+</head>
+<body>
+  <!-- Navigation Tabs -->
+  <nav class="mode-tabs">
+    <button class="tab-button active" data-mode="reading">
+      <span class="tab-icon">📖</span>
+      Reading
+    </button>
+    <button class="tab-button" data-mode="vocabulary">
+      <span class="tab-icon">📝</span>
+      Vocabulary
+    </button>
+    <button class="tab-button" data-mode="sentences">
+      <span class="tab-icon">💬</span>
+      Sentences
+    </button>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="content-container">
+    <!-- Reading Mode -->
+    <div class="mode-content active" data-mode="reading">
+      <!-- Article Header -->
+      <header class="article-header">
+        <h1 class="article-title"></h1>
+        <div class="article-meta">
+          <span class="article-url"></span>
+          <span class="article-language"></span>
+        </div>
+        <div class="highlight-mode-selector">
+          <label>Highlight Mode:</label>
+          <button class="highlight-mode-btn active" data-highlight-mode="vocabulary">
+            📝 Vocabulary
+          </button>
+          <button class="highlight-mode-btn" data-highlight-mode="sentence">
+            💬 Sentences
+          </button>
+          <button class="highlight-mode-btn" data-highlight-mode="none">
+            🚫 None
+          </button>
+        </div>
+      </header>
+
+      <!-- Article Part Display -->
+      <div class="article-part-container">
+        <div class="article-part-content"></div>
+        
+        <!-- Vocabulary Cards Section -->
+        <div class="vocabulary-cards-section">
+          <h3 class="section-title">Vocabulary</h3>
+          <div class="vocabulary-cards"></div>
+        </div>
+
+        <!-- Sentence Cards Section -->
+        <div class="sentence-cards-section">
+          <h3 class="section-title">Sentences</h3>
+          <div class="sentence-cards"></div>
+        </div>
+      </div>
+
+      <!-- Navigation Controls -->
+      <div class="navigation-controls">
+        <button class="nav-button" id="prev-part" title="Previous part (←)">
+          <span class="nav-icon">←</span>
+          Previous
+        </button>
+        <span class="part-indicator">
+          Part <span class="current-part">1</span> of <span class="total-parts">1</span>
+        </span>
+        <button class="nav-button" id="next-part" title="Next part (→)">
+          Next
+          <span class="nav-icon">→</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Vocabulary Learning Mode -->
+    <div class="mode-content" data-mode="vocabulary">
+      <div class="learning-mode-header">
+        <h2>Vocabulary Learning</h2>
+        <div class="display-options">
+          <button class="display-option active" data-display="both">A + B</button>
+          <button class="display-option" data-display="learning_only">A only</button>
+          <button class="display-option" data-display="native_only">B only</button>
+        </div>
+      </div>
+      <div class="vocabulary-grid"></div>
+    </div>
+
+    <!-- Sentence Learning Mode -->
+    <div class="mode-content" data-mode="sentences">
+      <div class="learning-mode-header">
+        <h2>Sentence Learning</h2>
+      </div>
+      <div class="sentence-list"></div>
+    </div>
+  </main>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay hidden">
+    <div class="loading-spinner"></div>
+    <p class="loading-text">Loading article...</p>
+  </div>
+
+  <!-- Context Menu (for right-click on highlights) -->
+  <div class="context-menu hidden">
+    <button class="context-menu-item" data-action="edit">Edit</button>
+    <button class="context-menu-item" data-action="remove">Remove</button>
+  </div>
+
+  <script src="learning-interface.js" type="module"></script>
+</body>
+</html>

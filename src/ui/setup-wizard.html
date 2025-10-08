@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Language Learning Extension - Setup</title>
+    <link rel="stylesheet" href="setup-wizard.css" />
+  </head>
+  <body>
+    <div class="wizard-container">
+      <!-- Step 1: Welcome -->
+      <div class="wizard-step active" data-step="1">
+        <div class="wizard-content">
+          <h1>Welcome to Language Learning Extension</h1>
+          <p class="subtitle">Transform web articles into interactive language learning experiences</p>
+          
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon">📖</div>
+              <h3>Read & Learn</h3>
+              <p>Convert any article into a clean, card-based reading interface</p>
+            </div>
+            
+            <div class="feature-card">
+              <div class="feature-icon">💡</div>
+              <h3>Smart Vocabulary</h3>
+              <p>Highlight words to create vocabulary cards with translations</p>
+            </div>
+            
+            <div class="feature-card">
+              <div class="feature-icon">✨</div>
+              <h3>AI-Powered</h3>
+              <p>Uses Chrome's built-in AI for local, private processing</p>
+            </div>
+            
+            <div class="feature-card">
+              <div class="feature-icon">🎯</div>
+              <h3>Adaptive Difficulty</h3>
+              <p>Content adjusted to your learning level automatically</p>
+            </div>
+          </div>
+          
+          <button class="btn-primary" onclick="nextStep()">Get Started</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Language Selection -->
+      <div class="wizard-step" data-step="2">
+        <div class="wizard-content">
+          <h1>Choose Your Languages</h1>
+          <p class="subtitle">Select the language you're learning and your native language</p>
+          
+          <div class="language-selection">
+            <div class="language-group">
+              <label for="learning-language">I'm learning:</label>
+              <select id="learning-language" class="language-select">
+                <option value="">Select language...</option>
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="it">Italian</option>
+                <option value="pt">Portuguese</option>
+                <option value="ru">Russian</option>
+                <option value="ja">Japanese</option>
+                <option value="ko">Korean</option>
+                <option value="zh">Chinese</option>
+                <option value="ar">Arabic</option>
+                <option value="hi">Hindi</option>
+              </select>
+            </div>
+            
+            <div class="language-group">
+              <label for="native-language">My native language is:</label>
+              <select id="native-language" class="language-select">
+                <option value="">Select language...</option>
+                <option value="en" selected>English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="it">Italian</option>
+                <option value="pt">Portuguese</option>
+                <option value="ru">Russian</option>
+                <option value="ja">Japanese</option>
+                <option value="ko">Korean</option>
+                <option value="zh">Chinese</option>
+                <option value="ar">Arabic</option>
+                <option value="hi">Hindi</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="wizard-actions">
+            <button class="btn-secondary" onclick="previousStep()">Back</button>
+            <button class="btn-primary" onclick="nextStep()" id="language-next">Next</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Difficulty & Settings -->
+      <div class="wizard-step" data-step="3">
+        <div class="wizard-content">
+          <h1>Customize Your Experience</h1>
+          <p class="subtitle">Set your learning preferences</p>
+          
+          <div class="settings-group">
+            <label for="difficulty-slider">Difficulty Level: <span id="difficulty-value">5</span></label>
+            <input 
+              type="range" 
+              id="difficulty-slider" 
+              min="1" 
+              max="10" 
+              value="5" 
+              class="difficulty-slider"
+              oninput="updateDifficultyValue(this.value)"
+            />
+            <div class="difficulty-labels">
+              <span>Beginner</span>
+              <span>Intermediate</span>
+              <span>Advanced</span>
+            </div>
+          </div>
+          
+          <div class="settings-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="auto-highlight" />
+              <span>Automatically highlight difficult vocabulary</span>
+            </label>
+            <p class="help-text">When enabled, the extension will suggest vocabulary based on difficulty</p>
+          </div>
+          
+          <div class="wizard-actions">
+            <button class="btn-secondary" onclick="previousStep()">Back</button>
+            <button class="btn-primary" onclick="nextStep()">Next</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Tutorial -->
+      <div class="wizard-step" data-step="4">
+        <div class="wizard-content">
+          <h1>Try It Out!</h1>
+          <p class="subtitle">Learn the basics with a sample article</p>
+          
+          <div class="tutorial-content">
+            <div class="tutorial-card">
+              <h3>📚 Sample Article: Alice in Wonderland</h3>
+              <p>We've prepared a classic excerpt for you to practice with. You'll learn how to:</p>
+              <ul>
+                <li>Navigate through article parts</li>
+                <li>Highlight vocabulary and sentences</li>
+                <li>Switch between reading and learning modes</li>
+                <li>Use keyboard shortcuts</li>
+              </ul>
+            </div>
+            
+            <div class="keyboard-shortcuts">
+              <h4>Quick Keyboard Shortcuts</h4>
+              <div class="shortcut-grid">
+                <div class="shortcut-item">
+                  <kbd>←</kbd> <kbd>→</kbd>
+                  <span>Navigate parts</span>
+                </div>
+                <div class="shortcut-item">
+                  <kbd>V</kbd>
+                  <span>Vocabulary mode</span>
+                </div>
+                <div class="shortcut-item">
+                  <kbd>S</kbd>
+                  <span>Sentence mode</span>
+                </div>
+                <div class="shortcut-item">
+                  <kbd>R</kbd>
+                  <span>Reading mode</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="wizard-actions">
+            <button class="btn-secondary" onclick="previousStep()">Back</button>
+            <button class="btn-primary" onclick="startTutorial()">Start Tutorial</button>
+            <button class="btn-text" onclick="skipTutorial()">Skip Tutorial</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress Indicator -->
+      <div class="progress-indicator">
+        <div class="progress-dot active" data-step="1"></div>
+        <div class="progress-dot" data-step="2"></div>
+        <div class="progress-dot" data-step="3"></div>
+        <div class="progress-dot" data-step="4"></div>
+      </div>
+    </div>
+
+    <script src="setup-wizard.js"></script>
+  </body>
+</html>

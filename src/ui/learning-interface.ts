@@ -1,0 +1,935 @@
+/**
+ * Learning Interface - Main UI controller for article rendering and learning modes
+ * Implements Requirements: 1.7, 6.1, 6.2, 6.4, 3.1, 3.2, 3.4, 3.5
+ */
+
+import {
+  initializeHighlightManager,
+  setHighlightMode,
+  cleanupHighlightManager,
+  type HighlightMode,
+} from './highlight-manager';
+
+import type {
+  ProcessedArticle,
+  ArticlePart,
+  VocabularyItem,
+  SentenceItem,
+  LearningMode,
+  LanguageDisplayMode,
+} from '../types';
+
+// ============================================================================
+// State Management
+// ============================================================================
+
+interface UIState {
+  currentMode: LearningMode;
+  currentArticle: ProcessedArticle | null;
+  currentPartIndex: number;
+  displayMode: LanguageDisplayMode;
+  vocabularyItems: VocabularyItem[];
+  sentenceItems: SentenceItem[];
+  highlightMode: HighlightMode;
+}
+
+const state: UIState = {
+  currentMode: 'reading',
+  currentArticle: null,
+  currentPartIndex: 0,
+  displayMode: 'both',
+  vocabularyItems: [],
+  sentenceItems: [],
+  highlightMode: 'vocabulary',
+};
+
+// ============================================================================
+// DOM Elements
+// ============================================================================
+
+const elements = {
+  // Mode tabs
+  tabButtons: document.querySelectorAll(
+    '.tab-button'
+  ) as NodeListOf<HTMLButtonElement>,
+  modeContents: document.querySelectorAll(
+    '.mode-content'
+  ) as NodeListOf<HTMLElement>,
+
+  // Article header
+  articleTitle: document.querySelector('.article-title') as HTMLElement,
+  articleUrl: document.querySelector('.article-url') as HTMLElement,
+  articleLanguage: document.querySelector('.article-language') as HTMLElement,
+
+  // Article content
+  articlePartContent: document.querySelector(
+    '.article-part-content'
+  ) as HTMLElement,
+  vocabularyCardsSection: document.querySelector(
+    '.vocabulary-cards'
+  ) as HTMLElement,
+  sentenceCardsSection: document.querySelector(
+    '.sentence-cards'
+  ) as HTMLElement,
+
+  // Navigation
+  prevButton: document.getElementById('prev-part') as HTMLButtonElement,
+  nextButton: document.getElementById('next-part') as HTMLButtonElement,
+  currentPartSpan: document.querySelector('.current-part') as HTMLElement,
+  totalPartsSpan: document.querySelector('.total-parts') as HTMLElement,
+
+  // Learning modes
+  displayOptions: document.querySelectorAll(
+    '.display-option'
+  ) as NodeListOf<HTMLButtonElement>,
+  vocabularyGrid: document.querySelector('.vocabulary-grid') as HTMLElement,
+  sentenceList: document.querySelector('.sentence-list') as HTMLElement,
+
+  // Loading overlay
+  loadingOverlay: document.querySelector('.loading-overlay') as HTMLElement,
+  loadingText: document.querySelector('.loading-text') as HTMLElement,
+
+  // Context menu
+  contextMenu: document.querySelector('.context-menu') as HTMLElement,
+};
+
+// ============================================================================
+// Initialization
+// ============================================================================
+
+async function initialize(): Promise<void> {
+  try {
+    showLoading('Loading article...');
+
+    // Get article data from session storage
+    const tabId = await getCurrentTabId();
+    const articleData = await getArticleData(tabId);
+
+    if (!articleData) {
+      showError('No article data found');
+      return;
+    }
+
+    // Load article
+    await loadArticle(articleData);
+
+    // Setup event listeners
+    setupEventListeners();
+
+    hideLoading();
+  } catch (error) {
+    console.error('Initialization error:', error);
+    showError('Failed to load article');
+  }
+}
+
+/**
+ * Get current tab ID
+ */
+async function getCurrentTabId(): Promise<number> {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tabs[0]?.id) {
+    throw new Error('No active tab found');
+  }
+  return tabs[0].id;
+}
+
+/**
+ * Get article data from session storage
+ */
+async function getArticleData(tabId: number): Promise<ProcessedArticle | null> {
+  const data = await chrome.storage.session.get(`article_${tabId}`);
+  return data[`article_${tabId}`] || null;
+}
+
+// ============================================================================
+// Article Loading and Rendering
+// ============================================================================
+
+/**
+ * Load and display article
+ */
+async function loadArticle(article: ProcessedArticle): Promise<void> {
+  state.currentArticle = article;
+  state.currentPartIndex = 0;
+
+  // Render article header
+  renderArticleHeader(article);
+
+  // Render first article part
+  renderArticlePart(0);
+
+  // Load vocabulary and sentences for this article
+  await loadVocabularyAndSentences(article.id);
+}
+
+/**
+ * Render article header
+ */
+function renderArticleHeader(article: ProcessedArticle): void {
+  elements.articleTitle.textContent = article.title;
+  elements.articleUrl.textContent = article.url;
+  elements.articleUrl.title = article.url;
+  elements.articleLanguage.textContent = article.originalLanguage.toUpperCase();
+}
+
+/**
+ * Render article part
+ */
+function renderArticlePart(partIndex: number): void {
+  if (!state.currentArticle) return;
+
+  const part = state.currentArticle.parts[partIndex];
+  if (!part) return;
+
+  state.currentPartIndex = partIndex;
+
+  // Cleanup previous highlight manager
+  cleanupHighlightManager();
+
+  // Render content
+  elements.articlePartContent.innerHTML = formatArticleContent(part.content);
+
+  // Initialize highlight manager for this part
+  initializeHighlightManager(
+    state.currentArticle.id,
+    part.id,
+    state.highlightMode
+  );
+
+  // Update navigation
+  updateNavigation();
+
+  // Render vocabulary and sentence cards for this part
+  renderPartVocabularyCards(part);
+  renderPartSentenceCards(part);
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/**
+ * Format article content into paragraphs
+ */
+function formatArticleContent(content: string): string {
+  const paragraphs = content.split('\n\n').filter(p => p.trim());
+  return paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
+ * Update navigation controls
+ */
+function updateNavigation(): void {
+  if (!state.currentArticle) return;
+
+  const totalParts = state.currentArticle.parts.length;
+  const currentPart = state.currentPartIndex + 1;
+
+  elements.currentPartSpan.textContent = currentPart.toString();
+  elements.totalPartsSpan.textContent = totalParts.toString();
+
+  // Update button states
+  elements.prevButton.disabled = state.currentPartIndex === 0;
+  elements.nextButton.disabled = state.currentPartIndex === totalParts - 1;
+}
+
+// ============================================================================
+// Vocabulary and Sentence Cards
+// ============================================================================
+
+/**
+ * Load vocabulary and sentences for article
+ */
+async function loadVocabularyAndSentences(articleId: string): Promise<void> {
+  try {
+    // Get all vocabulary items
+    const vocabData = await chrome.storage.local.get('vocabulary');
+    const allVocab: Record<string, VocabularyItem> = vocabData.vocabulary || {};
+    state.vocabularyItems = Object.values(allVocab).filter(
+      v => v.articleId === articleId
+    );
+
+    // Get all sentence items
+    const sentenceData = await chrome.storage.local.get('sentences');
+    const allSentences: Record<string, SentenceItem> =
+      sentenceData.sentences || {};
+    state.sentenceItems = Object.values(allSentences).filter(
+      s => s.articleId === articleId
+    );
+  } catch (error) {
+    console.error('Error loading vocabulary and sentences:', error);
+  }
+}
+
+/**
+ * Render vocabulary cards for current part
+ */
+function renderPartVocabularyCards(part: ArticlePart): void {
+  const partVocab = state.vocabularyItems.filter(v => v.partId === part.id);
+
+  if (partVocab.length === 0) {
+    elements.vocabularyCardsSection.innerHTML =
+      '<p class="text-secondary">No vocabulary items yet. Highlight words to add them.</p>';
+    return;
+  }
+
+  elements.vocabularyCardsSection.innerHTML = partVocab
+    .map(vocab => createVocabularyCardHTML(vocab))
+    .join('');
+
+  // Add event listeners to cards
+  partVocab.forEach(vocab => {
+    const card = document.querySelector(`[data-vocab-id="${vocab.id}"]`);
+    if (card) {
+      card.addEventListener('click', () =>
+        toggleCardCollapse(vocab.id, 'vocab')
+      );
+
+      const pronounceBtn = card.querySelector('.pronounce-btn');
+      if (pronounceBtn) {
+        pronounceBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          void handlePronounceClick(pronounceBtn as HTMLElement, vocab.word);
+        });
+      }
+    }
+  });
+}
+
+/**
+ * Create vocabulary card HTML
+ */
+function createVocabularyCardHTML(vocab: VocabularyItem): string {
+  return `
+    <div class="vocab-card collapsed" data-vocab-id="${vocab.id}">
+      <div class="card-header">
+        <span class="card-word">${escapeHtml(vocab.word)}</span>
+        <div class="card-actions">
+          <button class="card-action-btn pronounce-btn" title="Pronounce">🔊</button>
+        </div>
+      </div>
+      <div class="card-translation">${escapeHtml(vocab.translation)}</div>
+      <div class="card-details">
+        <div class="card-context">"${escapeHtml(vocab.context)}"</div>
+        ${
+          vocab.exampleSentences.length > 0
+            ? `
+          <div class="card-examples">
+            <div class="card-examples-title">Example sentences:</div>
+            ${vocab.exampleSentences.map(ex => `<div class="card-example">• ${escapeHtml(ex)}</div>`).join('')}
+          </div>
+        `
+            : ''
+        }
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render sentence cards for current part
+ */
+function renderPartSentenceCards(part: ArticlePart): void {
+  const partSentences = state.sentenceItems.filter(s => s.partId === part.id);
+
+  if (partSentences.length === 0) {
+    elements.sentenceCardsSection.innerHTML =
+      '<p class="text-secondary">No sentences yet. Highlight sentences to add them.</p>';
+    return;
+  }
+
+  elements.sentenceCardsSection.innerHTML = partSentences
+    .map(sentence => createSentenceCardHTML(sentence))
+    .join('');
+
+  // Add event listeners to cards
+  partSentences.forEach(sentence => {
+    const card = document.querySelector(`[data-sentence-id="${sentence.id}"]`);
+    if (card) {
+      card.addEventListener('click', () =>
+        toggleCardCollapse(sentence.id, 'sentence')
+      );
+
+      const pronounceBtn = card.querySelector('.pronounce-btn');
+      if (pronounceBtn) {
+        pronounceBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          void handlePronounceClick(
+            pronounceBtn as HTMLElement,
+            sentence.content
+          );
+        });
+      }
+    }
+  });
+}
+
+/**
+ * Create sentence card HTML
+ */
+function createSentenceCardHTML(sentence: SentenceItem): string {
+  return `
+    <div class="sentence-card collapsed" data-sentence-id="${sentence.id}">
+      <div class="card-header">
+        <span class="card-sentence">${escapeHtml(sentence.content)}</span>
+        <div class="card-actions">
+          <button class="card-action-btn pronounce-btn" title="Pronounce">🔊</button>
+        </div>
+      </div>
+      <div class="card-details">
+        <div class="card-translation">${escapeHtml(sentence.translation)}</div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Toggle card collapse state
+ */
+function toggleCardCollapse(id: string, type: 'vocab' | 'sentence'): void {
+  const card = document.querySelector(
+    `[data-${type === 'vocab' ? 'vocab' : 'sentence'}-id="${id}"]`
+  );
+  if (card) {
+    card.classList.toggle('collapsed');
+  }
+}
+
+// ============================================================================
+// Mode Switching
+// ============================================================================
+
+/**
+ * Switch learning mode
+ */
+function switchMode(mode: LearningMode): void {
+  state.currentMode = mode;
+
+  // Update tab buttons
+  elements.tabButtons.forEach(btn => {
+    if (btn.dataset.mode === mode) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Update content visibility
+  elements.modeContents.forEach(content => {
+    if (content.dataset.mode === mode) {
+      content.classList.add('active');
+    } else {
+      content.classList.remove('active');
+    }
+  });
+
+  // Render mode-specific content
+  if (mode === 'vocabulary') {
+    renderVocabularyLearningMode();
+  } else if (mode === 'sentences') {
+    renderSentenceLearningMode();
+  }
+}
+
+/**
+ * Render vocabulary learning mode
+ */
+function renderVocabularyLearningMode(): void {
+  if (state.vocabularyItems.length === 0) {
+    elements.vocabularyGrid.innerHTML =
+      '<p class="text-center text-secondary">No vocabulary items yet. Go to Reading mode and highlight words.</p>';
+    return;
+  }
+
+  elements.vocabularyGrid.innerHTML = state.vocabularyItems
+    .map(vocab => createVocabularyLearningCardHTML(vocab))
+    .join('');
+
+  // Add event listeners
+  state.vocabularyItems.forEach(vocab => {
+    const card = document.querySelector(
+      `[data-vocab-learning-id="${vocab.id}"]`
+    ) as HTMLElement;
+    if (card) {
+      card.addEventListener('click', () =>
+        handlePronounceClick(card, vocab.word)
+      );
+    }
+  });
+}
+
+/**
+ * Create vocabulary learning card HTML
+ */
+function createVocabularyLearningCardHTML(vocab: VocabularyItem): string {
+  const showWord =
+    state.displayMode === 'both' || state.displayMode === 'learning_only';
+  const showTranslation =
+    state.displayMode === 'both' || state.displayMode === 'native_only';
+  const hideTranslation = state.displayMode === 'learning_only';
+
+  return `
+    <div class="vocab-learning-card" data-vocab-learning-id="${vocab.id}">
+      ${showWord ? `<div class="vocab-learning-word">${escapeHtml(vocab.word)}</div>` : ''}
+      ${showTranslation ? `<div class="vocab-learning-translation ${hideTranslation ? 'hidden-lang' : ''}">${escapeHtml(vocab.translation)}</div>` : ''}
+    </div>
+  `;
+}
+
+/**
+ * Render sentence learning mode
+ */
+function renderSentenceLearningMode(): void {
+  if (state.sentenceItems.length === 0) {
+    elements.sentenceList.innerHTML =
+      '<p class="text-center text-secondary">No sentences yet. Go to Reading mode and highlight sentences.</p>';
+    return;
+  }
+
+  elements.sentenceList.innerHTML = state.sentenceItems
+    .map(sentence => createSentenceLearningCardHTML(sentence))
+    .join('');
+
+  // Add event listeners
+  state.sentenceItems.forEach(sentence => {
+    const card = document.querySelector(
+      `[data-sentence-learning-id="${sentence.id}"]`
+    );
+    if (card) {
+      const pronounceBtn = card.querySelector(
+        '.sentence-pronounce-btn'
+      ) as HTMLElement;
+      if (pronounceBtn) {
+        pronounceBtn.addEventListener('click', () =>
+          handlePronounceClick(pronounceBtn, sentence.content)
+        );
+      }
+    }
+  });
+}
+
+/**
+ * Create sentence learning card HTML
+ */
+function createSentenceLearningCardHTML(sentence: SentenceItem): string {
+  return `
+    <div class="sentence-learning-card" data-sentence-learning-id="${sentence.id}">
+      <div class="sentence-learning-content">${escapeHtml(sentence.content)}</div>
+      <div class="sentence-learning-translation">${escapeHtml(sentence.translation)}</div>
+      <div class="sentence-learning-actions">
+        <button class="sentence-action-btn sentence-pronounce-btn">
+          <span>🔊</span>
+          Pronounce
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================================
+// Event Listeners
+// ============================================================================
+
+function setupEventListeners(): void {
+  // Mode tab switching
+  elements.tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode as LearningMode;
+      switchMode(mode);
+    });
+  });
+
+  // Navigation buttons
+  elements.prevButton.addEventListener('click', () => {
+    if (state.currentPartIndex > 0) {
+      renderArticlePart(state.currentPartIndex - 1);
+    }
+  });
+
+  elements.nextButton.addEventListener('click', () => {
+    if (
+      state.currentArticle &&
+      state.currentPartIndex < state.currentArticle.parts.length - 1
+    ) {
+      renderArticlePart(state.currentPartIndex + 1);
+    }
+  });
+
+  // Display mode options
+  elements.displayOptions.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const displayMode = btn.dataset.display as LanguageDisplayMode;
+      state.displayMode = displayMode;
+
+      // Update active state
+      elements.displayOptions.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Re-render vocabulary learning mode
+      renderVocabularyLearningMode();
+    });
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', handleKeyboardShortcuts);
+
+  // Close context menu on click outside
+  document.addEventListener('click', () => {
+    elements.contextMenu.classList.add('hidden');
+  });
+
+  // Highlight mode switching
+  const highlightModeButtons = document.querySelectorAll('.highlight-mode-btn');
+  highlightModeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = (btn as HTMLElement).dataset.highlightMode as HighlightMode;
+      state.highlightMode = mode;
+      setHighlightMode(mode);
+
+      // Update active state
+      highlightModeButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Listen for highlight events
+  document.addEventListener('vocabulary-added', handleVocabularyAdded);
+  document.addEventListener('sentence-added', handleSentenceAdded);
+  document.addEventListener('vocabulary-removed', handleVocabularyRemoved);
+  document.addEventListener('sentence-removed', handleSentenceRemoved);
+
+  // Context menu actions
+  const contextMenuItems = document.querySelectorAll('.context-menu-item');
+  contextMenuItems.forEach(item => {
+    item.addEventListener('click', handleContextMenuAction);
+  });
+}
+
+/**
+ * Handle keyboard shortcuts
+ */
+function handleKeyboardShortcuts(event: KeyboardEvent): void {
+  // Ignore if typing in input
+  if (
+    event.target instanceof HTMLInputElement ||
+    event.target instanceof HTMLTextAreaElement
+  ) {
+    return;
+  }
+
+  switch (event.key) {
+    case 'ArrowLeft':
+      event.preventDefault();
+      if (state.currentPartIndex > 0) {
+        renderArticlePart(state.currentPartIndex - 1);
+      }
+      break;
+
+    case 'ArrowRight':
+      event.preventDefault();
+      if (
+        state.currentArticle &&
+        state.currentPartIndex < state.currentArticle.parts.length - 1
+      ) {
+        renderArticlePart(state.currentPartIndex + 1);
+      }
+      break;
+
+    case 'v':
+      event.preventDefault();
+      switchMode('vocabulary');
+      break;
+
+    case 's':
+      event.preventDefault();
+      switchMode('sentences');
+      break;
+
+    case 'r':
+      event.preventDefault();
+      switchMode('reading');
+      break;
+  }
+}
+
+// ============================================================================
+// Text-to-Speech
+// ============================================================================
+
+let currentTTSIndicator: HTMLElement | null = null;
+let currentSpeakingButton: HTMLElement | null = null;
+
+/**
+ * Handle pronounce button click with visual feedback
+ */
+async function handlePronounceClick(
+  button: HTMLElement,
+  text: string
+): Promise<void> {
+  try {
+    const { speak, stopSpeaking, isTTSSupported, getTTSService } = await import(
+      '../utils/tts-service'
+    );
+
+    if (!isTTSSupported()) {
+      showTooltip('Text-to-speech is not supported in your browser');
+      return;
+    }
+
+    const ttsService = getTTSService();
+
+    // If already speaking, stop
+    if (ttsService.isSpeaking()) {
+      stopSpeaking();
+      removeSpeakingIndicators();
+      return;
+    }
+
+    // Add speaking class to button
+    button.classList.add('speaking');
+    currentSpeakingButton = button;
+
+    // Show TTS indicator
+    showTTSIndicator(text);
+
+    // Get language from current article
+    const language = state.currentArticle?.originalLanguage;
+
+    // Speak the text
+    await speak(text, { language });
+
+    // Remove speaking indicators when done
+    removeSpeakingIndicators();
+  } catch (error: unknown) {
+    console.error('TTS error:', error);
+
+    // Check if it was cancelled
+    const ttsError = error as { type?: string };
+    if (ttsError.type !== 'cancelled') {
+      showTooltip('Failed to pronounce text');
+    }
+
+    removeSpeakingIndicators();
+  }
+}
+
+/**
+ * Show TTS indicator
+ */
+function showTTSIndicator(text: string): void {
+  // Remove existing indicator
+  if (currentTTSIndicator) {
+    currentTTSIndicator.remove();
+  }
+
+  const indicator = document.createElement('div');
+  indicator.className = 'tts-indicator';
+
+  const truncatedText = text.length > 50 ? text.substring(0, 50) + '...' : text;
+
+  indicator.innerHTML = `
+    <span class="tts-indicator-icon">🔊</span>
+    <span>Speaking: "${truncatedText}"</span>
+    <button class="tts-stop-btn">Stop</button>
+  `;
+
+  document.body.appendChild(indicator);
+  currentTTSIndicator = indicator;
+
+  // Add stop button listener
+  const stopBtn = indicator.querySelector('.tts-stop-btn');
+  if (stopBtn) {
+    stopBtn.addEventListener('click', async () => {
+      const { stopSpeaking } = await import('../utils/tts-service');
+      stopSpeaking();
+      removeSpeakingIndicators();
+    });
+  }
+}
+
+/**
+ * Remove speaking indicators
+ */
+function removeSpeakingIndicators(): void {
+  if (currentTTSIndicator) {
+    currentTTSIndicator.remove();
+    currentTTSIndicator = null;
+  }
+
+  if (currentSpeakingButton) {
+    currentSpeakingButton.classList.remove('speaking');
+    currentSpeakingButton = null;
+  }
+}
+
+/**
+ * Show tooltip message
+ */
+function showTooltip(message: string): void {
+  const tooltip = document.createElement('div');
+  tooltip.className = 'tts-tooltip';
+  tooltip.textContent = message;
+  tooltip.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #333;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease-out;
+  `;
+
+  document.body.appendChild(tooltip);
+
+  setTimeout(() => {
+    tooltip.style.animation = 'slideOut 0.3s ease-out';
+    setTimeout(() => tooltip.remove(), 300);
+  }, 3000);
+}
+
+// ============================================================================
+// Loading and Error States
+// ============================================================================
+
+function showLoading(message: string): void {
+  elements.loadingText.textContent = message;
+  elements.loadingOverlay.classList.remove('hidden');
+}
+
+function hideLoading(): void {
+  elements.loadingOverlay.classList.add('hidden');
+}
+
+function showError(message: string): void {
+  hideLoading();
+  alert(message); // TODO: Replace with better error UI
+}
+
+// ============================================================================
+// Highlight Event Handlers
+// ============================================================================
+
+/**
+ * Handle vocabulary added event
+ */
+function handleVocabularyAdded(event: Event): void {
+  const customEvent = event as CustomEvent;
+  const vocab = customEvent.detail as VocabularyItem;
+
+  // Add to state
+  state.vocabularyItems.push(vocab);
+
+  // Re-render vocabulary cards for current part
+  if (state.currentArticle) {
+    const part = state.currentArticle.parts[state.currentPartIndex];
+    if (part) {
+      renderPartVocabularyCards(part);
+    }
+  }
+}
+
+/**
+ * Handle sentence added event
+ */
+function handleSentenceAdded(event: Event): void {
+  const customEvent = event as CustomEvent;
+  const sentence = customEvent.detail as SentenceItem;
+
+  // Add to state
+  state.sentenceItems.push(sentence);
+
+  // Re-render sentence cards for current part
+  if (state.currentArticle) {
+    const part = state.currentArticle.parts[state.currentPartIndex];
+    if (part) {
+      renderPartSentenceCards(part);
+    }
+  }
+}
+
+/**
+ * Handle vocabulary removed event
+ */
+function handleVocabularyRemoved(event: Event): void {
+  const customEvent = event as CustomEvent;
+  const { id } = customEvent.detail as { id: string };
+
+  // Remove from state
+  state.vocabularyItems = state.vocabularyItems.filter(v => v.id !== id);
+
+  // Re-render vocabulary cards for current part
+  if (state.currentArticle) {
+    const part = state.currentArticle.parts[state.currentPartIndex];
+    if (part) {
+      renderPartVocabularyCards(part);
+    }
+  }
+}
+
+/**
+ * Handle sentence removed event
+ */
+function handleSentenceRemoved(event: Event): void {
+  const customEvent = event as CustomEvent;
+  const { id } = customEvent.detail as { id: string };
+
+  // Remove from state
+  state.sentenceItems = state.sentenceItems.filter(s => s.id !== id);
+
+  // Re-render sentence cards for current part
+  if (state.currentArticle) {
+    const part = state.currentArticle.parts[state.currentPartIndex];
+    if (part) {
+      renderPartSentenceCards(part);
+    }
+  }
+}
+
+/**
+ * Handle context menu actions
+ */
+async function handleContextMenuAction(event: Event): Promise<void> {
+  const target = event.target as HTMLElement;
+  const action = target.dataset.action;
+  const contextMenu = document.querySelector('.context-menu') as HTMLElement;
+
+  if (!contextMenu) return;
+
+  const itemId = contextMenu.dataset.itemId;
+  const itemType = contextMenu.dataset.itemType as 'vocabulary' | 'sentence';
+
+  if (!itemId || !itemType) return;
+
+  if (action === 'remove') {
+    const { removeHighlight } = await import('./highlight-manager');
+    void removeHighlight(itemId, itemType);
+  }
+
+  // Hide context menu
+  contextMenu.classList.add('hidden');
+}
+
+// ============================================================================
+// Initialize on page load
+// ============================================================================
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    void initialize();
+  });
+} else {
+  void initialize();
+}

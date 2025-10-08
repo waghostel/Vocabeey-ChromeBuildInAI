@@ -7,7 +7,7 @@ import importPlugin from 'eslint-plugin-import';
 export default [
   // Ignore patterns
   {
-    ignores: ['dist/**', 'node_modules/**', '*.config.js'],
+    ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.ts'],
   },
 
   // Global base configuration
@@ -190,6 +190,13 @@ export default [
   {
     files: ['**/*.test.ts', '**/*.spec.ts', 'tests/**/*.ts'],
     languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        project: './tsconfig.test.json',
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
       globals: {
         jest: 'readonly',
         describe: 'readonly',
@@ -200,11 +207,20 @@ export default [
         afterEach: 'readonly',
         beforeAll: 'readonly',
         afterAll: 'readonly',
+        vi: 'readonly',
       },
     },
+    plugins: {
+      '@typescript-eslint': typescript,
+      prettier,
+    },
     rules: {
+      'prettier/prettier': 'error',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      'no-console': 'off',
     },
   },
 ];

@@ -1,0 +1,56 @@
+> git -c user.useConfigOnly=true commit --quiet --allow-empty-message --file -
+[33m[STARTED][39m Backing up original state...
+[32m[COMPLETED][39m Backed up original state in git stash (c3bc865)
+[33m[STARTED][39m Running tasks for staged files...
+[33m[STARTED][39m package.json[0;90m — 33 files[0m[0;90m (chunk 1/2)...[0m
+[33m[STARTED][39m package.json[0;90m — 33 files[0m[0;90m (chunk 2/2)...[0m
+[33m[STARTED][39m *.{ts,js}[0;90m — 7 files[0m
+[33m[STARTED][39m *.{json,md}[0;90m — 23 files[0m
+[33m[STARTED][39m *.{ts,js}[0;90m — 24 files[0m
+[33m[STARTED][39m *.{json,md}[0;90m — 5 files[0m
+[33m[STARTED][39m prettier --write
+[33m[STARTED][39m prettier --write
+[33m[STARTED][39m prettier --write
+[33m[STARTED][39m prettier --write
+[32m[COMPLETED][39m prettier --write
+[32m[COMPLETED][39m *.{json,md}[0;90m — 5 files[0m
+[32m[COMPLETED][39m prettier --write
+[33m[STARTED][39m eslint --fix
+[32m[COMPLETED][39m prettier --write
+[32m[COMPLETED][39m *.{json,md}[0;90m — 23 files[0m
+[32m[COMPLETED][39m prettier --write
+[33m[STARTED][39m eslint --fix
+[31m[FAILED][39m [0;31meslint --fix[0m [0;90m[FAILED][0m
+[31m[FAILED][39m [0;31meslint --fix[0m [0;90m[FAILED][0m
+[31m[FAILED][39m [0;31meslint --fix[0m [0;90m[SIGKILL][0m
+[31m[FAILED][39m [0;31meslint --fix[0m [0;90m[SIGKILL][0m
+[32m[COMPLETED][39m Running tasks for staged files...
+[33m[STARTED][39m Applying modifications from tasks...
+[33m[SKIPPED][39m Skipped because of errors from tasks.
+[33m[STARTED][39m Reverting to original state because of errors...
+[32m[COMPLETED][39m Reverting to original state because of errors...
+[33m[STARTED][39m Cleaning up temporary files...
+[32m[COMPLETED][39m Cleaning up temporary files...
+
+[0;31m[0;31m✖[0m eslint --fix:[0m
+[0m[0m
+[0m[4mC:\Users\Cheney\Documents\Github\ChromeBuildInAI\eslint.config.js[24m[0m
+[0m  [2m0:0[22m  [33mwarning[39m  File ignored because of a matching ignore pattern. Use "--no-ignore" to disable file ignore settings or use "--no-warn-ignored" to suppress this warning[0m
+[0m[0m
+[0m[4mC:\Users\Cheney\Documents\Github\ChromeBuildInAI\scripts\copy-assets.js[24m[0m
+[0m   [2m2:10[22m  [31merror[39m    'join' is defined but never used  [2mno-unused-vars[22m[0m
+[0m  [2m34:3[22m   [33mwarning[39m  Unexpected console statement      [2mno-console[22m[0m
+[0m  [2m44:7[22m   [33mwarning[39m  Unexpected console statement      [2mno-console[22m[0m
+[0m  [2m47:5[22m   [33mwarning[39m  Unexpected console statement      [2mno-console[22m[0m
+[0m  [2m51:1[22m   [33mwarning[39m  Unexpected console statement      [2mno-console[22m[0m
+[0m[0m
+[0m[4mC:\Users\Cheney\Documents\Github\ChromeBuildInAI\src\ui\learning-interface.ts[24m[0m
+[0m  [2m301:11[22m  [31merror[39m  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  [2m@typescript-eslint/no-floating-promises[22m[0m
+[0m  [2m366:11[22m  [31merror[39m  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  [2m@typescript-eslint/no-floating-promises[22m[0m
+[0m  [2m929:3[22m   [31merror[39m  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  [2m@typescript-eslint/no-floating-promises[22m[0m
+[0m[0m
+[0m[31m[1m✖ 9 problems (4 errors, 5 warnings)[22m[39m[0m
+[0m[31m[1m[22m[39m[0m
+[0;31m
+[0;31m✖[0m eslint --fix failed without output (SIGKILL).[0m
+husky - pre-commit script failed (code 1)
