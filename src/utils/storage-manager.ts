@@ -3,7 +3,7 @@
  * Implements Requirements: 8.1, 8.2, 8.4
  */
 
-import { getCacheManager } from './cache-manager';
+import { getCacheManager, type CacheManager } from './cache-manager';
 
 import type {
   UserSettings,
@@ -86,7 +86,11 @@ const DEFAULT_STORAGE_SCHEMA: StorageSchema = {
 // ============================================================================
 
 export class StorageManager {
-  private cacheManager = getCacheManager();
+  private cacheManager: CacheManager;
+
+  constructor(cacheManager?: CacheManager) {
+    this.cacheManager = cacheManager || getCacheManager();
+  }
 
   /**
    * Initialize storage with default schema if not exists
@@ -228,8 +232,7 @@ export class StorageManager {
       vocab.word,
       settings.learningLanguage,
       settings.nativeLanguage,
-      vocab.translation,
-      vocab.context
+      vocab.translation
     );
 
     await this.incrementStatistic('vocabularyLearned');
@@ -669,11 +672,23 @@ export class StorageManager {
 // Export singleton instance
 // ============================================================================
 
-export const storageManager = new StorageManager();
+let storageManagerInstance: StorageManager | null = null;
 
 /**
  * Get storage manager instance
  */
-export function getStorageManager(): StorageManager {
-  return storageManager;
+export function getStorageManager(cacheManager?: CacheManager): StorageManager {
+  if (!storageManagerInstance) {
+    storageManagerInstance = new StorageManager(cacheManager);
+  }
+  return storageManagerInstance;
+}
+
+/**
+ * Create a new storage manager instance (for testing)
+ */
+export function createStorageManager(
+  cacheManager?: CacheManager
+): StorageManager {
+  return new StorageManager(cacheManager);
 }

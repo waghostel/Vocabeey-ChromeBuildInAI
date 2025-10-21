@@ -10,6 +10,7 @@ import { DataMigrator } from '../src/utils/data-migrator';
 import { ImportExportManager } from '../src/utils/import-export';
 import {
   StorageManager,
+  createStorageManager,
   CURRENT_SCHEMA_VERSION,
 } from '../src/utils/storage-manager';
 
@@ -89,7 +90,7 @@ describe('StorageManager', () => {
   let mockStorage: Record<string, any>;
 
   beforeEach(() => {
-    storageManager = new StorageManager();
+    storageManager = createStorageManager();
     mockStorage = {};
 
     // Mock chrome.storage.local
@@ -824,7 +825,7 @@ describe('ImportExportManager', () => {
 
   beforeEach(() => {
     importExportManager = new ImportExportManager();
-    _storageManager = new StorageManager();
+    _storageManager = createStorageManager();
     mockStorage = {
       schema_version: '1.0.0',
       user_settings: mockUserSettings,
@@ -1199,7 +1200,7 @@ describe('Cache Management', () => {
   let mockStorage: Record<string, any>;
 
   beforeEach(() => {
-    storageManager = new StorageManager();
+    storageManager = createStorageManager();
     mockStorage = {};
 
     vi.mocked(chrome.storage.local.get).mockImplementation(

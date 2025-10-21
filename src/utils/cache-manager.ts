@@ -3,6 +3,8 @@
  * Simple cache manager implementation for Chrome extension
  */
 
+import type { ProcessedArticle } from '../types';
+
 export interface CacheConfig {
   maxCacheSize: number;
   ttl: number;
@@ -25,12 +27,25 @@ export interface ProcessedContentCache {
 
 export class CacheManager {
   private config: CacheConfig;
+  private performanceMetrics: {
+    operations: number;
+    totalTime: number;
+    hitCount: number;
+    missCount: number;
+  };
 
   constructor(config: Partial<CacheConfig> = {}) {
     this.config = {
       maxCacheSize: 1000,
       ttl: 24 * 60 * 60 * 1000, // 24 hours
       ...config,
+    };
+
+    this.performanceMetrics = {
+      operations: 0,
+      totalTime: 0,
+      hitCount: 0,
+      missCount: 0,
     };
   }
 
@@ -79,6 +94,8 @@ export class CacheManager {
   async clear(): Promise<void> {
     try {
       await chrome.storage.local.clear();
+      // Reset performance metrics when clearing cache
+      this.resetPerformanceMetrics();
     } catch (error) {
       console.error('Cache clear error:', error);
     }
@@ -89,6 +106,7 @@ export class CacheManager {
     type: 'summary' | 'rewrite' | 'vocabulary',
     parameter: number
   ): Promise<string | null> {
+    const startTime = performance.now();
     try {
       const cacheKey = this.generateProcessedContentKey(
         contentHash,
@@ -96,9 +114,21 @@ export class CacheManager {
         parameter
       );
       const cached = await this.get<string>(cacheKey);
+
+      // Track performance metrics
+      this.performanceMetrics.operations++;
+      this.performanceMetrics.totalTime += performance.now() - startTime;
+
+      if (cached !== null) {
+        this.performanceMetrics.hitCount++;
+      } else {
+        this.performanceMetrics.missCount++;
+      }
+
       return cached ?? null; // Ensure null is returned instead of undefined
     } catch (error) {
       console.error('Get cached processed content error:', error);
+      this.performanceMetrics.missCount++;
       return null;
     }
   }
@@ -109,6 +139,7 @@ export class CacheManager {
     parameter: number,
     content: string
   ): Promise<void> {
+    const startTime = performance.now();
     try {
       const cacheKey = this.generateProcessedContentKey(
         contentHash,
@@ -116,13 +147,17 @@ export class CacheManager {
         parameter
       );
       await this.set(cacheKey, content);
+
+      // Track performance metrics
+      this.performanceMetrics.operations++;
+      this.performanceMetrics.totalTime += performance.now() - startTime;
     } catch (error) {
       console.error('Cache processed content error:', error);
     }
   }
 
   // Article caching methods
-  async cacheArticle(article: any): Promise<void> {
+  async cacheArticle(article: ProcessedArticle): Promise<void> {
     try {
       const cacheKey = `article:${article.url}:${article.originalLanguage || 'unknown'}`;
       await this.set(cacheKey, article);
@@ -131,7 +166,10 @@ export class CacheManager {
     }
   }
 
-  async getCachedArticle(url: string, language: string): Promise<any | null> {
+  async getCachedArticle(
+    url: string,
+    language: string
+  ): Promise<ProcessedArticle | null> {
     try {
       const cacheKey = `article:${url}:${language}`;
       return await this.get(cacheKey);
@@ -180,7 +218,15 @@ export class CacheManager {
     }
   }
 
-  async cacheBatchTranslations(translations: any[]): Promise<void> {
+  async cacheBatchTranslations(
+    translations: {
+      word: string;
+      fromLang: string;
+      toLang: string;
+      translation: string;
+      context?: string;
+    }[]
+  ): Promise<void> {
     try {
       const promises = translations.map(t =>
         this.cacheVocabularyTranslation(
@@ -200,7 +246,22 @@ export class CacheManager {
   getCacheStats(
     type: string
   ): { hitRate: number; missRate: number; totalRequests: number } | null {
-    // Simple mock implementation for testing
+    // Return actual performance metrics for processed content
+    if (type === 'processed') {
+      const totalRequests =
+        this.performanceMetrics.hitCount + this.performanceMetrics.missCount;
+      if (totalRequests === 0) {
+        return { hitRate: 0, missRate: 0, totalRequests: 0 };
+      }
+
+      return {
+        hitRate: this.performanceMetrics.hitCount / totalRequests,
+        missRate: this.performanceMetrics.missCount / totalRequests,
+        totalRequests,
+      };
+    }
+
+    // Simple mock implementation for other types
     return {
       hitRate: 0.85,
       missRate: 0.15,
@@ -252,9 +313,49 @@ export class CacheManager {
   async clearAllCaches(): Promise<void> {
     try {
       await this.clear();
+      // Performance metrics are reset in clear() method
     } catch (error) {
       console.error('Clear all caches error:', error);
     }
+  }
+
+  // Performance monitoring methods
+  getPerformanceMetrics(): {
+    operations: number;
+    averageLatency: number;
+    hitRate: number;
+    missRate: number;
+    totalTime: number;
+  } {
+    const totalRequests =
+      this.performanceMetrics.hitCount + this.performanceMetrics.missCount;
+
+    return {
+      operations: this.performanceMetrics.operations,
+      averageLatency:
+        this.performanceMetrics.operations > 0
+          ? this.performanceMetrics.totalTime /
+            this.performanceMetrics.operations
+          : 0,
+      hitRate:
+        totalRequests > 0
+          ? this.performanceMetrics.hitCount / totalRequests
+          : 0,
+      missRate:
+        totalRequests > 0
+          ? this.performanceMetrics.missCount / totalRequests
+          : 0,
+      totalTime: this.performanceMetrics.totalTime,
+    };
+  }
+
+  resetPerformanceMetrics(): void {
+    this.performanceMetrics = {
+      operations: 0,
+      totalTime: 0,
+      hitCount: 0,
+      missCount: 0,
+    };
   }
 
   private generateProcessedContentKey(
@@ -262,16 +363,8 @@ export class CacheManager {
     type: 'summary' | 'rewrite' | 'vocabulary',
     parameter: number
   ): string {
-    switch (type) {
-      case 'summary':
-        return `processed:${contentHash}:summary:${parameter}`;
-      case 'rewrite':
-        return `processed:${contentHash}:rewrite:${parameter}`;
-      case 'vocabulary':
-        return `processed:${contentHash}:vocabulary:${parameter}`;
-      default:
-        throw new Error(`Unknown processed content type: ${type}`);
-    }
+    // Optimized key generation using template literals for better performance
+    return `processed:${contentHash}:${type}:${parameter}`;
   }
 }
 
@@ -284,6 +377,11 @@ export function getCacheManager(config?: Partial<CacheConfig>): CacheManager {
   return cacheManagerInstance;
 }
 
+// For testing purposes - reset singleton
+export function resetCacheManagerInstance(): void {
+  cacheManagerInstance = null;
+}
+
 export function createCacheManager(
   config?: Partial<CacheConfig>
 ): CacheManager {
@@ -292,12 +390,25 @@ export function createCacheManager(
 
 export function generateContentHash(content: string): string {
   let hash = 0;
-  for (let i = 0; i < content.length; i++) {
-    const char = content.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash;
+  const len = content.length;
+
+  // Optimize for large content by sampling
+  if (len > 1000) {
+    // For large content, sample every nth character for better performance
+    const step = Math.floor(len / 100);
+    for (let i = 0; i < len; i += step) {
+      const char = content.charCodeAt(i);
+      hash = ((hash << 5) - hash + char) & 0x7fffffff; // Keep positive
+    }
+  } else {
+    // Process all characters for smaller content to maintain accuracy
+    for (let i = 0; i < len; i++) {
+      const char = content.charCodeAt(i);
+      hash = ((hash << 5) - hash + char) & 0x7fffffff;
+    }
   }
-  return Math.abs(hash).toString(36);
+
+  return hash.toString(36);
 }
 
 export async function isCachingAvailable(): Promise<boolean> {
@@ -311,5 +422,4 @@ export async function isCachingAvailable(): Promise<boolean> {
   }
 }
 
-// Export types
-export type { ProcessedContentCache };
+// Types are already exported via the interface declaration above

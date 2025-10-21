@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { storageManager } from '../src/utils/storage-manager';
+import { createStorageManager } from '../src/utils/storage-manager';
 
 import type { UserSettings } from '../src/types';
 
@@ -245,8 +245,10 @@ describe('Setup Wizard', () => {
 
 describe('Settings Persistence', () => {
   let mockStorage: Record<string, any>;
+  let storageManager: ReturnType<typeof createStorageManager>;
 
   beforeEach(() => {
+    storageManager = createStorageManager();
     mockStorage = {};
 
     vi.mocked(chrome.storage.local.get).mockImplementation(((
@@ -275,12 +277,14 @@ describe('Settings Persistence', () => {
 
   describe('Save Settings', () => {
     it('should save complete settings object', async () => {
+      const storageManager = createStorageManager();
       await storageManager.saveUserSettings(mockUserSettings);
 
       expect(mockStorage.user_settings).toEqual(mockUserSettings);
     });
 
     it('should persist language preferences', async () => {
+      const storageManager = createStorageManager();
       await storageManager.saveUserSettings(mockUserSettings);
 
       const settings = await storageManager.getUserSettings();
@@ -428,6 +432,12 @@ describe('Settings Persistence', () => {
 // ============================================================================
 
 describe('Settings Validation', () => {
+  let storageManager: ReturnType<typeof createStorageManager>;
+
+  beforeEach(() => {
+    storageManager = createStorageManager();
+  });
+
   describe('Language Validation', () => {
     it('should reject settings with same learning and native language', async () => {
       const invalidSettings = {
@@ -622,8 +632,10 @@ describe('Settings Validation', () => {
 
 describe('API Key Management', () => {
   let mockStorage: Record<string, any>;
+  let storageManager: ReturnType<typeof createStorageManager>;
 
   beforeEach(() => {
+    storageManager = createStorageManager();
     mockStorage = {};
 
     vi.mocked(chrome.storage.local.get).mockImplementation(((
@@ -818,7 +830,10 @@ describe('API Key Management', () => {
 // ============================================================================
 
 describe('Storage Quota Management', () => {
+  let storageManager: ReturnType<typeof createStorageManager>;
+
   beforeEach(() => {
+    storageManager = createStorageManager();
     vi.mocked(chrome.storage.local.getBytesInUse).mockResolvedValue(
       1000 as any
     );

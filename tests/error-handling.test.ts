@@ -633,6 +633,9 @@ describe('OfflineModeManager', () => {
   beforeEach(async () => {
     // Import and setup Chrome storage mock
     const { mockChromeStorage } = await import('./setup/chrome-mock');
+    const { createStorageManager } = await import(
+      '../src/utils/storage-manager'
+    );
     chromeMock = mockChromeStorage({
       articles: {},
       vocabulary: {},
@@ -640,7 +643,8 @@ describe('OfflineModeManager', () => {
     });
 
     monitor = new NetworkMonitor();
-    manager = new OfflineModeManager(monitor);
+    const storageManager = createStorageManager();
+    manager = new OfflineModeManager(monitor, storageManager);
   });
 
   afterEach(() => {

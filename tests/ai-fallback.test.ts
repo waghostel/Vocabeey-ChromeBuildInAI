@@ -642,10 +642,10 @@ describe('AIServiceCoordinator', () => {
 
       const testCoordinator = new AIServiceCoordinator('test-key');
 
-      mockLanguageDetector.detect.mockRejectedValueOnce(
+      mockLanguageDetector.detect.mockRejectedValue(
         new Error('Chrome AI failed')
       );
-      mockFetch.mockRejectedValueOnce(new Error('Gemini API failed'));
+      mockFetch.mockRejectedValue(new Error('Gemini API failed'));
 
       await expect(
         testCoordinator.detectLanguage('Hello')

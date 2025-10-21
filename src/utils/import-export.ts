@@ -3,7 +3,7 @@
  * Implements Requirements: 8.6, 8.5
  */
 
-import { storageManager } from './storage-manager';
+import { getStorageManager, type StorageManager } from './storage-manager';
 
 import type {
   ProcessedArticle,
@@ -34,16 +34,22 @@ interface ExportData {
 // ============================================================================
 
 export class ImportExportManager {
+  private storageManager: StorageManager;
+
+  constructor(storageManager?: StorageManager) {
+    this.storageManager = storageManager || getStorageManager();
+  }
+
   /**
    * Export all data to JSON format
    */
   async exportToJSON(): Promise<string> {
-    const settings = await storageManager.getUserSettings();
-    const articles = await storageManager.getAllArticles();
-    const vocabulary = await storageManager.getAllVocabulary();
-    const sentences = await storageManager.getAllSentences();
-    const statistics = await storageManager.getStatistics();
-    const version = await storageManager.getSchemaVersion();
+    const settings = await this.storageManager.getUserSettings();
+    const articles = await this.storageManager.getAllArticles();
+    const vocabulary = await this.storageManager.getAllVocabulary();
+    const sentences = await this.storageManager.getAllSentences();
+    const statistics = await this.storageManager.getStatistics();
+    const version = await this.storageManager.getSchemaVersion();
 
     const exportData: ExportData = {
       exportedAt: new Date().toISOString(),
@@ -62,11 +68,11 @@ export class ImportExportManager {
    * Export all data to Markdown format
    */
   async exportToMarkdown(): Promise<string> {
-    const settings = await storageManager.getUserSettings();
-    const articles = await storageManager.getAllArticles();
-    const vocabulary = await storageManager.getAllVocabulary();
-    const sentences = await storageManager.getAllSentences();
-    const statistics = await storageManager.getStatistics();
+    const settings = await this.storageManager.getUserSettings();
+    const articles = await this.storageManager.getAllArticles();
+    const vocabulary = await this.storageManager.getAllVocabulary();
+    const sentences = await this.storageManager.getAllSentences();
+    const statistics = await this.storageManager.getStatistics();
 
     let markdown = '# Language Learning Extension - Data Export\n\n';
     markdown += `**Exported:** ${new Date().toISOString()}\n\n`;
@@ -195,21 +201,21 @@ export class ImportExportManager {
       }
 
       // Import settings
-      await storageManager.saveUserSettings(data.settings);
+      await this.storageManager.saveUserSettings(data.settings);
 
       // Import articles
       for (const article of data.articles) {
-        await storageManager.saveArticle(article);
+        await this.storageManager.saveArticle(article);
       }
 
       // Import vocabulary
       for (const vocab of data.vocabulary) {
-        await storageManager.saveVocabulary(vocab);
+        await this.storageManager.saveVocabulary(vocab);
       }
 
       // Import sentences
       for (const sentence of data.sentences) {
-        await storageManager.saveSentence(sentence);
+        await this.storageManager.saveSentence(sentence);
       }
 
       console.log('Data import completed successfully');
@@ -292,8 +298,8 @@ export class ImportExportManager {
    * Export vocabulary only
    */
   async exportVocabularyOnly(format: ExportFormat): Promise<string> {
-    const vocabulary = await storageManager.getAllVocabulary();
-    const articles = await storageManager.getAllArticles();
+    const vocabulary = await this.storageManager.getAllVocabulary();
+    const articles = await this.storageManager.getAllArticles();
 
     if (format === 'json') {
       return JSON.stringify(
@@ -345,8 +351,8 @@ export class ImportExportManager {
    * Export sentences only
    */
   async exportSentencesOnly(format: ExportFormat): Promise<string> {
-    const sentences = await storageManager.getAllSentences();
-    const articles = await storageManager.getAllArticles();
+    const sentences = await this.storageManager.getAllSentences();
+    const articles = await this.storageManager.getAllArticles();
 
     if (format === 'json') {
       return JSON.stringify(

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -17,7 +17,7 @@
         <!-- Language Settings -->
         <section class="settings-section">
           <h2>Language Settings</h2>
-          
+
           <div class="setting-item">
             <label for="learning-language">Learning Language</label>
             <select id="learning-language" class="setting-select">
@@ -53,24 +53,26 @@
               <option value="ar">Arabic</option>
               <option value="hi">Hindi</option>
             </select>
-            <p class="setting-description">Your native language for translations</p>
+            <p class="setting-description">
+              Your native language for translations
+            </p>
           </div>
         </section>
 
         <!-- Learning Preferences -->
         <section class="settings-section">
           <h2>Learning Preferences</h2>
-          
+
           <div class="setting-item">
             <label for="difficulty-slider">
               Difficulty Level: <span id="difficulty-value">5</span>
             </label>
-            <input 
-              type="range" 
-              id="difficulty-slider" 
-              min="1" 
-              max="10" 
-              value="5" 
+            <input
+              type="range"
+              id="difficulty-slider"
+              min="1"
+              max="10"
+              value="5"
               class="setting-slider"
             />
             <div class="slider-labels">
@@ -78,7 +80,9 @@
               <span>Intermediate</span>
               <span>Advanced</span>
             </div>
-            <p class="setting-description">Content will be adapted to this difficulty level</p>
+            <p class="setting-description">
+              Content will be adapted to this difficulty level
+            </p>
           </div>
 
           <div class="setting-item">
@@ -86,48 +90,58 @@
               <input type="checkbox" id="auto-highlight" />
               <span>Automatically highlight difficult vocabulary</span>
             </label>
-            <p class="setting-description">Suggests vocabulary based on difficulty</p>
+            <p class="setting-description">
+              Suggests vocabulary based on difficulty
+            </p>
           </div>
         </section>
 
         <!-- API Keys -->
         <section class="settings-section">
           <h2>API Configuration</h2>
-          
+
           <div class="setting-item">
             <label for="gemini-api-key">Gemini API Key (Optional)</label>
             <div class="api-key-input">
-              <input 
-                type="password" 
-                id="gemini-api-key" 
+              <input
+                type="password"
+                id="gemini-api-key"
                 class="setting-input"
                 placeholder="Enter your Gemini API key"
               />
-              <button class="btn-toggle-visibility" onclick="togglePasswordVisibility('gemini-api-key')">
+              <button
+                class="btn-toggle-visibility"
+                onclick="togglePasswordVisibility('gemini-api-key')"
+              >
                 👁️
               </button>
             </div>
             <p class="setting-description">
-              Used as fallback when Chrome AI is unavailable. 
-              <a href="https://makersuite.google.com/app/apikey" target="_blank">Get API key</a>
+              Used as fallback when Chrome AI is unavailable.
+              <a href="https://makersuite.google.com/app/apikey" target="_blank"
+                >Get API key</a
+              >
             </p>
           </div>
 
           <div class="setting-item">
             <label for="jina-api-key">Jina Reader API Key (Optional)</label>
             <div class="api-key-input">
-              <input 
-                type="password" 
-                id="jina-api-key" 
+              <input
+                type="password"
+                id="jina-api-key"
                 class="setting-input"
                 placeholder="Enter your Jina Reader API key"
               />
-              <button class="btn-toggle-visibility" onclick="togglePasswordVisibility('jina-api-key')">
+              <button
+                class="btn-toggle-visibility"
+                onclick="togglePasswordVisibility('jina-api-key')"
+              >
                 👁️
               </button>
             </div>
             <p class="setting-description">
-              Used for better content extraction on complex pages. 
+              Used for better content extraction on complex pages.
               <a href="https://jina.ai/reader" target="_blank">Get API key</a>
             </p>
           </div>
@@ -136,14 +150,14 @@
         <!-- Keyboard Shortcuts -->
         <section class="settings-section">
           <h2>Keyboard Shortcuts</h2>
-          
+
           <div class="shortcuts-grid">
             <div class="shortcut-item">
               <label>Navigate Left</label>
-              <input 
-                type="text" 
-                id="shortcut-left" 
-                class="shortcut-input" 
+              <input
+                type="text"
+                id="shortcut-left"
+                class="shortcut-input"
                 value="ArrowLeft"
                 readonly
               />
@@ -151,10 +165,10 @@
 
             <div class="shortcut-item">
               <label>Navigate Right</label>
-              <input 
-                type="text" 
-                id="shortcut-right" 
-                class="shortcut-input" 
+              <input
+                type="text"
+                id="shortcut-right"
+                class="shortcut-input"
                 value="ArrowRight"
                 readonly
               />
@@ -162,10 +176,10 @@
 
             <div class="shortcut-item">
               <label>Vocabulary Mode</label>
-              <input 
-                type="text" 
-                id="shortcut-vocab" 
-                class="shortcut-input" 
+              <input
+                type="text"
+                id="shortcut-vocab"
+                class="shortcut-input"
                 value="v"
                 readonly
               />
@@ -173,10 +187,10 @@
 
             <div class="shortcut-item">
               <label>Sentence Mode</label>
-              <input 
-                type="text" 
-                id="shortcut-sentence" 
-                class="shortcut-input" 
+              <input
+                type="text"
+                id="shortcut-sentence"
+                class="shortcut-input"
                 value="s"
                 readonly
               />
@@ -184,57 +198,64 @@
 
             <div class="shortcut-item">
               <label>Reading Mode</label>
-              <input 
-                type="text" 
-                id="shortcut-reading" 
-                class="shortcut-input" 
+              <input
+                type="text"
+                id="shortcut-reading"
+                class="shortcut-input"
                 value="r"
                 readonly
               />
             </div>
           </div>
-          <p class="setting-description">Click on a shortcut to customize (coming soon)</p>
+          <p class="setting-description">
+            Click on a shortcut to customize (coming soon)
+          </p>
         </section>
 
         <!-- Appearance -->
         <section class="settings-section">
           <h2>Appearance</h2>
-          
+
           <div class="setting-item">
             <label class="setting-checkbox">
               <input type="checkbox" id="dark-mode" />
               <span>Dark Mode</span>
             </label>
-            <p class="setting-description">Use dark theme for the learning interface</p>
+            <p class="setting-description">
+              Use dark theme for the learning interface
+            </p>
           </div>
 
           <div class="setting-item">
             <label for="font-size-slider">
               Font Size: <span id="font-size-value">16</span>px
             </label>
-            <input 
-              type="range" 
-              id="font-size-slider" 
-              min="12" 
-              max="24" 
-              value="16" 
+            <input
+              type="range"
+              id="font-size-slider"
+              min="12"
+              max="24"
+              value="16"
               class="setting-slider"
             />
-            <p class="setting-description">Adjust text size in the learning interface</p>
+            <p class="setting-description">
+              Adjust text size in the learning interface
+            </p>
           </div>
         </section>
 
         <!-- Data Management -->
         <section class="settings-section">
           <h2>Data Management</h2>
-          
+
           <div class="setting-item">
             <div class="storage-info">
               <div class="storage-bar">
                 <div class="storage-used" id="storage-used-bar"></div>
               </div>
               <p class="storage-text">
-                <span id="storage-used">0</span> MB / <span id="storage-quota">0</span> MB used
+                <span id="storage-used">0</span> MB /
+                <span id="storage-quota">0</span> MB used
               </p>
             </div>
           </div>
@@ -256,14 +277,23 @@
       </div>
 
       <footer class="settings-footer">
-        <button class="btn-secondary" onclick="resetToDefaults()">Reset to Defaults</button>
-        <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+        <button class="btn-secondary" onclick="resetToDefaults()">
+          Reset to Defaults
+        </button>
+        <button class="btn-primary" onclick="saveSettings()">
+          Save Settings
+        </button>
       </footer>
 
       <div class="toast" id="toast"></div>
     </div>
 
-    <input type="file" id="import-file-input" accept=".json" style="display: none;" />
+    <input
+      type="file"
+      id="import-file-input"
+      accept=".json"
+      style="display: none"
+    />
 
     <script src="settings.js"></script>
   </body>

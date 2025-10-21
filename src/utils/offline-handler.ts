@@ -6,7 +6,7 @@
  */
 
 import { cacheManager } from './cache-manager';
-import { storageManager } from './storage-manager';
+import { getStorageManager, type StorageManager } from './storage-manager';
 
 import type { ProcessedArticle, ExtractedContent } from '../types';
 
@@ -187,9 +187,11 @@ export class NetworkMonitor {
 
 export class OfflineModeManager {
   private networkMonitor: NetworkMonitor;
+  private storageManager: StorageManager;
 
-  constructor(networkMonitor: NetworkMonitor) {
+  constructor(networkMonitor: NetworkMonitor, storageManager?: StorageManager) {
     this.networkMonitor = networkMonitor;
+    this.storageManager = storageManager || getStorageManager();
   }
 
   /**
@@ -204,9 +206,9 @@ export class OfflineModeManager {
    * Get offline capabilities
    */
   async getOfflineCapabilities(): Promise<OfflineCapabilities> {
-    const articles = await storageManager.getAllArticles();
-    const vocabulary = await storageManager.getAllVocabulary();
-    const sentences = await storageManager.getAllSentences();
+    const articles = await this.storageManager.getAllArticles();
+    const vocabulary = await this.storageManager.getAllVocabulary();
+    const sentences = await this.storageManager.getAllSentences();
 
     // Filter out expired articles
     const now = new Date();
@@ -233,14 +235,14 @@ export class OfflineModeManager {
     }
 
     // Offline - get from storage without expiration check
-    return await storageManager.getArticle(articleId);
+    return await this.storageManager.getArticle(articleId);
   }
 
   /**
    * Get all available cached articles for offline mode
    */
   async getAvailableCachedArticles(): Promise<ProcessedArticle[]> {
-    const articles = await storageManager.getAllArticles();
+    const articles = await this.storageManager.getAllArticles();
 
     // If offline, return all articles regardless of expiration
     if (!this.networkMonitor.isNetworkOnline()) {

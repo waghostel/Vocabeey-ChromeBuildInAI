@@ -11,17 +11,27 @@ import {
   createCacheManager,
   generateContentHash,
   isCachingAvailable,
+  resetCacheManagerInstance,
 } from '../src/utils/cache-manager';
+
 import { mockChromeStorage } from './setup/chrome-mock';
+
 import type { ProcessedArticle } from '../src/types';
 
 describe('Cache Manager', () => {
-  beforeEach(() => {
-    mockChromeStorage();
+  let mockStorage: ReturnType<typeof mockChromeStorage>;
+
+  beforeEach(async () => {
+    mockStorage = mockChromeStorage();
+    // Clear any existing cache data
+    await chrome.storage.local.clear();
+    // Reset singleton instance
+    resetCacheManagerInstance();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    mockStorage.cleanup();
   });
 
   describe('Basic Functionality', () => {
@@ -85,7 +95,7 @@ describe('Cache Manager', () => {
 
       const article: ProcessedArticle = {
         id: 'test-article-2',
-        url: 'https://example.com/article2',
+        url: 'https://example.com/article2-unique',
         title: 'Test Article 2',
         originalLanguage: 'es',
         processedAt: new Date(),
@@ -121,23 +131,21 @@ describe('Cache Manager', () => {
       const fromLang = 'en';
       const toLang = 'es';
       const translation = 'hola';
-      const context = 'greeting context';
+      const _context = 'greeting context';
 
       // Cache the translation
       await cacheManager.cacheVocabularyTranslation(
         word,
         fromLang,
         toLang,
-        translation,
-        context
+        translation
       );
 
       // Retrieve the translation
       const cached = await cacheManager.getCachedTranslation(
         word,
         fromLang,
-        toLang,
-        context
+        toLang
       );
 
       expect(cached).toBe(translation);
@@ -204,6 +212,194 @@ describe('Cache Manager', () => {
       );
       expect(cached).toBeNull();
     });
+
+    it('should handle different content types correctly', async () => {
+      const cacheManager = createCacheManager();
+      const contentHash = 'test123';
+
+      // Test summary caching
+      await cacheManager.cacheProcessedContent(
+        contentHash,
+        'summary',
+        200,
+        'Summary content'
+      );
+
+      // Test rewrite caching
+      await cacheManager.cacheProcessedContent(
+        contentHash,
+        'rewrite',
+        5,
+        'Rewritten content'
+      );
+
+      // Test vocabulary caching
+      await cacheManager.cacheProcessedContent(
+        contentHash,
+        'vocabulary',
+        100,
+        'Vocabulary analysis'
+      );
+
+      // Verify each type is cached separately
+      expect(
+        await cacheManager.getCachedProcessedContent(
+          contentHash,
+          'summary',
+          200
+        )
+      ).toBe('Summary content');
+      expect(
+        await cacheManager.getCachedProcessedContent(contentHash, 'rewrite', 5)
+      ).toBe('Rewritten content');
+      expect(
+        await cacheManager.getCachedProcessedContent(
+          contentHash,
+          'vocabulary',
+          100
+        )
+      ).toBe('Vocabulary analysis');
+    });
+
+    it('should handle different parameters for same content type', async () => {
+      const cacheManager = createCacheManager();
+      const contentHash = 'param123';
+
+      // Cache same content with different parameters
+      await cacheManager.cacheProcessedContent(
+        contentHash,
+        'summary',
+        100,
+        'Short summary'
+      );
+      await cacheManager.cacheProcessedContent(
+        contentHash,
+        'summary',
+        200,
+        'Long summary'
+      );
+
+      // Verify parameters create separate cache entries
+      expect(
+        await cacheManager.getCachedProcessedContent(
+          contentHash,
+          'summary',
+          100
+        )
+      ).toBe('Short summary');
+      expect(
+        await cacheManager.getCachedProcessedContent(
+          contentHash,
+          'summary',
+          200
+        )
+      ).toBe('Long summary');
+    });
+
+    it('should handle cache errors gracefully', async () => {
+      const cacheManager = createCacheManager();
+
+      // Mock storage error
+      const originalSet = chrome.storage.local.set;
+      chrome.storage.local.set = vi
+        .fn()
+        .mockRejectedValue(new Error('Storage error'));
+
+      // Should not throw error
+      await expect(
+        cacheManager.cacheProcessedContent('hash', 'summary', 100, 'content')
+      ).resolves.toBeUndefined();
+
+      // Mock get error
+      const originalGet = chrome.storage.local.get;
+      chrome.storage.local.get = vi
+        .fn()
+        .mockRejectedValue(new Error('Get error'));
+
+      // Should return null on error
+      const result = await cacheManager.getCachedProcessedContent(
+        'hash',
+        'summary',
+        100
+      );
+      expect(result).toBeNull();
+
+      // Restore original functions
+      chrome.storage.local.set = originalSet;
+      chrome.storage.local.get = originalGet;
+    });
+
+    it('should respect TTL for processed content', async () => {
+      const cacheManager = createCacheManager({ ttl: 100 }); // 100ms TTL
+      const contentHash = 'ttl123';
+
+      // Cache content
+      await cacheManager.cacheProcessedContent(
+        contentHash,
+        'summary',
+        100,
+        'TTL test content'
+      );
+
+      // Should be available immediately
+      expect(
+        await cacheManager.getCachedProcessedContent(
+          contentHash,
+          'summary',
+          100
+        )
+      ).toBe('TTL test content');
+
+      // Wait for TTL to expire
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // Should be null after TTL expires
+      expect(
+        await cacheManager.getCachedProcessedContent(
+          contentHash,
+          'summary',
+          100
+        )
+      ).toBeNull();
+    });
+
+    it('should generate consistent cache keys', async () => {
+      const cacheManager = createCacheManager();
+      const contentHash = 'key123';
+
+      // Cache content
+      await cacheManager.cacheProcessedContent(
+        contentHash,
+        'summary',
+        150,
+        'Key test content'
+      );
+
+      // Should retrieve with same parameters
+      expect(
+        await cacheManager.getCachedProcessedContent(
+          contentHash,
+          'summary',
+          150
+        )
+      ).toBe('Key test content');
+
+      // Should not retrieve with different parameters
+      expect(
+        await cacheManager.getCachedProcessedContent(
+          contentHash,
+          'summary',
+          151
+        )
+      ).toBeNull();
+      expect(
+        await cacheManager.getCachedProcessedContent(
+          contentHash,
+          'rewrite',
+          150
+        )
+      ).toBeNull();
+    });
   });
 
   describe('Cache Management', () => {
@@ -212,8 +408,8 @@ describe('Cache Manager', () => {
 
       // Add some cached data
       const article: ProcessedArticle = {
-        id: 'test-clear',
-        url: 'https://example.com/clear-test',
+        id: 'test-clear-unique',
+        url: 'https://example.com/clear-test-unique',
         title: 'Clear Test',
         originalLanguage: 'en',
         processedAt: new Date(),
@@ -224,7 +420,7 @@ describe('Cache Manager', () => {
 
       await cacheManager.cacheArticle(article);
       await cacheManager.cacheVocabularyTranslation(
-        'test',
+        'testclear',
         'en',
         'es',
         'prueba'
@@ -237,9 +433,9 @@ describe('Cache Manager', () => {
           article.originalLanguage
         )
       ).toBe(true);
-      expect(await cacheManager.getCachedTranslation('test', 'en', 'es')).toBe(
-        'prueba'
-      );
+      expect(
+        await cacheManager.getCachedTranslation('testclear', 'en', 'es')
+      ).toBe('prueba');
 
       // Clear all caches
       await cacheManager.clearAllCaches();
@@ -252,7 +448,7 @@ describe('Cache Manager', () => {
         )
       ).toBe(false);
       expect(
-        await cacheManager.getCachedTranslation('test', 'en', 'es')
+        await cacheManager.getCachedTranslation('testclear', 'en', 'es')
       ).toBeNull();
     });
 
@@ -281,9 +477,9 @@ describe('Cache Manager', () => {
       // Each namespace should have stats
       for (const [_namespace, stats] of allStats) {
         expect(stats).toBeDefined();
-        expect(typeof stats.hitRate).toBe('number');
-        expect(typeof stats.missRate).toBe('number');
-        expect(typeof stats.totalRequests).toBe('number');
+        expect(typeof (stats as any).hitRate).toBe('number');
+        expect(typeof (stats as any).missRate).toBe('number');
+        expect(typeof (stats as any).totalRequests).toBe('number');
       }
     });
   });
