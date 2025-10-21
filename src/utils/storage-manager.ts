@@ -3,6 +3,8 @@
  * Implements Requirements: 8.1, 8.2, 8.4
  */
 
+import { getCacheManager } from './cache-manager';
+
 import type {
   UserSettings,
   ProcessedArticle,
@@ -84,6 +86,8 @@ const DEFAULT_STORAGE_SCHEMA: StorageSchema = {
 // ============================================================================
 
 export class StorageManager {
+  private cacheManager = getCacheManager();
+
   /**
    * Initialize storage with default schema if not exists
    */
@@ -138,6 +142,10 @@ export class StorageManager {
     articles[article.id] = article;
 
     await chrome.storage.local.set({ articles });
+
+    // Cache the article for faster future access
+    await this.cacheManager.cacheArticle(article);
+
     await this.incrementStatistic('articlesProcessed');
     await this.updateLastActivity();
   }
@@ -146,9 +154,37 @@ export class StorageManager {
    * Get article by ID
    */
   async getArticle(articleId: string): Promise<ProcessedArticle | null> {
+    // First try to get from storage (cache will be checked internally if URL is available)
     const data = await chrome.storage.local.get('articles');
     const articles = data.articles || {};
     return articles[articleId] || null;
+  }
+
+  /**
+   * Get article by URL with intelligent caching
+   */
+  async getArticleByUrl(
+    url: string,
+    language: string
+  ): Promise<ProcessedArticle | null> {
+    // First check cache
+    const cached = await this.cacheManager.getCachedArticle(url, language);
+    if (cached) {
+      return cached;
+    }
+
+    // If not in cache, search in storage
+    const articles = await this.getAllArticles();
+    const article = articles.find(
+      a => a.url === url && a.originalLanguage === language
+    );
+
+    if (article) {
+      // Cache for future access
+      await this.cacheManager.cacheArticle(article);
+    }
+
+    return article || null;
   }
 
   /**
@@ -185,6 +221,17 @@ export class StorageManager {
     vocabulary[vocab.id] = vocab;
 
     await chrome.storage.local.set({ vocabulary });
+
+    // Cache the translation for future use
+    const settings = await this.getUserSettings();
+    await this.cacheManager.cacheVocabularyTranslation(
+      vocab.word,
+      settings.learningLanguage,
+      settings.nativeLanguage,
+      vocab.translation,
+      vocab.context
+    );
+
     await this.incrementStatistic('vocabularyLearned');
     await this.updateLastActivity();
   }
@@ -368,7 +415,7 @@ export class StorageManager {
     const vocabItems = Object.values(vocabulary);
     if (vocabItems.length > 0) {
       markdown += '## Vocabulary\n\n';
-      vocabItems.forEach((item: any) => {
+      vocabItems.forEach((item: unknown) => {
         markdown += `### ${item.word}\n`;
         markdown += `- Translation: ${item.translation}\n`;
         markdown += `- Context: ${item.context}\n`;
@@ -382,7 +429,7 @@ export class StorageManager {
     const sentenceItems = Object.values(sentences);
     if (sentenceItems.length > 0) {
       markdown += '## Sentences\n\n';
-      sentenceItems.forEach((item: any) => {
+      sentenceItems.forEach((item: unknown) => {
         markdown += `- ${item.content}\n`;
         markdown += `  - Translation: ${item.translation}\n\n`;
       });
@@ -409,6 +456,130 @@ export class StorageManager {
       await chrome.storage.local.set(parsedData);
     } catch {
       throw new Error('Invalid import data format');
+    }
+  }
+
+  /**
+   * Clean up data associated with a specific tab
+   */
+  async cleanupTabData(tabId: number): Promise<void> {
+    try {
+      // Remove session storage for this tab
+      await chrome.storage.session.remove(`article_${tabId}`);
+      await chrome.storage.session.remove(`pending_article_${tabId}`);
+
+      console.log(`Cleaned up storage data for tab ${tabId}`);
+    } catch (error) {
+      console.error(`Failed to cleanup tab ${tabId} data:`, error);
+    }
+  }
+
+  /**
+   * Perform maintenance cleanup (remove old/expired data)
+   */
+  async performMaintenanceCleanup(): Promise<{
+    articlesRemoved: number;
+    vocabularyRemoved: number;
+    sentencesRemoved: number;
+  }> {
+    const results = {
+      articlesRemoved: 0,
+      vocabularyRemoved: 0,
+      sentencesRemoved: 0,
+    };
+
+    try {
+      // Clean up expired articles (older than 30 days)
+      const articles = await this.getAllArticles();
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      for (const article of articles) {
+        if (new Date(article.processedAt) < thirtyDaysAgo) {
+          await this.deleteArticle(article.id);
+          results.articlesRemoved++;
+        }
+      }
+
+      // Clean up old vocabulary (keep only last 1000 items)
+      const vocabulary = await this.getAllVocabulary();
+      if (vocabulary.length > 1000) {
+        const sortedVocab = vocabulary.sort(
+          (a, b) =>
+            new Date(b.lastReviewed).getTime() -
+            new Date(a.lastReviewed).getTime()
+        );
+
+        const toRemove = sortedVocab.slice(1000);
+        for (const vocab of toRemove) {
+          await this.deleteVocabulary(vocab.id);
+          results.vocabularyRemoved++;
+        }
+      }
+
+      // Clean up old sentences (keep only last 1000 items)
+      const sentences = await this.getAllSentences();
+      if (sentences.length > 1000) {
+        const sortedSentences = sentences.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+        const toRemove = sortedSentences.slice(1000);
+        for (const sentence of toRemove) {
+          await this.deleteSentence(sentence.id);
+          results.sentencesRemoved++;
+        }
+      }
+
+      // Perform cache maintenance
+      await this.cacheManager.performMaintenance();
+
+      console.log('Maintenance cleanup completed:', results);
+      return results;
+    } catch (error) {
+      console.error('Maintenance cleanup failed:', error);
+      return results;
+    }
+  }
+
+  /**
+   * Get memory usage estimate for stored data
+   */
+  async getMemoryUsageEstimate(): Promise<{
+    totalBytes: number;
+    articleBytes: number;
+    vocabularyBytes: number;
+    sentenceBytes: number;
+  }> {
+    try {
+      const allData = await chrome.storage.local.get(null);
+      const dataString = JSON.stringify(allData);
+      const totalBytes = new Blob([dataString]).size;
+
+      // Estimate individual components
+      const articles = allData.articles || {};
+      const vocabulary = allData.vocabulary || {};
+      const sentences = allData.sentences || {};
+
+      const articleBytes = new Blob([JSON.stringify(articles)]).size;
+      const vocabularyBytes = new Blob([JSON.stringify(vocabulary)]).size;
+      const sentenceBytes = new Blob([JSON.stringify(sentences)]).size;
+
+      return {
+        totalBytes,
+        articleBytes,
+        vocabularyBytes,
+        sentenceBytes,
+      };
+    } catch (error) {
+      console.error('Failed to estimate memory usage:', error);
+      return {
+        totalBytes: 0,
+        articleBytes: 0,
+        vocabularyBytes: 0,
+        sentenceBytes: 0,
+      };
     }
   }
 
@@ -499,3 +670,10 @@ export class StorageManager {
 // ============================================================================
 
 export const storageManager = new StorageManager();
+
+/**
+ * Get storage manager instance
+ */
+export function getStorageManager(): StorageManager {
+  return storageManager;
+}

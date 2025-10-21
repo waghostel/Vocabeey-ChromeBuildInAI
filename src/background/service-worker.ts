@@ -3,6 +3,16 @@
  * Handles extension lifecycle and coordinates between components
  */
 
+import {
+  getMemoryManager,
+  initializeMemoryManagement,
+  shutdownMemoryManagement,
+} from '../utils/memory-manager';
+import {
+  initializeOffscreenManagement,
+  shutdownOffscreenManagement,
+} from '../utils/offscreen-manager';
+
 import type { ExtractedContent } from '../types';
 
 interface SystemCapabilities {
@@ -19,8 +29,8 @@ interface SystemCapabilities {
   };
 }
 
-// Track active learning interface tabs
-const activeLearningTabs = new Set<number>();
+// Memory manager will handle tab tracking
+const memoryManager = getMemoryManager();
 
 // Listen for extension icon clicks
 chrome.action.onClicked.addListener(async (tab): Promise<void> => {
@@ -140,8 +150,8 @@ async function openLearningInterface(
       throw new Error('Failed to create tab');
     }
 
-    // Track this tab as a learning interface tab
-    activeLearningTabs.add(tab.id);
+    // Register tab with memory manager
+    memoryManager.registerTab(tab.id);
 
     // Store content for the new tab to retrieve
     await chrome.storage.session.set({
@@ -208,19 +218,7 @@ async function checkSystemCapabilities(): Promise<SystemCapabilities> {
   return capabilities;
 }
 
-/**
- * Handle tab removal to clean up resources
- */
-chrome.tabs.onRemoved.addListener((tabId: number) => {
-  if (activeLearningTabs.has(tabId)) {
-    activeLearningTabs.delete(tabId);
-
-    // Clean up session storage for this tab
-    chrome.storage.session.remove(`article_${tabId}`).catch(error => {
-      console.error('Error cleaning up session storage:', error);
-    });
-  }
-});
+// Tab removal is now handled by memory manager automatically
 
 /**
  * Initialize extension on install
@@ -244,6 +242,19 @@ chrome.runtime.onInstalled.addListener(async details => {
       },
     });
   }
+
+  // Initialize memory and offscreen management
+  await initializeMemoryManagement();
+  await initializeOffscreenManagement();
+});
+
+/**
+ * Handle extension shutdown
+ */
+chrome.runtime.onSuspend.addListener(async () => {
+  console.log('Extension suspending, cleaning up resources...');
+  await shutdownMemoryManagement();
+  await shutdownOffscreenManagement();
 });
 
 // Initialize extension

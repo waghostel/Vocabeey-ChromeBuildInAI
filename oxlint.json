@@ -1,0 +1,44 @@
+{
+  "rules": {
+    "typescript": "error",
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "warn",
+    "style": "warn"
+  },
+  "globals": {
+    "chrome": "readonly",
+    "browser": "readonly",
+    "console": "readonly",
+    "document": "readonly",
+    "window": "readonly",
+    "self": "readonly",
+    "setTimeout": "readonly",
+    "clearTimeout": "readonly",
+    "setInterval": "readonly",
+    "clearInterval": "readonly",
+    "fetch": "readonly",
+    "Response": "readonly",
+    "Request": "readonly",
+    "URL": "readonly",
+    "URLSearchParams": "readonly",
+    "MutationObserver": "readonly",
+    "Element": "readonly",
+    "HTMLElement": "readonly",
+    "Event": "readonly",
+    "CustomEvent": "readonly",
+    "importScripts": "readonly"
+  },
+  "env": {
+    "webextensions": true,
+    "es2022": true,
+    "browser": true
+  },
+  "ignore": [
+    "dist/**",
+    "node_modules/**",
+    "*.config.js",
+    "*.config.ts",
+    "scripts/**"
+  ]
+}

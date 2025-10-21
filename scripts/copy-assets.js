@@ -16,6 +16,10 @@ const assets = [
   { src: 'src/ui/setup-wizard.css', dest: 'dist/ui/setup-wizard.css' },
   { src: 'src/ui/settings.html', dest: 'dist/ui/settings.html' },
   { src: 'src/ui/settings.css', dest: 'dist/ui/settings.css' },
+  {
+    src: 'src/offscreen/ai-processor.html',
+    dest: 'dist/offscreen/ai-processor.html',
+  },
 ];
 
 function ensureDirectoryExists(filePath) {

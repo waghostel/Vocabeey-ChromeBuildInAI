@@ -34,7 +34,8 @@ export interface TTSError {
 class TTSService {
   private synthesis: SpeechSynthesis | null = null;
   private voices: SpeechSynthesisVoice[] = [];
-  private currentUtterance: SpeechSynthesisUtterance | null = null;
+  // @ts-ignore - Used in event handlers
+  private _currentUtterance: SpeechSynthesisUtterance | null = null;
   private isInitialized = false;
 
   constructor(synthesisProvider?: () => SpeechSynthesis | null) {
@@ -232,12 +233,12 @@ class TTSService {
 
         // Event handlers
         utterance.onend = () => {
-          this.currentUtterance = null;
+          this._currentUtterance = null;
           resolve();
         };
 
         utterance.onerror = event => {
-          this.currentUtterance = null;
+          this._currentUtterance = null;
 
           // Check if it was cancelled
           if (event.error === 'canceled' || event.error === 'interrupted') {
@@ -260,13 +261,13 @@ class TTSService {
         };
 
         // Store current utterance
-        this.currentUtterance = utterance;
+        this._currentUtterance = utterance;
 
         // Speak
         try {
           this.synthesis!.speak(utterance);
         } catch (error) {
-          this.currentUtterance = null;
+          this._currentUtterance = null;
           reject(
             this.createError(
               'synthesis_failed',
@@ -285,7 +286,7 @@ class TTSService {
   public stop(): void {
     if (this.synthesis) {
       this.synthesis.cancel();
-      this.currentUtterance = null;
+      this._currentUtterance = null;
     }
   }
 

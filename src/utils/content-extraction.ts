@@ -90,6 +90,7 @@ export class ReadabilityExtractor implements ContentExtractor {
     sanitized = sanitized.trim();
 
     // Remove control characters except newlines and tabs
+
     sanitized = sanitized.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');
 
     // Normalize line breaks
@@ -257,6 +258,7 @@ export class JinaReaderExtractor implements ContentExtractor {
 
     let sanitized = content.replace(/\s+/g, ' ');
     sanitized = sanitized.trim();
+
     sanitized = sanitized.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');
     sanitized = sanitized.replace(/\r\n/g, '\n');
     sanitized = sanitized.replace(/\r/g, '\n');
@@ -430,6 +432,7 @@ export class DOMExtractor implements ContentExtractor {
 
     let sanitized = content.replace(/\s+/g, ' ');
     sanitized = sanitized.trim();
+
     sanitized = sanitized.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');
     sanitized = sanitized.replace(/\r\n/g, '\n');
     sanitized = sanitized.replace(/\r/g, '\n');

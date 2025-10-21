@@ -3,6 +3,8 @@
  * Implements Requirements: 1.7, 6.1, 6.2, 6.4, 3.1, 3.2, 3.4, 3.5
  */
 
+import { getMemoryManager, type ResourceUsage } from '../utils/memory-manager';
+
 import {
   initializeHighlightManager,
   setHighlightMode,
@@ -100,6 +102,9 @@ const elements = {
 async function initialize(): Promise<void> {
   try {
     showLoading('Loading article...');
+
+    // Initialize memory monitoring
+    initializeMemoryMonitoring();
 
     // Get article data from session storage
     const tabId = await getCurrentTabId();
@@ -920,6 +925,95 @@ async function handleContextMenuAction(event: Event): Promise<void> {
 
   // Hide context menu
   contextMenu.classList.add('hidden');
+}
+
+// ============================================================================
+// Memory Monitoring
+// ============================================================================
+
+function initializeMemoryMonitoring(): void {
+  const memoryManager = getMemoryManager();
+
+  // Add memory usage callback
+  const unsubscribe = memoryManager.onMemoryUsageChange(
+    (usage: ResourceUsage) => {
+      updateMemoryIndicator(usage);
+
+      // Show warning if memory usage is high
+      if (usage.memory.percentage > 80) {
+        showMemoryWarning(usage);
+      }
+    }
+  );
+
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    unsubscribe();
+  });
+}
+
+function updateMemoryIndicator(usage: ResourceUsage): void {
+  // Create or update memory indicator in the UI
+  let indicator = document.getElementById('memory-indicator');
+
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.id = 'memory-indicator';
+    indicator.className = 'memory-indicator';
+    document.body.appendChild(indicator);
+  }
+
+  const memoryMB = (usage.memory.used / 1024 / 1024).toFixed(1);
+  const storagePercent = usage.storage.percentage.toFixed(1);
+
+  indicator.innerHTML = `
+    <div class="memory-stats">
+      <span>Memory: ${memoryMB}MB</span>
+      <span>Storage: ${storagePercent}%</span>
+      <span>Tabs: ${usage.activeTabs}</span>
+    </div>
+  `;
+
+  // Add warning class if usage is high
+  if (usage.memory.percentage > 80 || usage.storage.percentage > 80) {
+    indicator.classList.add('warning');
+  } else {
+    indicator.classList.remove('warning');
+  }
+}
+
+function showMemoryWarning(_usage: ResourceUsage): void {
+  // Show a non-intrusive warning about high memory usage
+  const warning = document.createElement('div');
+  warning.className = 'memory-warning';
+  warning.innerHTML = `
+    <div class="warning-content">
+      <span>⚠️ High memory usage detected</span>
+      <button class="cleanup-btn">Clean up</button>
+      <button class="dismiss-btn">×</button>
+    </div>
+  `;
+
+  // Add event listeners
+  const cleanupBtn = warning.querySelector('.cleanup-btn');
+  const dismissBtn = warning.querySelector('.dismiss-btn');
+
+  cleanupBtn?.addEventListener('click', async () => {
+    const memoryManager = getMemoryManager();
+    await memoryManager.forceCleanup();
+    warning.remove();
+  });
+
+  dismissBtn?.addEventListener('click', () => {
+    warning.remove();
+  });
+
+  // Auto-dismiss after 10 seconds
+  setTimeout(() => {
+    warning.remove();
+  }, 10000);
+
+  document.body.appendChild(warning);
 }
 
 // ============================================================================

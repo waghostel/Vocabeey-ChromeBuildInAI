@@ -470,4 +470,245 @@ describe('TTS Service', () => {
       expect(utterance.voice).toBeTruthy();
     });
   });
+
+  describe('Multiple language pronunciation (Req 3.5, 4.5, 5.5)', () => {
+    it('should pronounce vocabulary in English', async () => {
+      const speakPromise = speak('vocabulary', { language: 'en-US' });
+
+      const utterance = (
+        global.SpeechSynthesisUtterance as unknown as ReturnType<typeof vi.fn>
+      ).mock.results[0].value;
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      if (utterance.onend) {
+        utterance.onend();
+      }
+
+      await speakPromise;
+
+      expect(utterance.text).toBe('vocabulary');
+      expect(utterance.lang).toBe('en-US');
+      expect(mockSpeechSynthesis.speak).toHaveBeenCalled();
+    });
+
+    it('should pronounce sentences in Spanish', async () => {
+      const speakPromise = speak('Hola, ¿cómo estás?', { language: 'es-ES' });
+
+      const utterance = (
+        global.SpeechSynthesisUtterance as unknown as ReturnType<typeof vi.fn>
+      ).mock.results[0].value;
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      if (utterance.onend) {
+        utterance.onend();
+      }
+
+      await speakPromise;
+
+      expect(utterance.text).toBe('Hola, ¿cómo estás?');
+      expect(utterance.lang).toBe('es-ES');
+      expect(mockSpeechSynthesis.speak).toHaveBeenCalled();
+    });
+
+    it('should pronounce content in French', async () => {
+      const speakPromise = speak('Bonjour le monde', { language: 'fr-FR' });
+
+      const utterance = (
+        global.SpeechSynthesisUtterance as unknown as ReturnType<typeof vi.fn>
+      ).mock.results[0].value;
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      if (utterance.onend) {
+        utterance.onend();
+      }
+
+      await speakPromise;
+
+      expect(utterance.text).toBe('Bonjour le monde');
+      expect(utterance.lang).toBe('fr-FR');
+      expect(mockSpeechSynthesis.speak).toHaveBeenCalled();
+    });
+
+    it('should handle pronunciation with language prefix only', async () => {
+      const speakPromise = speak('Hello', { language: 'en' });
+
+      const utterance = (
+        global.SpeechSynthesisUtterance as unknown as ReturnType<typeof vi.fn>
+      ).mock.results[0].value;
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      if (utterance.onend) {
+        utterance.onend();
+      }
+
+      await speakPromise;
+
+      expect(utterance.text).toBe('Hello');
+      expect(utterance.lang).toBe('en');
+      expect(mockSpeechSynthesis.speak).toHaveBeenCalled();
+    });
+  });
+
+  describe('Error recovery and edge cases', () => {
+    it('should handle empty text gracefully', async () => {
+      const speakPromise = speak('');
+
+      const utterance = (
+        global.SpeechSynthesisUtterance as unknown as ReturnType<typeof vi.fn>
+      ).mock.results[0].value;
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      if (utterance.onend) {
+        utterance.onend();
+      }
+
+      await speakPromise;
+
+      expect(utterance.text).toBe('');
+      expect(mockSpeechSynthesis.speak).toHaveBeenCalled();
+    });
+
+    it('should handle very long text', async () => {
+      const longText = 'word '.repeat(1000);
+      const speakPromise = speak(longText);
+
+      const utterance = (
+        global.SpeechSynthesisUtterance as unknown as ReturnType<typeof vi.fn>
+      ).mock.results[0].value;
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      if (utterance.onend) {
+        utterance.onend();
+      }
+
+      await speakPromise;
+
+      expect(utterance.text).toBe(longText);
+      expect(mockSpeechSynthesis.speak).toHaveBeenCalled();
+    });
+
+    it('should handle special characters in text', async () => {
+      const specialText = 'Hello! @#$%^&*() 你好 مرحبا';
+      const speakPromise = speak(specialText);
+
+      const utterance = (
+        global.SpeechSynthesisUtterance as unknown as ReturnType<typeof vi.fn>
+      ).mock.results[0].value;
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      if (utterance.onend) {
+        utterance.onend();
+      }
+
+      await speakPromise;
+
+      expect(utterance.text).toBe(specialText);
+      expect(mockSpeechSynthesis.speak).toHaveBeenCalled();
+    });
+
+    it('should cancel previous speech when new speech starts', async () => {
+      void speak('First text');
+
+      // Start second speech before first completes
+      const secondPromise = speak('Second text');
+
+      expect(mockSpeechSynthesis.cancel).toHaveBeenCalled();
+
+      const utterance = (
+        global.SpeechSynthesisUtterance as unknown as ReturnType<typeof vi.fn>
+      ).mock.results[1].value;
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      if (utterance.onend) {
+        utterance.onend();
+      }
+
+      await secondPromise;
+
+      expect(utterance.text).toBe('Second text');
+    });
+
+    it('should handle interrupted error type', async () => {
+      const speakPromise = speak('Test');
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const utterance = (
+        global.SpeechSynthesisUtterance as unknown as ReturnType<typeof vi.fn>
+      ).mock.results[0].value;
+
+      if (utterance.onerror) {
+        utterance.onerror({ error: 'interrupted' });
+      }
+
+      await expect(speakPromise).rejects.toMatchObject({
+        type: 'cancelled',
+        message: 'Speech synthesis was cancelled',
+      });
+    });
+
+    it('should handle synthesis failure during speak call', async () => {
+      // Mock speak to throw error
+      mockSpeechSynthesis.speak.mockImplementationOnce(() => {
+        throw new Error('Synthesis failed');
+      });
+
+      await expect(speak('Test')).rejects.toMatchObject({
+        type: 'synthesis_failed',
+        message: 'Failed to start speech synthesis',
+      });
+    });
+  });
+
+  describe('TTS service readiness', () => {
+    it('should report ready when voices are available', async () => {
+      const service = getTTSService(
+        () => mockSpeechSynthesis as unknown as SpeechSynthesis
+      );
+
+      const ready = await service.isReady();
+
+      expect(ready).toBe(true);
+    });
+
+    it('should report not ready when TTS is not supported', async () => {
+      const service = getTTSService(() => null);
+
+      const ready = await service.isReady();
+
+      expect(ready).toBe(false);
+    });
+
+    it('should wait for voices to load', async () => {
+      let voicesLoaded = false;
+      const delayedMockSynthesis = {
+        ...mockSpeechSynthesis,
+        getVoices: vi.fn(() => (voicesLoaded ? mockVoices : [])),
+        addEventListener: vi.fn((event, handler) => {
+          if (event === 'voiceschanged') {
+            setTimeout(() => {
+              voicesLoaded = true;
+              handler();
+            }, 50);
+          }
+        }),
+      };
+
+      const service = getTTSService(
+        () => delayedMockSynthesis as unknown as SpeechSynthesis
+      );
+
+      const ready = await service.isReady();
+
+      expect(ready).toBe(true);
+    });
+  });
 });

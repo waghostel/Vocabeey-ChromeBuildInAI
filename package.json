@@ -5,8 +5,12 @@
   "type": "module",
   "scripts": {
     "prepare": "husky",
-    "lint": "eslint src --ext .ts,.js",
-    "lint:fix": "eslint src --ext .ts,.js --fix",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint src --fix",
+    "lint:eslint": "eslint src --ext .ts,.js",
+    "lint:eslint:fix": "eslint src --ext .ts,.js --fix",
+    "lint:manifest": "prettier --check manifest.json",
+    "lint:extension": "oxlint src && pnpm run lint:manifest",
     "format": "prettier --write \"src/**/*.{ts,js,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js,json}\"",
     "type-check": "tsc --noEmit",
@@ -17,14 +21,22 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --run --coverage",
+    "validate:extension": "pnpm run lint:extension && pnpm run test && pnpm run build",
+    "lint:switch": "node scripts/lint-switcher.js",
     "preinstall": "npx only-allow pnpm"
   },
   "lint-staged": {
     "*.{ts,js}": [
       "prettier --write",
-      "eslint --fix"
+      "oxlint --fix"
     ],
     "*.{json,md}": [
+      "prettier --write"
+    ],
+    "manifest.json": [
+      "prettier --write"
+    ],
+    "src/**/*.{html,css}": [
       "prettier --write"
     ]
   },
@@ -52,6 +64,7 @@
     "husky": "^9.1.7",
     "jsdom": "^27.0.0",
     "lint-staged": "^16.2.3",
+    "oxlint": "^1.23.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
