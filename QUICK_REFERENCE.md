@@ -1,134 +1,92 @@
-# Quick Reference Card
+# Quick Reference
 
-## 🚀 Daily Commands
-
-```bash
-# Start development
-pnpm dev
-
-# Check code quality
-pnpm lint
-pnpm type-check
-
-# Fix issues
-pnpm lint:fix
-pnpm format
-
-# Build
-pnpm build
-```
-
-## 📂 Where to Put Files
-
-```
-src/background/     → Service worker, background scripts
-src/content/        → Content scripts (inject into pages)
-src/offscreen/      → Offscreen documents (AI processing)
-src/ui/             → UI components, popup, options page
-src/types/          → TypeScript type definitions
-src/utils/          → Shared utilities
-tests/              → Test files
-```
-
-## ⚡ Pre-commit Hook
-
-Runs automatically on `git commit`:
-
-1. Prettier formats code
-2. ESLint fixes issues
-3. Commit proceeds if no errors
-
-## 🎯 ESLint Rules by File Type
-
-| Location          | Console    | window/document | Strictness |
-| ----------------- | ---------- | --------------- | ---------- |
-| `src/background/` | ✅ Allowed | ❌ Blocked      | High       |
-| `src/content/`    | ⚠️ Warning | ✅ Allowed      | High       |
-| `src/ui/`         | ⚠️ Warning | ✅ Allowed      | High       |
-| `tests/`          | ✅ Allowed | ✅ Allowed      | Relaxed    |
-
-## 🔧 Troubleshooting
+## 🚀 Essential Commands
 
 ```bash
-# Clear ESLint cache
-pnpm exec eslint --clear-cache
+# Development
+pnpm dev              # Watch mode development
+pnpm build            # Production build
+pnpm test             # Run test suite
+pnpm lint             # Code quality check
 
-# Reinstall dependencies
-rm -rf node_modules && pnpm install
-
-# Check ESLint config for a file
-pnpm exec eslint --print-config src/types/index.ts
+# Quality
+pnpm lint:fix         # Auto-fix linting issues
+pnpm format           # Format code with Prettier
+pnpm type-check       # TypeScript validation
+pnpm validate:extension  # Full validation pipeline
 ```
 
-## 📦 Package Manager
+## 📂 Project Structure
 
-**Always use pnpm** (not npm or yarn):
+```
+src/
+├── background/       # Service worker (no DOM access)
+├── content/          # Content scripts (DOM access)
+├── offscreen/        # AI processing (heavy tasks)
+├── ui/               # User interface components
+├── types/            # TypeScript definitions (centralized)
+└── utils/            # Shared utilities (single responsibility)
+
+docs/                 # Documentation (organized by topic)
+tests/                # Test suite (700+ tests, 92% coverage)
+dist/                 # Build output (load in Chrome)
+```
+
+## 🎯 Chrome Extension Context Rules
+
+| Context        | DOM | Chrome APIs | Console | Use Case              |
+| -------------- | --- | ----------- | ------- | --------------------- |
+| Service Worker | ❌  | ✅          | ✅      | Background processing |
+| Content Script | ✅  | Limited     | ⚠️      | Page interaction      |
+| Offscreen Doc  | ✅  | Specific    | ✅      | AI processing         |
+| UI Components  | ✅  | ✅          | ⚠️      | User interface        |
+
+## 🔧 Quick Fixes
 
 ```bash
-pnpm install <package>      # Add dependency
-pnpm add -D <package>       # Add dev dependency
-pnpm remove <package>       # Remove dependency
-pnpm update                 # Update all packages
+# Build issues
+rm -rf dist node_modules && pnpm install && pnpm build
+
+# Linting issues
+pnpm lint:fix && pnpm format
+
+# Test issues
+pnpm test --run --reporter=verbose
+
+# Extension loading issues
+# 1. Check dist/manifest.json exists
+# 2. Reload extension in chrome://extensions
+# 3. Check Chrome version (needs 140+)
 ```
 
-## 🎨 Code Style
+## 📖 Documentation Quick Links
 
-- **Quotes**: Single quotes (`'`)
-- **Semicolons**: Required (`;`)
-- **Indentation**: 2 spaces
-- **Line width**: 80 characters
-- **Trailing commas**: ES5 style
+- **[🏃 Quick Start](docs/development/quick-start.md)** - 5-minute setup
+- **[👥 User Guide](docs/user-guide/README.md)** - End-user docs
+- **[🏗️ Architecture](docs/architecture/README.md)** - System design
+- **[🔧 API Reference](docs/api/README.md)** - Chrome AI integration
+- **[🧪 Testing](docs/testing/README.md)** - Test suite guide
 
-## 🔍 VS Code Extensions
+## 💡 Development Tips
 
-Recommended (install from Extensions panel):
+### Code Quality (Automated)
 
-- ESLint
-- Prettier
-- TypeScript
+- **Pre-commit hooks**: Auto-format and lint on commit
+- **Dual linting**: Oxlint (fast) + ESLint (comprehensive)
+- **Type safety**: Strict TypeScript with Chrome types
 
-## 📝 TypeScript Tips
+### Chrome Extension Development
 
-```typescript
-// ✅ Good - explicit return type
-function getData(): Promise<string> {
-  return fetch('/api').then(r => r.text());
-}
+- **Load extension**: Build → chrome://extensions → Load unpacked → Select `dist/`
+- **Debug contexts**: Service worker, content script, offscreen doc have different DevTools
+- **Message passing**: Use typed interfaces for component communication
 
-// ⚠️ Warning - implicit return type
-function getData() {
-  return fetch('/api').then(r => r.text());
-}
+### Testing
 
-// ✅ Good - unused param with underscore
-function handler(_event: Event): void {
-  console.log('handled');
-}
-
-// ❌ Error - unused param
-function handler(event: Event): void {
-  console.log('handled');
-}
-```
-
-## 🌐 Chrome Extension Globals
-
-Available everywhere:
-
-- `chrome.*` - Chrome Extension APIs
-- `console.*` - Console methods
-
-Service worker only:
-
-- `self` - Service worker global
-- ❌ No `window` or `document`
-
-Content scripts:
-
-- `window` - Page window
-- `document` - Page DOM
-- `chrome.*` - Extension APIs
+- **700+ tests**: Unit, integration, user acceptance, system tests
+- **92% coverage**: Comprehensive validation of all components
+- **Fast execution**: Vitest with parallel execution and mocking
 
 ---
 
-**Keep this handy!** 📌
+**Need help?** Check [docs/README.md](docs/README.md) for complete documentation index

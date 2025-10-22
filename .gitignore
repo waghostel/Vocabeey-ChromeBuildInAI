@@ -36,3 +36,21 @@ pnpm-debug.log*
 # Temporary files
 *.tmp
 .temp/
+ignore/FINAL_LINT_RESULTS.md
+ignore/LINT_ERROR_SUMMARY.md
+ignore/PROJECT_STRUCTURE.md
+ignore/SETUP_SUMMARY.md
+ignore/TEST_FIXES_SUMMARY.md
+ignore/test-failure-analysis-report.md
+ignore/test-failure-fix-solution.md
+ignore/task-execute-reports/cache-performance-validation.md
+ignore/task-execute-reports/task-4-implementation-summary.md
+ignore/task-execute-reports/task-5-implementation-summary.md
+ignore/task-execute-reports/task-5.3-implementation-summary.md
+ignore/task-execute-reports/task-6-implementation-summary.md
+ignore/task-execute-reports/task-7-implementation-summary.md
+ignore/task-execute-reports/task-7.7-implementation-summary.md
+ignore/task-execute-reports/task-8-implementation-summary.md
+ignore/task-execute-reports/task-9-implementation-summary.md
+ignore/task-execute-reports/task-10-implementation-summary.md
+ignore/task-execute-reports/tts-test-analysis.md

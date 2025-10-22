@@ -93,6 +93,9 @@ describe('StorageManager', () => {
     storageManager = createStorageManager();
     mockStorage = {};
 
+    // Clear all mock call history
+    vi.clearAllMocks();
+
     // Mock chrome.storage.local
     vi.mocked(chrome.storage.local.get).mockImplementation(
       (keys: string | string[] | null) => {
@@ -477,6 +480,9 @@ describe('DataMigrator', () => {
     dataMigrator = new DataMigrator();
     mockStorage = {};
 
+    // Clear all mock call history
+    vi.clearAllMocks();
+
     vi.mocked(chrome.storage.local.get).mockImplementation(
       (keys: string | string[] | null) => {
         if (keys === null) {
@@ -841,6 +847,9 @@ describe('ImportExportManager', () => {
       },
     };
 
+    // Clear all mock call history
+    vi.clearAllMocks();
+
     vi.mocked(chrome.storage.local.get).mockImplementation(
       (keys: string | string[] | null) => {
         if (keys === null) {
@@ -1202,6 +1211,9 @@ describe('Cache Management', () => {
   beforeEach(() => {
     storageManager = createStorageManager();
     mockStorage = {};
+
+    // Clear all mock call history
+    vi.clearAllMocks();
 
     vi.mocked(chrome.storage.local.get).mockImplementation(
       (keys: string | string[] | null) => {

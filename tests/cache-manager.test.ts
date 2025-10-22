@@ -22,6 +22,7 @@ describe('Cache Manager', () => {
   let mockStorage: ReturnType<typeof mockChromeStorage>;
 
   beforeEach(async () => {
+    // Create fresh mock storage for each test
     mockStorage = mockChromeStorage();
     // Clear any existing cache data
     await chrome.storage.local.clear();
@@ -29,9 +30,21 @@ describe('Cache Manager', () => {
     resetCacheManagerInstance();
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
-    mockStorage.cleanup();
+  afterEach(async () => {
+    // Comprehensive cleanup procedures
+    try {
+      // Clear all cache data
+      await chrome.storage.local.clear();
+      // Reset singleton instance
+      resetCacheManagerInstance();
+      // Clear all mocks
+      vi.clearAllMocks();
+      // Cleanup mock storage
+      mockStorage.cleanup();
+    } catch (error) {
+      // Ignore cleanup errors in tests
+      console.warn('Test cleanup error:', error);
+    }
   });
 
   describe('Basic Functionality', () => {
@@ -95,7 +108,7 @@ describe('Cache Manager', () => {
 
       const article: ProcessedArticle = {
         id: 'test-article-2',
-        url: 'https://example.com/article2-unique',
+        url: 'https://example.com/article2-unique-check',
         title: 'Test Article 2',
         originalLanguage: 'es',
         processedAt: new Date(),
@@ -103,6 +116,9 @@ describe('Cache Manager', () => {
         processingStatus: 'completed',
         cacheExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
       };
+
+      // Ensure clean state before checking
+      await chrome.storage.local.clear();
 
       // Should not be cached initially
       const initialCheck = await cacheManager.isArticleCached(
@@ -406,10 +422,13 @@ describe('Cache Manager', () => {
     it('should clear all caches', async () => {
       const cacheManager = createCacheManager();
 
+      // Ensure clean state before starting
+      await chrome.storage.local.clear();
+
       // Add some cached data
       const article: ProcessedArticle = {
-        id: 'test-clear-unique',
-        url: 'https://example.com/clear-test-unique',
+        id: 'test-clear-unique-v2',
+        url: 'https://example.com/clear-test-unique-v2',
         title: 'Clear Test',
         originalLanguage: 'en',
         processedAt: new Date(),
@@ -420,7 +439,7 @@ describe('Cache Manager', () => {
 
       await cacheManager.cacheArticle(article);
       await cacheManager.cacheVocabularyTranslation(
-        'testclear',
+        'testclear-v2',
         'en',
         'es',
         'prueba'
@@ -434,7 +453,7 @@ describe('Cache Manager', () => {
         )
       ).toBe(true);
       expect(
-        await cacheManager.getCachedTranslation('testclear', 'en', 'es')
+        await cacheManager.getCachedTranslation('testclear-v2', 'en', 'es')
       ).toBe('prueba');
 
       // Clear all caches
@@ -448,7 +467,7 @@ describe('Cache Manager', () => {
         )
       ).toBe(false);
       expect(
-        await cacheManager.getCachedTranslation('testclear', 'en', 'es')
+        await cacheManager.getCachedTranslation('testclear-v2', 'en', 'es')
       ).toBeNull();
     });
 

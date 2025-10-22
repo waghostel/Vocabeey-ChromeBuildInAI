@@ -16,19 +16,21 @@ export function mockChromeStorage(initialData: Record<string, any> = {}) {
       local: {
         get: vi.fn().mockImplementation(keys => {
           if (typeof keys === 'string') {
-            return Promise.resolve({ [keys]: storage[keys] || {} });
+            return Promise.resolve({ [keys]: storage[keys] });
           }
           if (Array.isArray(keys)) {
             const result: Record<string, any> = {};
             keys.forEach(key => {
-              result[key] = storage[key] || {};
+              if (key in storage) {
+                result[key] = storage[key];
+              }
             });
             return Promise.resolve(result);
           }
           if (keys === null || keys === undefined) {
-            return Promise.resolve(storage);
+            return Promise.resolve({ ...storage });
           }
-          return Promise.resolve(storage);
+          return Promise.resolve({ ...storage });
         }),
         set: vi.fn().mockImplementation(items => {
           Object.assign(storage, items);
@@ -60,6 +62,8 @@ export function mockChromeStorage(initialData: Record<string, any> = {}) {
   return {
     storage,
     cleanup: () => {
+      // Clear the storage object completely
+      Object.keys(storage).forEach(key => delete storage[key]);
       delete (global as any).chrome;
     },
   };

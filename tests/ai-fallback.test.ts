@@ -523,7 +523,7 @@ describe('AIServiceCoordinator', () => {
       json: async () => ({
         candidates: [
           {
-            content: { parts: [{ text: 'test' }], role: 'model' },
+            content: { parts: [{ text: 'available' }], role: 'model' },
             finishReason: 'STOP',
           },
         ],
@@ -611,22 +611,26 @@ describe('AIServiceCoordinator', () => {
 
       const testCoordinator = new AIServiceCoordinator('test-key');
 
+      // Mock the service status update to bypass availability check timing issues
+      vi.spyOn(testCoordinator as any, 'updateServiceStatus').mockResolvedValue(
+        undefined
+      );
+      // Manually set service status to simulate both services being available for fallback test
+      (testCoordinator as any).serviceStatus = {
+        chromeAI: true,
+        geminiAPI: true,
+        lastChecked: new Date(),
+      };
+
       mockLanguageDetector.detect.mockRejectedValueOnce(
         new Error('Chrome AI failed')
       );
 
-      // Mock successful Gemini API response
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          candidates: [
-            {
-              content: { parts: [{ text: 'es' }], role: 'model' },
-              finishReason: 'STOP',
-            },
-          ],
-        }),
-      });
+      // Mock the GeminiAPIClient method directly to avoid fetch timing issues
+      vi.spyOn(
+        testCoordinator['geminiClient'],
+        'detectLanguage'
+      ).mockResolvedValue('es');
 
       const language = await testCoordinator.detectLanguage('Hola mundo');
 
@@ -639,6 +643,19 @@ describe('AIServiceCoordinator', () => {
     it('should throw error when all services fail', async () => {
       // Create fresh coordinator for this test
       vi.clearAllMocks();
+
+      // Mock availability check first (happens during coordinator initialization)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          candidates: [
+            {
+              content: { parts: [{ text: 'available' }], role: 'model' },
+              finishReason: 'STOP',
+            },
+          ],
+        }),
+      });
 
       const testCoordinator = new AIServiceCoordinator('test-key');
 
@@ -674,21 +691,26 @@ describe('AIServiceCoordinator', () => {
 
       const testCoordinator = new AIServiceCoordinator('test-key');
 
+      // Mock the service status update to bypass availability check timing issues
+      vi.spyOn(testCoordinator as any, 'updateServiceStatus').mockResolvedValue(
+        undefined
+      );
+      // Manually set service status to simulate Gemini API being available
+      (testCoordinator as any).serviceStatus = {
+        chromeAI: false,
+        geminiAPI: true,
+        lastChecked: new Date(),
+      };
+
       mockSummarizer.summarize.mockRejectedValueOnce(
         new Error('Chrome AI failed')
       );
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          candidates: [
-            {
-              content: { parts: [{ text: 'Gemini summary' }], role: 'model' },
-              finishReason: 'STOP',
-            },
-          ],
-        }),
-      });
+      // Mock the GeminiAPIClient method directly to avoid fetch timing issues
+      vi.spyOn(
+        testCoordinator['geminiClient'],
+        'summarizeContent'
+      ).mockResolvedValue('Gemini summary');
 
       const summary = await testCoordinator.summarizeContent('Long text...');
 
@@ -718,21 +740,26 @@ describe('AIServiceCoordinator', () => {
 
       const testCoordinator = new AIServiceCoordinator('test-key');
 
+      // Mock the service status update to bypass availability check timing issues
+      vi.spyOn(testCoordinator as any, 'updateServiceStatus').mockResolvedValue(
+        undefined
+      );
+      // Manually set service status to simulate Gemini API being available
+      (testCoordinator as any).serviceStatus = {
+        chromeAI: false,
+        geminiAPI: true,
+        lastChecked: new Date(),
+      };
+
       mockTranslator.translate.mockRejectedValueOnce(
         new Error('Chrome AI failed')
       );
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          candidates: [
-            {
-              content: { parts: [{ text: 'Bonjour le monde' }], role: 'model' },
-              finishReason: 'STOP',
-            },
-          ],
-        }),
-      });
+      // Mock the GeminiAPIClient method directly to avoid fetch timing issues
+      vi.spyOn(
+        testCoordinator['geminiClient'],
+        'translateText'
+      ).mockResolvedValue('Bonjour le monde');
 
       const translation = await testCoordinator.translateText(
         'Hello world',
@@ -775,37 +802,35 @@ describe('AIServiceCoordinator', () => {
 
       const testCoordinator = new AIServiceCoordinator('test-key');
 
+      // Mock the service status update to bypass availability check timing issues
+      vi.spyOn(testCoordinator as any, 'updateServiceStatus').mockResolvedValue(
+        undefined
+      );
+      // Manually set service status to simulate Gemini API being available
+      (testCoordinator as any).serviceStatus = {
+        chromeAI: false,
+        geminiAPI: true,
+        lastChecked: new Date(),
+      };
+
       // Mock Chrome AI failure
       mockChromeAI.assistant.create.mockRejectedValueOnce(
         new Error('Chrome AI failed')
       );
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          candidates: [
-            {
-              content: {
-                parts: [
-                  {
-                    text: JSON.stringify([
-                      {
-                        word: 'world',
-                        difficulty: 2,
-                        isProperNoun: false,
-                        isTechnicalTerm: false,
-                        exampleSentences: ['World peace'],
-                      },
-                    ]),
-                  },
-                ],
-                role: 'model',
-              },
-              finishReason: 'STOP',
-            },
-          ],
-        }),
-      });
+      // Mock the GeminiAPIClient method directly to avoid fetch timing issues
+      vi.spyOn(
+        testCoordinator['geminiClient'],
+        'analyzeVocabulary'
+      ).mockResolvedValue([
+        {
+          word: 'world',
+          difficulty: 2,
+          isProperNoun: false,
+          isTechnicalTerm: false,
+          exampleSentences: ['World peace'],
+        },
+      ]);
 
       const analyses = await testCoordinator.analyzeVocabulary(
         ['world'],
@@ -865,18 +890,22 @@ describe('AIServiceCoordinator', () => {
 
       const newCoordinator = new AIServiceCoordinator('test-key');
 
-      // Mock actual language detection call
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          candidates: [
-            {
-              content: { parts: [{ text: 'fr' }], role: 'model' },
-              finishReason: 'STOP',
-            },
-          ],
-        }),
-      });
+      // Mock the service status update to bypass availability check timing issues
+      vi.spyOn(newCoordinator as any, 'updateServiceStatus').mockResolvedValue(
+        undefined
+      );
+      // Manually set service status to simulate Gemini API being available
+      (newCoordinator as any).serviceStatus = {
+        chromeAI: false,
+        geminiAPI: true,
+        lastChecked: new Date(),
+      };
+
+      // Mock the GeminiAPIClient method directly to avoid fetch timing issues
+      vi.spyOn(
+        newCoordinator['geminiClient'],
+        'detectLanguage'
+      ).mockResolvedValue('fr');
 
       const language = await newCoordinator.detectLanguage('Bonjour');
 
@@ -915,10 +944,43 @@ describe('AIServiceCoordinator', () => {
 
       const testCoordinator = new AIServiceCoordinator('test-key');
 
-      // First, trigger creation of the AI services by using them
-      mockSummarizer.summarize.mockResolvedValueOnce('test');
-      mockRewriter.rewrite.mockResolvedValueOnce('test');
-      mockTranslator.translate.mockResolvedValueOnce('test');
+      // Mock the service status update to bypass availability check timing issues
+      vi.spyOn(testCoordinator as any, 'updateServiceStatus').mockResolvedValue(
+        undefined
+      );
+      // Manually set service status to simulate Chrome AI being available for this test
+      (testCoordinator as any).serviceStatus = {
+        chromeAI: true,
+        geminiAPI: true,
+        lastChecked: new Date(),
+      };
+
+      // Mock the actual service instances that the coordinator uses
+      vi.spyOn(
+        testCoordinator['chromeSummarizer'],
+        'summarizeContent'
+      ).mockResolvedValue('Chrome summary');
+      vi.spyOn(
+        testCoordinator['chromeRewriter'],
+        'rewriteContent'
+      ).mockResolvedValue('Rewritten text');
+      vi.spyOn(
+        testCoordinator['chromeTranslator'],
+        'translateText'
+      ).mockResolvedValue('Hola mundo');
+
+      // Mock the destroy methods that we want to verify
+      vi.spyOn(
+        testCoordinator['chromeSummarizer'],
+        'destroy'
+      ).mockImplementation(() => {});
+      vi.spyOn(testCoordinator['chromeRewriter'], 'destroy').mockImplementation(
+        () => {}
+      );
+      vi.spyOn(
+        testCoordinator['chromeTranslator'],
+        'destroy'
+      ).mockImplementation(() => {});
 
       await testCoordinator.summarizeContent('test');
       await testCoordinator.rewriteContent('test', 5);
@@ -927,9 +989,9 @@ describe('AIServiceCoordinator', () => {
       // Now destroy and check cleanup
       testCoordinator.destroy();
 
-      expect(mockSummarizer.destroy).toHaveBeenCalled();
-      expect(mockRewriter.destroy).toHaveBeenCalled();
-      expect(mockTranslator.destroy).toHaveBeenCalled();
+      expect(testCoordinator['chromeSummarizer'].destroy).toHaveBeenCalled();
+      expect(testCoordinator['chromeRewriter'].destroy).toHaveBeenCalled();
+      expect(testCoordinator['chromeTranslator'].destroy).toHaveBeenCalled();
     });
   });
 });

@@ -1,91 +1,91 @@
 # Language Learning Chrome Extension
 
-Chrome Extension for interactive language learning using built-in AI APIs.
+Transform web articles into interactive language learning experiences using Chrome's built-in AI APIs.
 
-## Development Setup
-
-This project uses **pnpm** as the package manager with ESLint + Prettier for code quality.
-
-### Prerequisites
-
-- Node.js 18+
-- pnpm 8+
-- Chrome 140+ (for built-in AI APIs)
-
-### Installation
+## 🚀 Quick Start
 
 ```bash
 # Install dependencies
-pnpm install
+pnpm install && pnpm prepare
 
-# Initialize Husky hooks
-pnpm prepare
+# Start development
+pnpm dev
+
+# Build for production
+pnpm build
+
+# Run tests
+pnpm test
 ```
 
-### Available Scripts
+## 📖 Documentation
 
-```bash
-# Linting
-pnpm lint              # Check for linting errors
-pnpm lint:fix          # Fix linting errors automatically
+- **[📚 Complete Documentation](docs/README.md)** - Full documentation index
+- **[🏃 Quick Start Guide](docs/development/quick-start.md)** - Get running in 5 minutes
+- **[👥 User Guide](docs/user-guide/README.md)** - End-user documentation
+- **[🏗️ Architecture](docs/architecture/README.md)** - Technical architecture
+- **[🔧 API Reference](docs/api/README.md)** - Chrome AI integration
+- **[🧪 Testing Guide](docs/testing/README.md)** - Test suite and coverage
 
-# Formatting
-pnpm format            # Format all files
-pnpm format:check      # Check formatting without modifying files
+## ✨ Features
 
-# Type Checking
-pnpm type-check        # Run TypeScript type checking
+- **🤖 AI-Powered Processing**: Chrome Built-in AI + Gemini fallback
+- **📝 Smart Content Extraction**: Clean, focused article content
+- **🎯 Adaptive Difficulty**: Content adapted to your learning level
+- **💬 Interactive Translation**: Context-aware vocabulary and sentences
+- **🔊 Text-to-Speech**: Native pronunciation support
+- **💾 Privacy-First**: Local processing, no tracking
 
-# Building
-pnpm build             # Compile TypeScript to JavaScript
-pnpm dev               # Watch mode for development
-```
+## 🛠️ Development
+
+### Prerequisites
+
+- Node.js 18+ & pnpm 8+
+- Chrome 140+ (for built-in AI APIs)
 
 ### Project Structure
 
 ```
 src/
-├── background/        # Service worker and background scripts
-├── content/          # Content scripts for web page interaction
-├── offscreen/        # Offscreen documents for AI processing
-├── ui/               # User interface components
-├── types/            # TypeScript type definitions
-└── utils/            # Utility functions
+├── background/       # Service worker
+├── content/          # Content scripts
+├── offscreen/        # AI processing
+├── ui/               # User interface
+├── types/            # TypeScript definitions
+└── utils/            # Shared utilities
 
-tests/                # Test files
-dist/                 # Compiled output (generated)
+docs/                 # Documentation
+tests/                # Test suite (700+ tests)
 ```
 
-### Code Quality
+### Key Commands
 
-This project enforces code quality through:
+```bash
+pnpm dev              # Watch mode development
+pnpm build            # Production build
+pnpm test             # Run test suite
+pnpm lint             # Code quality check
+pnpm validate:extension  # Full validation
+```
 
-- **ESLint**: Linting with TypeScript-specific rules
-- **Prettier**: Code formatting
-- **Husky**: Git hooks for pre-commit checks
-- **lint-staged**: Run linters on staged files only
+## 🧪 Quality Assurance
 
-### Pre-commit Hooks
+- **700+ Tests**: Comprehensive test coverage (92.3%)
+- **Dual Linting**: Oxlint (fast) + ESLint (comprehensive)
+- **Type Safety**: Strict TypeScript with Chrome types
+- **Pre-commit Hooks**: Automated code quality checks
 
-Before each commit, the following checks run automatically:
+## 🏗️ Architecture
 
-1. Prettier formats staged files
-2. ESLint checks and fixes staged files
+- **Chrome Extension**: Manifest V3 with service worker
+- **AI Integration**: Chrome Built-in AI APIs with Gemini fallback
+- **Storage**: Local-first with privacy focus
+- **Testing**: Vitest with comprehensive mocking
 
-### Chrome Extension Specific Rules
+## 📄 License
 
-- Service workers cannot use `window` or `document` globals
-- Content scripts have access to DOM APIs
-- TypeScript files have stricter rules than JavaScript files
-- Console logs are allowed in background scripts but warned in content scripts
+MIT - See [LICENSE](LICENSE) for details
 
-### TypeScript Configuration
+---
 
-- Target: ES2022
-- Module: ES2022
-- Strict mode enabled
-- Chrome types included
-
-## License
-
-MIT
+**Ready to start?** Check the [Quick Start Guide](docs/development/quick-start.md) or [User Guide](docs/user-guide/README.md)
