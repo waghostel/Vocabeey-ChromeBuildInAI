@@ -4,31 +4,29 @@ This directory contains all documentation for the Language Learning Chrome Exten
 
 ## Documentation Structure
 
-### 📚 Core Documentation
+### Core Documentation
 
 - **[Project Overview](overview.md)** - Product vision, features, and architecture
 - **[Development Guide](development/README.md)** - Setup, workflow, and contribution guidelines
 - **[API Documentation](api/README.md)** - Chrome AI integration and API references
 
-### 🚀 Getting Started
+### Getting Started
 
 - **[Quick Start](development/quick-start.md)** - Get up and running in 5 minutes
 - **[Setup Guide](development/setup.md)** - Detailed installation and configuration
 
-### 🏗️ Architecture
+### Architecture
 
 - **[Technical Architecture](architecture/README.md)** - System design and component overview
 - **[Chrome Extension Structure](architecture/extension-structure.md)** - Manifest V3 implementation details
 
-### 🧪 Testing
+### Testing
 
 - **[Testing Guide](testing/README.md)** - Test structure and execution
-- **[Test Coverage](testing/coverage.md)** - Current test coverage and requirements
 
-### 📖 User Guide
+### User Guide
 
 - **[User Manual](user-guide/README.md)** - End-user documentation
-- **[Feature Guide](user-guide/features.md)** - Detailed feature explanations
 
 ## Quick Reference
 

@@ -182,9 +182,9 @@ interface SummaryOptions {
 
 **Chrome API Parameters**:
 
-- `type`: Always 'tl;dr' for article summarization
-- `format`: 'markdown' for bullet points, 'plain-text' for paragraphs
-- `length`: Mapped from maxLength (short: <100, medium: <300, long: >=300)
+- **type**: Always 'tl;dr' for article summarization
+- **format**: 'markdown' for bullet points, 'plain-text' for paragraphs
+- **length**: Mapped from maxLength (short: <100, medium: <300, long: >=300)
 
 **Error Types**:
 
@@ -263,9 +263,9 @@ class ChromeRewriter {
 
 **Chrome API Parameters**:
 
-- `tone`: Mapped from difficulty level (more-formal, more-casual, as-is)
-- `format`: Always 'plain-text' to preserve readability
-- `length`: Always 'as-is' to maintain original content length
+- **tone**: Mapped from difficulty level (more-formal, more-casual, as-is)
+- **format**: Always 'plain-text' to preserve readability
+- **length**: Always 'as-is' to maintain original content length
 
 **Error Types**:
 
@@ -1396,5 +1396,12 @@ const summary = await monitor.monitorOperation('summarization', () =>
 const report = monitor.getPerformanceReport();
 console.log('Performance Report:', JSON.stringify(report, null, 2));
 ```
+
+## Related Documentation
+
+- **[Architecture Overview](../architecture/README.md)** - System design and component relationships
+- **[Development Guide](../development/README.md)** - Setup and contribution guidelines
+- **[Testing Guide](../testing/README.md)** - API testing strategies and mocks
+- **[User Guide](../user-guide/README.md)** - End-user feature documentation
 
 This comprehensive API documentation covers all implemented Chrome AI services, error handling patterns, caching strategies, and real-world usage examples for the Language Learning Chrome Extension.

@@ -32,6 +32,63 @@ interface SystemState {
   };
 }
 
+// Counters to prevent timestamp collisions during rapid processing
+let articleCounter = 0;
+let vocabularyCounter = 0;
+let sentenceCounter = 0;
+
+/**
+ * Generates unique IDs using timestamp and counter to prevent collisions
+ * during rapid processing in tests
+ */
+function generateUniqueArticleId(): string {
+  // Increment counter and handle overflow protection
+  if (articleCounter >= 999999) {
+    articleCounter = 0;
+  }
+
+  const id = `article-${Date.now()}-${++articleCounter}`;
+
+  // Optional collision detection logging for debugging
+  if (process.env.NODE_ENV === 'test' && process.env.DEBUG_COLLISIONS) {
+    console.debug(`Generated article ID: ${id}`);
+  }
+
+  return id;
+}
+
+function generateUniqueVocabularyId(): string {
+  // Increment counter and handle overflow protection
+  if (vocabularyCounter >= 999999) {
+    vocabularyCounter = 0;
+  }
+
+  const id = `vocab-${Date.now()}-${++vocabularyCounter}`;
+
+  // Optional collision detection logging for debugging
+  if (process.env.NODE_ENV === 'test' && process.env.DEBUG_COLLISIONS) {
+    console.debug(`Generated vocabulary ID: ${id}`);
+  }
+
+  return id;
+}
+
+function generateUniqueSentenceId(): string {
+  // Increment counter and handle overflow protection
+  if (sentenceCounter >= 999999) {
+    sentenceCounter = 0;
+  }
+
+  const id = `sentence-${Date.now()}-${++sentenceCounter}`;
+
+  // Optional collision detection logging for debugging
+  if (process.env.NODE_ENV === 'test' && process.env.DEBUG_COLLISIONS) {
+    console.debug(`Generated sentence ID: ${id}`);
+  }
+
+  return id;
+}
+
 // Mock system controller
 function createSystemController() {
   let systemState: SystemState = {
@@ -81,7 +138,7 @@ function createSystemController() {
 
       // Step 2: Process with AI
       const processedArticle: ProcessedArticle = {
-        id: `article-${Date.now()}`,
+        id: generateUniqueArticleId(),
         url,
         title: extractedContent.title,
         originalLanguage: 'en',
@@ -126,7 +183,7 @@ function createSystemController() {
       articleId: string
     ) => {
       const vocabulary: VocabularyItem = {
-        id: `vocab-${Date.now()}`,
+        id: generateUniqueVocabularyId(),
         word,
         translation: `Translation of ${word}`,
         context,
@@ -150,7 +207,7 @@ function createSystemController() {
       articleId: string
     ) => {
       const sentenceItem: SentenceItem = {
-        id: `sentence-${Date.now()}`,
+        id: generateUniqueSentenceId(),
         content: sentence,
         translation: `Translation: ${sentence}`,
         articleId,
@@ -230,6 +287,11 @@ describe('System Integration Tests', () => {
     chromeStorageMock = mockChromeStorage();
     systemController = createSystemController();
     vi.clearAllMocks();
+
+    // Reset counters for each test
+    articleCounter = 0;
+    vocabularyCounter = 0;
+    sentenceCounter = 0;
 
     // Setup Chrome API mocks
     if (!global.chrome) {

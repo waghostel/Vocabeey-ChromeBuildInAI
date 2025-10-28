@@ -5,7 +5,7 @@
  * Implements graceful degradation for service failures
  */
 
-import { cacheManager } from './cache-manager';
+import { CacheManager } from './cache-manager';
 import { getStorageManager, type StorageManager } from './storage-manager';
 
 import type { ProcessedArticle, ExtractedContent } from '../types';
@@ -231,7 +231,8 @@ export class OfflineModeManager {
   async getCachedArticle(articleId: string): Promise<ProcessedArticle | null> {
     if (this.networkMonitor.isNetworkOnline()) {
       // Online - use normal cache retrieval
-      return await cacheManager.getCachedArticle(articleId);
+      const cacheManager = new CacheManager();
+      return await cacheManager.getCachedArticle(articleId, 'en'); // Default language
     }
 
     // Offline - get from storage without expiration check

@@ -3,7 +3,7 @@
  * Implements Requirements: 7.2, 7.3, 7.4, 7.5, 7.6, 7.7
  */
 
-import { storageManager } from '../utils/storage-manager';
+import { StorageManager } from '../utils/storage-manager';
 
 import type { UserSettings } from '../types';
 
@@ -12,6 +12,7 @@ import type { UserSettings } from '../types';
 // ============================================================================
 
 let currentSettings: UserSettings | null = null;
+const storageManager = new StorageManager();
 
 // ============================================================================
 // Initialization
@@ -23,7 +24,9 @@ async function initializeSettings(): Promise<void> {
     currentSettings = await storageManager.getUserSettings();
 
     // Populate form fields
-    populateFormFields(currentSettings);
+    if (currentSettings) {
+      populateFormFields(currentSettings);
+    }
 
     // Update storage info
     await updateStorageInfo();
@@ -331,7 +334,9 @@ async function handleFileImport(event: Event): Promise<void> {
 
     // Reload settings
     currentSettings = await storageManager.getUserSettings();
-    populateFormFields(currentSettings);
+    if (currentSettings) {
+      populateFormFields(currentSettings);
+    }
     await updateStorageInfo();
 
     showToast('Data imported successfully', 'success');

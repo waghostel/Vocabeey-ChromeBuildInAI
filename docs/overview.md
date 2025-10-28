@@ -20,25 +20,25 @@ Language learners who want to practice with real-world content from web articles
 
 ### Key Features
 
-#### 🔍 Content Processing
+#### Content Processing
 
 - **Extraction Pipeline**: Readability.js → Jina Reader API → DOM parsing fallback
 - **AI Processing**: Chrome Built-in AI APIs with Gemini fallback
 - **Content Adaptation**: Difficulty-based rewriting and summarization
 
-#### 🎯 Learning Modes
+#### Learning Modes
 
 - **Vocabulary Mode**: Word/phrase highlighting with translation cards
 - **Sentence Mode**: Sentence highlighting with contextual translations
 - **Learning Interface**: Grid layout with display options and TTS support
 
-#### 🧠 AI Integration
+#### AI Integration
 
 - **Chrome Built-in AI**: Summarizer, Translator, Rewriter, Language Detector
 - **Gemini API Fallback**: Extended functionality for unsupported languages
 - **Intelligent Processing**: Context-aware translations and vocabulary analysis
 
-#### 💾 Data Management
+#### Data Management
 
 - **Local Storage**: Privacy-focused with no tracking
 - **Caching System**: Processed articles and translations
@@ -73,13 +73,13 @@ Chrome Built-in AI (Primary) → Gemini API (Fallback) → Error Handling
 
 ### Development Status
 
-- ✅ Core infrastructure and Chrome AI integration
-- ✅ Content extraction and processing pipeline
-- ✅ Comprehensive test suite (700+ tests)
-- ✅ Code quality tools (ESLint, Prettier, Husky)
-- 🚧 Learning interface implementation
-- 🚧 Settings and configuration UI
-- 📋 User acceptance testing and polish
+- **Completed**: Core infrastructure and Chrome AI integration
+- **Completed**: Content extraction and processing pipeline
+- **Completed**: Comprehensive test suite (700+ tests)
+- **Completed**: Code quality tools (ESLint, Prettier, Husky)
+- **In Progress**: Learning interface implementation
+- **In Progress**: Settings and configuration UI
+- **Planned**: User acceptance testing and polish
 
 ### Success Metrics
 

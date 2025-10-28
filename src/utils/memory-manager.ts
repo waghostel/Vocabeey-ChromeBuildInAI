@@ -466,7 +466,7 @@ export class MemoryManager {
     try {
       // Try to trigger garbage collection
       if ('gc' in window) {
-        (window as unknown).gc();
+        (window as any).gc();
         console.log('Forced garbage collection');
       } else if ('webkitRequestAnimationFrame' in window) {
         // Fallback: trigger through animation frame

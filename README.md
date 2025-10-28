@@ -2,7 +2,7 @@
 
 Interactive language learning extension using Chrome's built-in AI APIs to transform web articles into learning experiences.
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install dependencies
@@ -24,26 +24,26 @@ pnpm test
 pnpm test:coverage
 ```
 
-## 📖 Documentation
+## Documentation
 
-- **[📚 Complete Documentation](docs/README.md)** - Full documentation index
-- **[🏃 Quick Start Guide](docs/development/quick-start.md)** - Get running in 5 minutes
-- **[👥 User Guide](docs/user-guide/README.md)** - End-user documentation
-- **[🏗️ Architecture](docs/architecture/README.md)** - Technical architecture
-- **[🔧 API Reference](docs/api/README.md)** - Chrome AI integration
-- **[🧪 Testing Guide](docs/testing/README.md)** - Test suite and coverage
+- **[Complete Documentation](docs/README.md)** - Full documentation index
+- **[Quick Start Guide](docs/development/quick-start.md)** - Get running in 5 minutes
+- **[User Guide](docs/user-guide/README.md)** - End-user documentation
+- **[Architecture](docs/architecture/README.md)** - Technical architecture
+- **[API Reference](docs/api/README.md)** - Chrome AI integration
+- **[Testing Guide](docs/testing/README.md)** - Test suite and coverage
 
-## ✨ Features
+## Features
 
-- **🤖 AI-Powered Processing**: Chrome Built-in AI APIs with Gemini fallback
-- **📝 Smart Content Extraction**: Readability.js → Jina Reader API → DOM parsing pipeline
-- **🎯 Interactive Learning Interface**: Full-page takeover with card-based UI
-- **💬 Dual Highlighting System**: Vocabulary mode and sentence mode learning
-- **🔊 Text-to-Speech Support**: Native pronunciation with TTS service
-- **💾 Privacy-First Storage**: Local-first data with offline capability
-- **⚡ Performance Optimized**: Memory management and caching system
+- **AI-Powered Processing**: Chrome Built-in AI APIs with Gemini fallback
+- **Smart Content Extraction**: Readability.js → Jina Reader API → DOM parsing pipeline
+- **Interactive Learning Interface**: Full-page takeover with card-based UI
+- **Dual Highlighting System**: Vocabulary mode and sentence mode learning
+- **Text-to-Speech Support**: Native pronunciation with TTS service
+- **Privacy-First Storage**: Local-first data with offline capability
+- **Performance Optimized**: Memory management and caching system
 
-## 🛠️ Development
+## Development
 
 ### Prerequisites
 
@@ -98,7 +98,7 @@ pnpm test:ui          # Vitest UI
 pnpm validate:extension  # Full validation pipeline
 ```
 
-## 🧪 Quality Assurance
+## Quality Assurance
 
 - **740+ Tests**: Comprehensive test coverage across 22 test files
 - **Dual Linting**: Oxlint (primary) + ESLint (fallback) with TypeScript rules
@@ -106,7 +106,7 @@ pnpm validate:extension  # Full validation pipeline
 - **Pre-commit Hooks**: Husky with lint-staged for automated quality checks
 - **Performance Testing**: Memory management and benchmark tests included
 
-## 🏗️ Architecture
+## Architecture
 
 - **Chrome Extension**: Manifest V3 with service worker architecture
 - **AI Integration**: Chrome Built-in AI APIs (Summarizer, Translator, Rewriter, Language Detector) with Gemini fallback
@@ -114,10 +114,10 @@ pnpm validate:extension  # Full validation pipeline
 - **Storage**: Versioned schema with local-first privacy approach
 - **Testing**: Vitest with jsdom environment and Chrome API mocking
 
-## 📄 License
+## License
 
 MIT - See [LICENSE](LICENSE) for details
 
 ---
 
-**Ready to start?** Check the [Quick Start Guide](docs/development/quick-start.md) or [User Guide](docs/user-guide/README.md)
+**Ready to start?** Check the [Quick Start Guide](docs/development/quick-start.md) or [User Guide](docs/user-guide/README.md).

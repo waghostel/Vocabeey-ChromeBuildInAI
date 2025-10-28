@@ -4,7 +4,7 @@
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 18+ (required for ES2022 features)
 - pnpm 8+ (required, enforced via preinstall hook)
 - Chrome 140+ (for built-in AI APIs)
 
@@ -16,10 +16,10 @@ git clone <repository-url>
 cd language-learning-extension
 pnpm install
 
-# Initialize git hooks
+# Initialize git hooks (sets up Husky pre-commit hooks)
 pnpm prepare
 
-# Start development
+# Start development (TypeScript watch mode)
 pnpm dev
 ```
 
@@ -29,23 +29,30 @@ pnpm dev
 
 ```bash
 # Development
-pnpm dev              # Watch mode compilation
-pnpm build            # Production build
+pnpm dev              # TypeScript watch mode compilation
+pnpm build            # Production build (TypeScript + asset copying)
+pnpm copy-assets      # Copy static assets to dist/
 
 # Code Quality
 pnpm lint             # Oxlint (fast) checking
-pnpm lint:fix         # Auto-fix issues
-pnpm format           # Prettier formatting
-pnpm type-check       # TypeScript validation
+pnpm lint:fix         # Auto-fix linting issues
+pnpm lint:eslint      # ESLint alternative checking
+pnpm lint:eslint:fix  # ESLint auto-fix
+pnpm lint:manifest    # Prettier check for manifest.json
+pnpm lint:extension   # Combined linting (Oxlint + manifest)
+pnpm format           # Prettier formatting for all files
+pnpm format:check     # Check formatting without fixing
+pnpm type-check       # TypeScript validation without compilation
 
 # Testing
-pnpm test             # Run all tests
+pnpm test             # Run all tests once (Vitest)
 pnpm test:watch       # Watch mode testing
-pnpm test:coverage    # Coverage reports
-pnpm test:ui          # Vitest UI
+pnpm test:coverage    # Coverage reports with V8 provider
+pnpm test:ui          # Vitest UI interface
 
 # Extension Validation
-pnpm validate:extension  # Full validation pipeline
+pnpm validate:extension  # Full pipeline: lint + test + build
+pnpm lint:switch      # Switch between Oxlint and ESLint
 ```
 
 ### Code Quality Automation
@@ -61,24 +68,69 @@ Every commit automatically runs:
 #### Linting Strategy
 
 - **Oxlint (Default)**: Fast Rust-based linting for development
+  - Configuration: `oxlint.json` with TypeScript, correctness, and performance rules
+  - Globals: Chrome extension APIs, browser APIs, ES2022 environment
+  - Ignores: `dist/`, `node_modules/`, config files, scripts
 - **ESLint (Alternative)**: Comprehensive analysis for CI/CD
+  - Configuration: `eslint.config.js` with context-specific rules
+  - TypeScript support with `@typescript-eslint` plugin
+  - Context-aware rules for background, content, offscreen, and UI components
+  - Import ordering and Prettier integration
 - **Switch between linters**: `pnpm run lint:switch --oxlint|--eslint`
+  - Automatically updates `package.json` scripts and `lint-staged` configuration
+  - Runs the selected linter after switching
 
 ## Project Structure
 
 ```
 src/
-├── background/       # Service worker (no DOM access)
-├── content/          # Content scripts (DOM interaction)
-├── offscreen/        # Offscreen documents (AI processing)
-├── ui/               # User interface components
-├── types/            # TypeScript type definitions (centralized)
-└── utils/            # Shared utilities (single-responsibility)
+├── background/           # Service worker (no DOM access)
+│   └── service-worker.ts # Main background script
+├── content/              # Content scripts (DOM interaction)
+│   └── content-script.ts # Page content interaction
+├── offscreen/            # Offscreen documents (AI processing)
+│   ├── ai-processor.ts   # AI processing logic
+│   └── ai-processor.html # Offscreen document HTML
+├── ui/                   # User interface components
+│   ├── learning-interface.* # Main learning UI
+│   ├── settings.*        # Settings interface
+│   ├── setup-wizard.*    # Initial setup flow
+│   └── highlight-manager.ts # Text highlighting logic
+├── types/                # TypeScript type definitions (centralized)
+│   └── index.ts          # All interface definitions
+└── utils/                # Shared utilities (single-responsibility)
+    ├── ai-service-coordinator.ts # AI service orchestration
+    ├── article-processor.ts      # Article content processing
+    ├── batch-processor.ts        # Batch processing utilities
+    ├── cache-manager.ts          # Caching system
+    ├── chrome-ai.ts              # Chrome Built-in AI APIs
+    ├── content-extraction.ts     # Content extraction pipeline
+    ├── data-migrator.ts          # Data migration utilities
+    ├── error-handler.ts          # Centralized error handling
+    ├── gemini-api.ts             # Gemini API integration
+    ├── import-export.ts          # Data import/export
+    ├── memory-manager.ts         # Memory optimization
+    ├── offline-handler.ts        # Offline functionality
+    ├── offscreen-manager.ts      # Offscreen document management
+    ├── progress-tracker.ts       # Progress tracking
+    ├── storage-manager.ts        # Data persistence
+    └── tts-service.ts            # Text-to-speech
 
-tests/                # Test files with comprehensive coverage
-dist/                 # Compiled output (generated)
-docs/                 # Documentation
-.kiro/                # Kiro IDE configuration and specs
+tests/                    # Test files with comprehensive coverage
+├── setup/                # Test configuration and mocking
+│   └── chrome-mock.ts    # Chrome API mocking utilities
+├── setup.ts              # Global test setup
+├── *.test.ts             # Unit and integration tests
+├── integration.test.ts   # Cross-component integration
+├── user-acceptance.test.ts # End-to-end user workflows
+└── system-integration.test.ts # System-wide integration
+
+dist/                     # Compiled output (generated by build)
+docs/                     # Documentation
+.kiro/                    # Kiro IDE configuration and specs
+scripts/                  # Build and utility scripts
+├── copy-assets.js        # Asset copying for build
+└── lint-switcher.js      # Linter switching utility
 ```
 
 ### Architecture Principles
@@ -127,25 +179,54 @@ chrome.runtime.sendMessage<ExtractContentMessage>({
 
 ```
 tests/
-├── setup.ts                    # Global test configuration
-├── setup/chrome-mock.ts        # Chrome API mocking utilities
-├── *.test.ts                   # Unit tests
-├── integration.test.ts         # Cross-component integration
-├── user-acceptance.test.ts     # End-to-end user workflows
-└── system-integration.test.ts  # System-wide integration
+├── setup.ts                        # Global test configuration (Vitest + jsdom)
+├── setup/
+│   └── chrome-mock.ts              # Chrome API mocking utilities
+├── ai-fallback.test.ts             # AI service fallback testing
+├── batch-processor-integration.test.ts # Batch processing integration
+├── cache-manager.test.ts           # Cache system unit tests
+├── cache-manager-edge-cases.test.ts # Cache edge cases
+├── cache-performance-benchmark.test.ts # Performance benchmarks
+├── chrome-ai.test.ts               # Chrome AI API integration
+├── content-extraction.test.ts      # Content extraction pipeline
+├── content-script.test.ts          # Content script functionality
+├── cross-component-integration.test.ts # Cross-component integration
+├── error-handling.test.ts          # Error handling systems
+├── error-scenarios.test.ts         # Error scenario testing
+├── integration.test.ts             # General integration tests
+├── manifest.test.ts                # Manifest validation
+├── memory-management.test.ts       # Memory optimization tests
+├── performance.test.ts             # Performance testing
+├── service-worker.test.ts          # Background script testing
+├── settings-system.test.ts         # Settings management
+├── storage-system.test.ts          # Storage system tests
+├── system-integration.test.ts      # System-wide integration
+├── tts-service.test.ts             # Text-to-speech testing
+├── ui-components.test.ts           # UI component testing
+└── user-acceptance.test.ts         # End-to-end user workflows
 ```
 
 ### Test Categories
 
-- **Unit Tests**: Individual component functionality
-- **Integration Tests**: Component interaction and data flow
-- **User Acceptance Tests**: Complete user workflows
-- **System Tests**: Extension lifecycle and performance
+- **Unit Tests**: Individual component functionality (cache-manager, chrome-ai, etc.)
+- **Integration Tests**: Component interaction and data flow (cross-component, batch-processor)
+- **Performance Tests**: Benchmarking and optimization validation
+- **Edge Case Tests**: Boundary conditions and error scenarios
+- **User Acceptance Tests**: Complete user workflows and acceptance criteria
+- **System Tests**: Extension lifecycle, memory management, and system-wide behavior
+
+### Test Framework Configuration
+
+- **Test Runner**: Vitest with jsdom environment
+- **Coverage Provider**: V8 with HTML and JSON reports
+- **Global Setup**: Chrome API mocking in `tests/setup.ts`
+- **Chrome API Mocking**: Comprehensive mocking in `tests/setup/chrome-mock.ts`
+- **TypeScript Config**: Separate `tsconfig.test.json` for test-specific settings
 
 ### Running Tests
 
 ```bash
-# All tests
+# All tests (single run)
 pnpm test
 
 # Specific test file
@@ -154,8 +235,14 @@ pnpm test tests/chrome-ai.test.ts
 # Watch mode for development
 pnpm test:watch
 
-# Coverage report
+# Coverage report (HTML + JSON)
 pnpm test:coverage
+
+# Interactive UI
+pnpm test:ui
+
+# Performance benchmarks
+pnpm test tests/cache-performance-benchmark.test.ts
 ```
 
 ## Code Style Guidelines
@@ -194,25 +281,82 @@ import { getCacheManager } from '../utils/cache-manager';
 ### TypeScript Compilation
 
 - **Target**: ES2022 with ES2022 modules
-- **Output**: `dist/` directory with source maps
-- **Type Checking**: Strict mode with Chrome types
+- **Output**: `dist/` directory with source maps enabled
+- **Type Checking**: Strict mode with Chrome types and `@types/chrome`
+- **Configuration**: `tsconfig.json` with strict settings
+- **Test Configuration**: Separate `tsconfig.test.json` for test files
 
-### Asset Pipeline
+### Asset Pipeline (`scripts/copy-assets.js`)
 
-- **Static Assets**: Copied via `scripts/copy-assets.js`
-- **Manifest**: Chrome Extension Manifest V3
-- **Icons**: Multiple sizes for different contexts
+The build process copies static assets from source to distribution:
 
-### Build Output
+```javascript
+// Assets copied during build:
+- manifest.json → dist/manifest.json
+- icons/ → dist/icons/ (directory structure)
+- src/ui/learning-interface.html → dist/ui/learning-interface.html
+- src/ui/learning-interface.css → dist/ui/learning-interface.css
+- src/ui/setup-wizard.html → dist/ui/setup-wizard.html
+- src/ui/setup-wizard.css → dist/ui/setup-wizard.css
+- src/ui/settings.html → dist/ui/settings.html
+- src/ui/settings.css → dist/ui/settings.css
+- src/offscreen/ai-processor.html → dist/offscreen/ai-processor.html
+```
+
+### Build Commands
+
+```bash
+# Full build (TypeScript + assets)
+pnpm build
+
+# TypeScript compilation only
+tsc
+
+# Asset copying only
+pnpm copy-assets
+
+# Development build with watch
+pnpm dev
+```
+
+### Build Output Structure
 
 ```
 dist/
-├── background/service-worker.js
-├── content/content-script.js
-├── offscreen/ai-processor.js
-├── ui/*.js
-└── manifest.json
+├── background/
+│   └── service-worker.js         # Background script
+├── content/
+│   └── content-script.js         # Content script
+├── offscreen/
+│   ├── ai-processor.js           # Offscreen processing
+│   └── ai-processor.html         # Offscreen document
+├── ui/
+│   ├── learning-interface.js     # Learning interface logic
+│   ├── learning-interface.html   # Learning interface HTML
+│   ├── learning-interface.css    # Learning interface styles
+│   ├── settings.js               # Settings logic
+│   ├── settings.html             # Settings HTML
+│   ├── settings.css              # Settings styles
+│   ├── setup-wizard.js           # Setup wizard logic
+│   ├── setup-wizard.html         # Setup wizard HTML
+│   ├── setup-wizard.css          # Setup wizard styles
+│   └── highlight-manager.js      # Highlighting logic
+├── types/
+│   └── index.js                  # Type definitions (compiled)
+├── utils/
+│   └── *.js                      # All utility modules
+├── icons/                        # Extension icons
+└── manifest.json                 # Chrome extension manifest
 ```
+
+### Build Validation
+
+The `validate:extension` command runs the complete validation pipeline:
+
+1. **Linting**: Oxlint source code + Prettier manifest check
+2. **Testing**: Full test suite with coverage
+3. **Building**: TypeScript compilation + asset copying
+4. **Verification**: Ensures build output is complete and valid
 
 ## Debugging
 
@@ -263,33 +407,73 @@ test: add integration tests for AI fallback
 
 ### Common Development Issues
 
-#### ESLint/Oxlint Errors
+#### Linting Errors
 
 ```bash
-# Clear cache
+# Fix Oxlint issues automatically
+pnpm lint:fix
+
+# Switch to ESLint for more detailed analysis
+pnpm run lint:switch --eslint
+
+# Clear ESLint cache (if using ESLint)
 pnpm exec eslint --clear-cache
 
-# Switch linters
+# Switch back to Oxlint for faster development
 pnpm run lint:switch --oxlint
+
+# Check specific file
+pnpm lint src/utils/specific-file.ts
 ```
 
 #### Test Failures
 
 ```bash
-# Run specific test
-pnpm test tests/failing-test.test.ts
+# Run specific test file
+pnpm test tests/chrome-ai.test.ts
 
-# Debug with UI
+# Run tests matching pattern
+pnpm test --grep "cache manager"
+
+# Debug with interactive UI
 pnpm test:ui
+
+# Run tests with coverage to identify gaps
+pnpm test:coverage
+
+# Watch mode for continuous testing
+pnpm test:watch
 ```
 
 #### Build Issues
 
 ```bash
-# Clean build
-rm -rf dist node_modules
+# Clean build (Windows)
+rmdir /s /q dist node_modules
 pnpm install
 pnpm build
+
+# Type checking without compilation
+pnpm type-check
+
+# Build assets only
+pnpm copy-assets
+
+# Validate entire extension
+pnpm validate:extension
+```
+
+#### Package Manager Issues
+
+```bash
+# Clear pnpm cache
+pnpm store prune
+
+# Reinstall dependencies
+pnpm install --frozen-lockfile
+
+# Update dependencies
+pnpm update
 ```
 
 #### Chrome Extension Issues
@@ -298,6 +482,13 @@ pnpm build
 - Verify permissions in Chrome
 - Check service worker console for errors
 - Ensure content scripts are injected properly
+
+## Related Documentation
+
+- **[Architecture Overview](../architecture/README.md)** - System design and component relationships
+- **[API Reference](../api/README.md)** - Chrome AI integration details
+- **[Testing Guide](../testing/README.md)** - Test suite and coverage
+- **[User Guide](../user-guide/README.md)** - End-user feature documentation
 
 ### Getting Help
 

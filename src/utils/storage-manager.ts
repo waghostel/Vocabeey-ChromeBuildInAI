@@ -418,7 +418,7 @@ export class StorageManager {
     const vocabItems = Object.values(vocabulary);
     if (vocabItems.length > 0) {
       markdown += '## Vocabulary\n\n';
-      vocabItems.forEach((item: unknown) => {
+      vocabItems.forEach((item: any) => {
         markdown += `### ${item.word}\n`;
         markdown += `- Translation: ${item.translation}\n`;
         markdown += `- Context: ${item.context}\n`;
@@ -432,7 +432,7 @@ export class StorageManager {
     const sentenceItems = Object.values(sentences);
     if (sentenceItems.length > 0) {
       markdown += '## Sentences\n\n';
-      sentenceItems.forEach((item: unknown) => {
+      sentenceItems.forEach((item: any) => {
         markdown += `- ${item.content}\n`;
         markdown += `  - Translation: ${item.translation}\n\n`;
       });
