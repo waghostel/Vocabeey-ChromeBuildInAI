@@ -31,10 +31,7 @@ The Language Learning Chrome Extension is built using Chrome Extension Manifest 
     }
   ],
 
-  "action": {
-    "default_popup": "ui/popup/popup.html",
-    "default_title": "Language Learning Reader"
-  },
+  "action": {},
 
   "web_accessible_resources": [
     {
@@ -79,29 +76,53 @@ The Language Learning Chrome Extension is built using Chrome Extension Manifest 
 - Storage initialization
 - System capability detection
 
+**Trigger Mechanism**:
+
+The extension uses **click-based activation** rather than automatic processing:
+
+- **Empty Action Object**: `"action": {}` in manifest means no popup is defined
+- **Click Handler**: `chrome.action.onClicked` listener responds to toolbar icon clicks
+- **On-Demand Processing**: Content extraction only occurs when user explicitly requests it
+- **No Auto-Processing**: Extension does NOT automatically process pages on load
+
 **Implementation**:
 
 ```typescript
-// Service worker registration
-chrome.action.onClicked.addListener(async tab => {
-  if (!isValidUrl(tab.url)) return;
+// Extension icon click handler
+chrome.action.onClicked.addListener(async (tab): Promise<void> => {
+  if (!tab.id) return;
 
-  // Inject content script
+  // Validate tab URL (skip chrome:// pages)
+  if (
+    !tab.url ||
+    tab.url.startsWith('chrome://') ||
+    tab.url.startsWith('chrome-extension://')
+  ) {
+    console.warn('Cannot process chrome:// or extension pages');
+    return;
+  }
+
+  // Inject content script dynamically
   await chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    function: extractContent,
+    files: ['dist/content/content-script.js'],
   });
 });
 
-// Message handling
+// Message handling between components
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.type) {
     case 'CONTENT_EXTRACTED':
-      handleContentExtraction(message, sender);
-      break;
+      handleContentExtracted(message.data)
+        .then(() => sendResponse({ success: true }))
+        .catch(error => sendResponse({ success: false, error: error.message }));
+      return true;
+
     case 'OPEN_LEARNING_INTERFACE':
-      openLearningInterface(message.articleId);
-      break;
+      openLearningInterface(message.data)
+        .then(tabId => sendResponse({ success: true, data: { tabId } }))
+        .catch(error => sendResponse({ success: false, error: error.message }));
+      return true;
   }
 });
 ```

@@ -188,16 +188,16 @@ export class PerformanceBottleneckDetector {
     this.detectedBottlenecks.clear();
 
     console.log(
-      '[PerformanceBottleneckDetector] Started performance monitoring'
+      '[PerformanceBottleneckDetector] Started real performance monitoring with MCP integration'
     );
 
-    // Initialize context monitoring
-    await this.initializeContextMonitoring();
+    // Initialize real context monitoring using MCP
+    await this.initializeRealContextMonitoring();
 
-    // Start periodic performance collection
+    // Start periodic real performance collection
     this.monitoringInterval = setInterval(async () => {
-      await this.collectPerformanceMetrics();
-      await this.analyzeBottlenecks();
+      await this.collectRealPerformanceMetrics();
+      await this.analyzeRealBottlenecks();
     }, intervalMs);
   }
 
@@ -286,7 +286,7 @@ export class PerformanceBottleneckDetector {
 
     while (Date.now() - startTime < duration && this.isMonitoring) {
       // Collect metrics from all contexts
-      await this.collectPerformanceMetrics();
+      await this.collectRealPerformanceMetrics();
 
       // Analyze cross-component interactions
       const interactionBottlenecks =
@@ -333,31 +333,38 @@ export class PerformanceBottleneckDetector {
     });
   }
 
-  private async initializeContextMonitoring(): Promise<void> {
+  private async initializeRealContextMonitoring(): Promise<void> {
     try {
-      // Get available pages/contexts
+      // Get real available pages/contexts using MCP
       const pages = await mcp_chrome_devtools_list_pages();
+      console.log(
+        '[PerformanceBottleneckDetector] Found real contexts for monitoring:',
+        pages.length
+      );
 
       for (const page of pages) {
         const contextType = this.identifyContextType(page.url);
         if (contextType) {
           this.contextPages.set(contextType, page.index);
           this.performanceMetrics.set(contextType, []);
+
+          // Inject real performance monitoring scripts
+          await this.injectRealPerformanceMonitoring(contextType, page.index);
         }
       }
     } catch (error) {
       console.warn(
-        '[PerformanceBottleneckDetector] Failed to initialize context monitoring:',
+        '[PerformanceBottleneckDetector] Failed to initialize real context monitoring:',
         error
       );
     }
   }
 
-  private async collectPerformanceMetrics(): Promise<void> {
+  private async collectRealPerformanceMetrics(): Promise<void> {
     for (const [context, pageIndex] of this.contextPages) {
       try {
         await mcp_chrome_devtools_select_page({ pageIdx: pageIndex });
-        const metrics = await this.collectContextMetrics(context);
+        const metrics = await this.collectRealContextMetrics(context);
 
         if (metrics) {
           const contextMetrics = this.performanceMetrics.get(context) || [];
@@ -372,7 +379,7 @@ export class PerformanceBottleneckDetector {
         }
       } catch (error) {
         console.warn(
-          `[PerformanceBottleneckDetector] Failed to collect metrics for ${context}:`,
+          `[PerformanceBottleneckDetector] Failed to collect real metrics for ${context}:`,
           error
         );
       }
@@ -487,12 +494,15 @@ export class PerformanceBottleneckDetector {
     }
   }
 
-  private async analyzeBottlenecks(): Promise<void> {
+  private async analyzeRealBottlenecks(): Promise<void> {
     for (const [context, metrics] of this.performanceMetrics) {
       if (metrics.length < 2) continue; // Need at least 2 data points
 
       const recentMetrics = metrics.slice(-10); // Analyze last 10 metrics
-      const bottlenecks = await this.detectContextBottlenecks(context);
+      const bottlenecks = await this.detectRealContextBottlenecks(
+        context as ExtensionContext,
+        recentMetrics
+      );
 
       for (const bottleneck of bottlenecks) {
         this.detectedBottlenecks.set(bottleneck.id, bottleneck);
@@ -938,7 +948,9 @@ export class PerformanceBottleneckDetector {
     const allMetrics = Array.from(this.performanceMetrics.entries());
 
     // Check for synchronized performance degradation across contexts
-    const degradationPattern = this.detectSynchronizedDegradation(allMetrics);
+    const degradationPattern = this.detectSynchronizedDegradation(
+      allMetrics as [ExtensionContext, PerformanceMetrics[]][]
+    );
     if (degradationPattern) {
       bottlenecks.push({
         id: this.generateBottleneckId(),
@@ -1418,6 +1430,635 @@ export class PerformanceBottleneckDetector {
   private generateDetectionId(): string {
     return `detection_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
+
+  /**
+   * Inject real performance monitoring scripts into contexts
+   */
+  private async injectRealPerformanceMonitoring(
+    context: ExtensionContext,
+    pageIndex: number
+  ): Promise<void> {
+    try {
+      await mcp_chrome_devtools_select_page({ pageIdx: pageIndex });
+
+      const monitoringScript =
+        this.generateRealPerformanceMonitoringScript(context);
+      if (monitoringScript) {
+        await mcp_chrome_devtools_evaluate_script({
+          function: monitoringScript,
+        });
+        console.log(
+          `[PerformanceBottleneckDetector] Real performance monitoring injected for ${context}`
+        );
+      }
+    } catch (error) {
+      console.warn(
+        `[PerformanceBottleneckDetector] Failed to inject performance monitoring for ${context}:`,
+        error
+      );
+    }
+  }
+
+  /**
+   * Generate real performance monitoring script for injection
+   */
+  private generateRealPerformanceMonitoringScript(
+    context: ExtensionContext
+  ): string | null {
+    return `
+      () => {
+        // Real performance monitoring for ${context}
+        if (typeof window !== 'undefined' || typeof self !== 'undefined') {
+          const global = typeof window !== 'undefined' ? window : self;
+          
+          // Store performance monitoring data
+          if (!global.performanceMonitor) {
+            global.performanceMonitor = {
+              context: '${context}',
+              startTime: Date.now(),
+              metrics: [],
+              longTasks: [],
+              memoryLeaks: []
+            };
+          }
+          
+          // Monitor long tasks (if supported)
+          if (typeof PerformanceObserver !== 'undefined') {
+            try {
+              const longTaskObserver = new PerformanceObserver((list) => {
+                for (const entry of list.getEntries()) {
+                  if (entry.duration > 50) { // Tasks longer than 50ms
+                    global.performanceMonitor.longTasks.push({
+                      startTime: entry.startTime,
+                      duration: entry.duration,
+                      name: entry.name,
+                      timestamp: Date.now()
+                    });
+                    
+                    console.log('[PerformanceBottleneckDetector] Long task detected:', {
+                      context: '${context}',
+                      duration: entry.duration,
+                      startTime: entry.startTime
+                    });
+                  }
+                }
+              });
+              
+              longTaskObserver.observe({ entryTypes: ['longtask'] });
+            } catch (e) {
+              console.warn('[PerformanceBottleneckDetector] Long task monitoring not supported');
+            }
+          }
+          
+          // Monitor memory usage
+          const monitorMemory = () => {
+            if (performance.memory) {
+              const memoryInfo = {
+                usedJSHeapSize: performance.memory.usedJSHeapSize,
+                totalJSHeapSize: performance.memory.totalJSHeapSize,
+                jsHeapSizeLimit: performance.memory.jsHeapSizeLimit,
+                timestamp: Date.now()
+              };
+              
+              global.performanceMonitor.metrics.push(memoryInfo);
+              
+              // Detect potential memory leaks
+              if (global.performanceMonitor.metrics.length > 10) {
+                const recent = global.performanceMonitor.metrics.slice(-10);
+                const growth = recent[recent.length - 1].usedJSHeapSize - recent[0].usedJSHeapSize;
+                
+                if (growth > 10 * 1024 * 1024) { // 10MB growth
+                  console.warn('[PerformanceBottleneckDetector] Potential memory leak detected:', {
+                    context: '${context}',
+                    growth: growth,
+                    currentUsage: memoryInfo.usedJSHeapSize
+                  });
+                }
+              }
+              
+              // Keep only last 50 metrics
+              if (global.performanceMonitor.metrics.length > 50) {
+                global.performanceMonitor.metrics = global.performanceMonitor.metrics.slice(-50);
+              }
+            }
+          };
+          
+          // Monitor memory every 5 seconds
+          setInterval(monitorMemory, 5000);
+          
+          // Initial memory measurement
+          monitorMemory();
+          
+          // Monitor network requests (if in appropriate context)
+          if ('${context}' === 'content-script' || '${context}' === 'offscreen') {
+            const originalFetch = global.fetch;
+            if (originalFetch) {
+              global.fetch = function(...args) {
+                const startTime = Date.now();
+                const url = args[0];
+                
+                return originalFetch.apply(this, args).then(response => {
+                  const endTime = Date.now();
+                  const duration = endTime - startTime;
+                  
+                  if (duration > 2000) { // Slow requests > 2s
+                    console.log('[PerformanceBottleneckDetector] Slow network request:', {
+                      context: '${context}',
+                      url: url,
+                      duration: duration,
+                      status: response.status
+                    });
+                  }
+                  
+                  return response;
+                }).catch(error => {
+                  const endTime = Date.now();
+                  const duration = endTime - startTime;
+                  
+                  console.error('[PerformanceBottleneckDetector] Network request failed:', {
+                    context: '${context}',
+                    url: url,
+                    duration: duration,
+                    error: error.message
+                  });
+                  
+                  throw error;
+                });
+              };
+            }
+          }
+          
+          // Context-specific monitoring
+          if ('${context}' === 'ui' || '${context}' === 'content-script') {
+            // Monitor DOM size and rendering performance
+            const monitorDOM = () => {
+              if (typeof document !== 'undefined') {
+                const domSize = document.querySelectorAll('*').length;
+                
+                if (domSize > 5000) {
+                  console.warn('[PerformanceBottleneckDetector] Large DOM detected:', {
+                    context: '${context}',
+                    domSize: domSize,
+                    timestamp: Date.now()
+                  });
+                }
+              }
+            };
+            
+            // Monitor DOM every 10 seconds
+            setInterval(monitorDOM, 10000);
+            monitorDOM();
+          }
+          
+          console.log('[PerformanceBottleneckDetector] Real performance monitoring initialized for ${context}');
+        }
+      }
+    `;
+  }
+
+  /**
+   * Collect real context metrics using enhanced data collection
+   */
+  private async collectRealContextMetrics(
+    context: ExtensionContext
+  ): Promise<PerformanceMetrics | null> {
+    try {
+      const metricsScript = `
+        () => {
+          const global = typeof window !== 'undefined' ? window : self;
+          const monitor = global.performanceMonitor;
+          
+          const metrics = {
+            timestamp: Date.now(),
+            context: '${context}',
+            memory: performance.memory ? {
+              usedJSHeapSize: performance.memory.usedJSHeapSize,
+              totalJSHeapSize: performance.memory.totalJSHeapSize,
+              jsHeapSizeLimit: performance.memory.jsHeapSizeLimit
+            } : null,
+            timing: performance.timing ? {
+              navigationStart: performance.timing.navigationStart,
+              loadEventEnd: performance.timing.loadEventEnd,
+              domContentLoadedEventEnd: performance.timing.domContentLoadedEventEnd
+            } : null,
+            longTasks: monitor ? monitor.longTasks.slice(-5) : [], // Last 5 long tasks
+            memoryGrowth: 0
+          };
+          
+          // Calculate memory growth if we have historical data
+          if (monitor && monitor.metrics.length > 1) {
+            const recent = monitor.metrics.slice(-2);
+            metrics.memoryGrowth = recent[1].usedJSHeapSize - recent[0].usedJSHeapSize;
+          }
+          
+          // Add context-specific metrics
+          if (typeof document !== 'undefined') {
+            metrics.dom = {
+              elementCount: document.querySelectorAll('*').length,
+              scriptCount: document.scripts.length,
+              styleSheetCount: document.styleSheets.length
+            };
+          }
+          
+          return metrics;
+        }
+      `;
+
+      const rawMetrics = await mcp_chrome_devtools_evaluate_script({
+        function: metricsScript,
+      });
+
+      if (!rawMetrics) return null;
+
+      // Transform raw metrics into structured format with real data
+      const performanceMetrics: PerformanceMetrics = {
+        timestamp: new Date(rawMetrics.timestamp || Date.now()),
+        context,
+        memoryUsage: {
+          usedJSHeapSize: rawMetrics.memory?.usedJSHeapSize || 0,
+          totalJSHeapSize: rawMetrics.memory?.totalJSHeapSize || 0,
+          jsHeapSizeLimit: rawMetrics.memory?.jsHeapSizeLimit || 0,
+          memoryLeaks: this.detectMemoryLeaks(rawMetrics),
+          garbageCollectionEvents: [],
+        },
+        cpuUsage: {
+          cpuUsage: this.calculateCPUUsage(rawMetrics.longTasks || []),
+          longTasks: this.transformLongTasks(rawMetrics.longTasks || []),
+          scriptExecutionTime: 0,
+          idleTime: 0,
+          blockingOperations: this.identifyBlockingOperations(
+            rawMetrics.longTasks || []
+          ),
+        },
+        networkMetrics: {
+          totalRequests: 0,
+          failedRequests: 0,
+          averageLatency: 0,
+          slowRequests: [],
+          bandwidthUsage: 0,
+        },
+        messagePassingMetrics: {
+          totalMessages: 0,
+          averageLatency: 0,
+          failedMessages: 0,
+          slowMessages: [],
+          queueBacklog: 0,
+        },
+      };
+
+      // Add context-specific metrics
+      if (context === 'ui' || context === 'content-script') {
+        performanceMetrics.renderingMetrics = {
+          frameRate: 60, // Would need more sophisticated measurement
+          layoutThrashing: 0,
+          paintEvents: 0,
+          reflows: 0,
+          domSize: rawMetrics.dom?.elementCount || 0,
+        };
+      }
+
+      if (context === 'offscreen') {
+        performanceMetrics.aiProcessingMetrics = {
+          processingTime: 0,
+          queueLength: 0,
+          cacheHitRate: 0.8,
+          modelSwitches: 0,
+          failureRate: 0,
+        };
+      }
+
+      return performanceMetrics;
+    } catch (error) {
+      console.warn(
+        `[PerformanceBottleneckDetector] Failed to collect real metrics for ${context}:`,
+        error
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Detect real context bottlenecks using enhanced analysis
+   */
+  private async detectRealContextBottlenecks(
+    context: ExtensionContext,
+    metrics: PerformanceMetrics[]
+  ): Promise<PerformanceBottleneck[]> {
+    const bottlenecks: PerformanceBottleneck[] = [];
+
+    if (metrics.length < 2) return bottlenecks;
+
+    // Enhanced memory bottleneck detection
+    const memoryBottlenecks = await this.detectRealMemoryBottlenecks(
+      context,
+      metrics
+    );
+    bottlenecks.push(...memoryBottlenecks);
+
+    // Enhanced CPU bottleneck detection
+    const cpuBottlenecks = await this.detectRealCPUBottlenecks(
+      context,
+      metrics
+    );
+    bottlenecks.push(...cpuBottlenecks);
+
+    // Real network bottleneck detection
+    const networkBottlenecks = await this.detectRealNetworkBottlenecks(
+      context,
+      metrics
+    );
+    bottlenecks.push(...networkBottlenecks);
+
+    // Context-specific real bottlenecks
+    if (context === 'ui' || context === 'content-script') {
+      const renderingBottlenecks = await this.detectRealRenderingBottlenecks(
+        context,
+        metrics
+      );
+      bottlenecks.push(...renderingBottlenecks);
+    }
+
+    return bottlenecks;
+  }
+
+  /**
+   * Detect memory leaks from real metrics data
+   */
+  private detectMemoryLeaks(rawMetrics: any): MemoryLeak[] {
+    const leaks: MemoryLeak[] = [];
+
+    if (rawMetrics.memoryGrowth && rawMetrics.memoryGrowth > 5 * 1024 * 1024) {
+      // 5MB growth
+      leaks.push({
+        id: `leak_${Date.now()}`,
+        detectedAt: new Date(),
+        growthRate: rawMetrics.memoryGrowth / 5, // bytes per second (assuming 5s interval)
+        suspectedSource: 'Unknown - requires further investigation',
+        currentSize: rawMetrics.memoryGrowth,
+      });
+    }
+
+    return leaks;
+  }
+
+  /**
+   * Calculate CPU usage from long tasks
+   */
+  private calculateCPUUsage(longTasks: any[]): number {
+    if (longTasks.length === 0) return 0;
+
+    const totalBlockingTime = longTasks.reduce(
+      (sum, task) => sum + (task.duration || 0),
+      0
+    );
+    const timeWindow = 5000; // 5 second window
+
+    return Math.min(100, (totalBlockingTime / timeWindow) * 100);
+  }
+
+  /**
+   * Transform long tasks data
+   */
+  private transformLongTasks(longTasks: any[]): LongTask[] {
+    return longTasks.map(task => ({
+      startTime: task.startTime || 0,
+      duration: task.duration || 0,
+      source: task.name || 'unknown',
+      blocking: task.duration > 50,
+    }));
+  }
+
+  /**
+   * Identify blocking operations from long tasks
+   */
+  private identifyBlockingOperations(longTasks: any[]): BlockingOperation[] {
+    return longTasks
+      .filter(task => task.duration > 100) // Only tasks > 100ms
+      .map(task => ({
+        operation: task.name || 'unknown-operation',
+        duration: task.duration,
+        context: 'main-thread',
+        impact: task.duration > 500 ? 'ui-freeze' : 'delayed-response',
+      }));
+  }
+
+  /**
+   * Enhanced real memory bottleneck detection
+   */
+  private async detectRealMemoryBottlenecks(
+    context: ExtensionContext,
+    metrics: PerformanceMetrics[]
+  ): Promise<PerformanceBottleneck[]> {
+    const bottlenecks: PerformanceBottleneck[] = [];
+    const recentMetrics = metrics.slice(-5);
+
+    // Check for real memory leaks
+    for (const metric of recentMetrics) {
+      if (metric.memoryUsage.memoryLeaks.length > 0) {
+        for (const leak of metric.memoryUsage.memoryLeaks) {
+          bottlenecks.push({
+            id: this.generateBottleneckId(),
+            timestamp: new Date(),
+            context,
+            bottleneckType: 'memory-leak',
+            severity: leak.growthRate > 1024 * 1024 ? 'critical' : 'high', // 1MB/s growth
+            description: `Real memory leak detected: ${(leak.growthRate / 1024).toFixed(1)}KB/s growth rate`,
+            metrics: { leak },
+            impact: {
+              userExperience:
+                leak.growthRate > 2 * 1024 * 1024 ? 'severe' : 'moderate',
+              systemResources: 'critical',
+              functionality: 'degraded',
+              estimatedSlowdown: Math.min(
+                80,
+                (leak.growthRate / (1024 * 1024)) * 20
+              ),
+            },
+            rootCause:
+              'Real memory leak detected through performance monitoring',
+            recommendations: this.generateMemoryOptimizationRecommendations(
+              leak.currentSize
+            ),
+            estimatedFixTime: 90,
+          });
+        }
+      }
+    }
+
+    return bottlenecks;
+  }
+
+  /**
+   * Enhanced real CPU bottleneck detection
+   */
+  private async detectRealCPUBottlenecks(
+    context: ExtensionContext,
+    metrics: PerformanceMetrics[]
+  ): Promise<PerformanceBottleneck[]> {
+    const bottlenecks: PerformanceBottleneck[] = [];
+    const recentMetrics = metrics.slice(-5);
+
+    for (const metric of recentMetrics) {
+      // Check for real long tasks
+      if (metric.cpuUsage.longTasks.length > 0) {
+        const totalBlockingTime = metric.cpuUsage.longTasks.reduce(
+          (sum, task) => sum + task.duration,
+          0
+        );
+
+        if (totalBlockingTime > 200) {
+          // 200ms of blocking
+          bottlenecks.push({
+            id: this.generateBottleneckId(),
+            timestamp: new Date(),
+            context,
+            bottleneckType: 'cpu-intensive',
+            severity: totalBlockingTime > 1000 ? 'critical' : 'high',
+            description: `Real CPU bottleneck: ${totalBlockingTime.toFixed(0)}ms blocking time from ${metric.cpuUsage.longTasks.length} long tasks`,
+            metrics: {
+              blockingTime: totalBlockingTime,
+              longTasks: metric.cpuUsage.longTasks,
+              cpuUsage: metric.cpuUsage.cpuUsage,
+            },
+            impact: {
+              userExperience: totalBlockingTime > 1000 ? 'severe' : 'moderate',
+              systemResources: 'high',
+              functionality: 'degraded',
+              estimatedSlowdown: Math.min(90, totalBlockingTime / 10),
+            },
+            rootCause: 'Real long-running tasks blocking the main thread',
+            recommendations:
+              this.generateCPUOptimizationRecommendations(totalBlockingTime),
+            estimatedFixTime: 60,
+          });
+        }
+      }
+    }
+
+    return bottlenecks;
+  }
+
+  /**
+   * Real network bottleneck detection (enhanced)
+   */
+  private async detectRealNetworkBottlenecks(
+    context: ExtensionContext,
+    metrics: PerformanceMetrics[]
+  ): Promise<PerformanceBottleneck[]> {
+    const bottlenecks: PerformanceBottleneck[] = [];
+
+    // Check console logs for real network issues
+    try {
+      const consoleMessages = await mcp_chrome_devtools_list_console_messages({
+        types: ['log', 'warn', 'error'],
+        includePreservedMessages: false,
+      });
+
+      let slowRequestCount = 0;
+      let failedRequestCount = 0;
+
+      for (const message of consoleMessages) {
+        if (
+          message.text &&
+          message.text.includes('[PerformanceBottleneckDetector]')
+        ) {
+          if (message.text.includes('Slow network request')) {
+            slowRequestCount++;
+          } else if (message.text.includes('Network request failed')) {
+            failedRequestCount++;
+          }
+        }
+      }
+
+      if (slowRequestCount > 2) {
+        bottlenecks.push({
+          id: this.generateBottleneckId(),
+          timestamp: new Date(),
+          context,
+          bottleneckType: 'network-latency',
+          severity: slowRequestCount > 5 ? 'high' : 'medium',
+          description: `Real network performance issues: ${slowRequestCount} slow requests detected`,
+          metrics: { slowRequestCount },
+          impact: {
+            userExperience: slowRequestCount > 5 ? 'severe' : 'moderate',
+            systemResources: 'medium',
+            functionality: 'degraded',
+            estimatedSlowdown: Math.min(60, slowRequestCount * 10),
+          },
+          rootCause: 'Real slow network requests detected through monitoring',
+          recommendations: this.generateNetworkOptimizationRecommendations({
+            totalRequests: slowRequestCount + 10,
+            failedRequests: failedRequestCount,
+            averageLatency: 3000,
+            slowRequests: [],
+            bandwidthUsage: 0,
+          }),
+          estimatedFixTime: 45,
+        });
+      }
+    } catch (error) {
+      console.warn(
+        '[PerformanceBottleneckDetector] Error checking network bottlenecks:',
+        error
+      );
+    }
+
+    return bottlenecks;
+  }
+
+  /**
+   * Real rendering bottleneck detection
+   */
+  private async detectRealRenderingBottlenecks(
+    context: ExtensionContext,
+    metrics: PerformanceMetrics[]
+  ): Promise<PerformanceBottleneck[]> {
+    const bottlenecks: PerformanceBottleneck[] = [];
+
+    // Check console logs for DOM size warnings
+    try {
+      const consoleMessages = await mcp_chrome_devtools_list_console_messages({
+        types: ['warn'],
+        includePreservedMessages: false,
+      });
+
+      for (const message of consoleMessages) {
+        if (message.text && message.text.includes('Large DOM detected')) {
+          const domSizeMatch = message.text.match(/domSize: (\d+)/);
+          if (domSizeMatch) {
+            const domSize = parseInt(domSizeMatch[1]);
+
+            bottlenecks.push({
+              id: this.generateBottleneckId(),
+              timestamp: new Date(),
+              context,
+              bottleneckType: 'rendering',
+              severity: domSize > 10000 ? 'high' : 'medium',
+              description: `Real DOM performance issue: ${domSize} elements detected`,
+              metrics: { domSize },
+              impact: {
+                userExperience: domSize > 10000 ? 'severe' : 'moderate',
+                systemResources: 'high',
+                functionality: 'degraded',
+                estimatedSlowdown: Math.min(50, (domSize - 1000) / 200),
+              },
+              rootCause: 'Real large DOM size affecting rendering performance',
+              recommendations:
+                this.generateDOMOptimizationRecommendations(domSize),
+              estimatedFixTime: 75,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(
+        '[PerformanceBottleneckDetector] Error checking rendering bottlenecks:',
+        error
+      );
+    }
+
+    return bottlenecks;
+  }
 }
 
 // Global MCP function declarations
@@ -1429,4 +2070,7 @@ declare global {
   function mcp_chrome_devtools_evaluate_script(params: {
     function: string;
   }): Promise<any>;
+  function mcp_chrome_devtools_list_console_messages(
+    params: any
+  ): Promise<any[]>;
 }

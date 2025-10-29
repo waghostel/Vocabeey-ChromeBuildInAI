@@ -48,10 +48,11 @@ Language learners who want to practice with real-world content from web articles
 
 #### Extension Architecture
 
+- **Click-based Activation**: User-initiated processing via toolbar icon click
 - **Full-page takeover**: New tab for learning interface
 - **Service Worker**: Background processing and message routing
-- **Content Scripts**: Page content extraction
-- **Offscreen Documents**: Heavy AI processing
+- **Content Scripts**: On-demand page content extraction
+- **Offscreen Documents**: Heavy AI processing without timeout limits
 
 #### AI Service Chain
 

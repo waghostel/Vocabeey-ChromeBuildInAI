@@ -163,10 +163,12 @@ export class ErrorPropagationTracker {
     this.errorChains.clear();
     this.recoveryMonitoring.clear();
 
-    console.log('[ErrorPropagationTracker] Started tracking error propagation');
+    console.log(
+      '[ErrorPropagationTracker] Started real error propagation tracking'
+    );
 
-    // Initialize error monitoring for each context
-    await this.initializeContextErrorMonitoring();
+    // Initialize real error monitoring for each context using MCP
+    await this.initializeRealContextErrorMonitoring();
   }
 
   /**
@@ -530,87 +532,274 @@ export class ErrorPropagationTracker {
     return monitoringResults;
   }
 
-  private async initializeContextErrorMonitoring(): Promise<void> {
-    // Initialize error monitoring for each extension context
-    const contexts: ExtensionContext[] = [
-      'service-worker',
-      'content-script',
-      'offscreen',
-      'ui',
-    ];
+  private async initializeRealContextErrorMonitoring(): Promise<void> {
+    try {
+      // Get real list of available pages/contexts using MCP
+      const pages = await mcp_chrome_devtools_list_pages();
+      console.log(
+        '[ErrorPropagationTracker] Found pages for error monitoring:',
+        pages.length
+      );
 
-    for (const context of contexts) {
-      try {
-        await this.setupContextErrorHandlers(context);
-      } catch (error) {
-        console.warn(
-          `[ErrorPropagationTracker] Failed to setup error monitoring for ${context}:`,
-          error
-        );
+      // Initialize error monitoring for each real context
+      for (const page of pages) {
+        const contextType = this.identifyContextType(page.url);
+        if (contextType) {
+          await this.setupRealContextErrorHandlers(contextType, page.index);
+        }
       }
+
+      // Start real error event monitoring
+      await this.startRealErrorEventMonitoring();
+    } catch (error) {
+      console.error(
+        '[ErrorPropagationTracker] Failed to initialize real error monitoring:',
+        error
+      );
     }
   }
 
-  private async setupContextErrorHandlers(
-    context: ExtensionContext
+  private async setupRealContextErrorHandlers(
+    context: ExtensionContext,
+    pageIndex: number
   ): Promise<void> {
-    // Setup error handlers specific to each context type
-    const handlerScript = this.generateErrorHandlerScript(context);
+    try {
+      // Select the real context page
+      await mcp_chrome_devtools_select_page({ pageIdx: pageIndex });
 
-    if (handlerScript) {
-      try {
-        // In a real implementation, this would inject error handlers into the appropriate context
+      // Inject real error handlers into the context
+      const handlerScript = this.generateRealErrorHandlerScript(context);
+      if (handlerScript) {
+        await mcp_chrome_devtools_evaluate_script({
+          function: handlerScript,
+        });
         console.log(
-          `[ErrorPropagationTracker] Error handlers setup for ${context}`
-        );
-      } catch (error) {
-        console.warn(
-          `[ErrorPropagationTracker] Failed to setup error handlers for ${context}:`,
-          error
+          `[ErrorPropagationTracker] Real error handlers injected for ${context}`
         );
       }
+    } catch (error) {
+      console.warn(
+        `[ErrorPropagationTracker] Failed to setup real error handlers for ${context}:`,
+        error
+      );
     }
   }
 
-  private generateErrorHandlerScript(context: ExtensionContext): string | null {
+  private generateRealErrorHandlerScript(
+    context: ExtensionContext
+  ): string | null {
     const handlerScripts: Record<ExtensionContext, string> = {
       'service-worker': `
-        // Service worker error handler
-        self.addEventListener('error', (event) => {
-          console.error('[SW Error]', event.error);
-          // Track error propagation
-        });
-        
-        self.addEventListener('unhandledrejection', (event) => {
-          console.error('[SW Unhandled Rejection]', event.reason);
-          // Track error propagation
-        });
+        () => {
+          // Real service worker error handler with detailed tracking
+          if (typeof self !== 'undefined') {
+            const originalErrorHandler = self.onerror;
+            self.onerror = function(message, source, lineno, colno, error) {
+              const errorData = {
+                context: 'service-worker',
+                type: 'javascript-error',
+                message: message,
+                source: source,
+                line: lineno,
+                column: colno,
+                stack: error ? error.stack : null,
+                timestamp: Date.now(),
+                errorId: 'error_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+              };
+              
+              console.error('[ErrorPropagationTracker] SW Error:', errorData);
+              
+              // Call original handler if it exists
+              if (originalErrorHandler) {
+                return originalErrorHandler.call(this, message, source, lineno, colno, error);
+              }
+              return false;
+            };
+            
+            self.addEventListener('unhandledrejection', (event) => {
+              const errorData = {
+                context: 'service-worker',
+                type: 'unhandled-rejection',
+                reason: event.reason ? event.reason.toString() : 'Unknown rejection',
+                stack: event.reason && event.reason.stack ? event.reason.stack : null,
+                timestamp: Date.now(),
+                errorId: 'error_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+              };
+              
+              console.error('[ErrorPropagationTracker] SW Unhandled Rejection:', errorData);
+            });
+          }
+        }
       `,
       'content-script': `
-        // Content script error handler
-        window.addEventListener('error', (event) => {
-          console.error('[CS Error]', event.error);
-          // Track error propagation
-        });
-        
-        window.addEventListener('unhandledrejection', (event) => {
-          console.error('[CS Unhandled Rejection]', event.reason);
-          // Track error propagation
-        });
+        () => {
+          // Real content script error handler with detailed tracking
+          if (typeof window !== 'undefined') {
+            const originalErrorHandler = window.onerror;
+            window.onerror = function(message, source, lineno, colno, error) {
+              const errorData = {
+                context: 'content-script',
+                type: 'javascript-error',
+                message: message,
+                source: source,
+                line: lineno,
+                column: colno,
+                stack: error ? error.stack : null,
+                url: window.location.href,
+                timestamp: Date.now(),
+                errorId: 'error_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+              };
+              
+              console.error('[ErrorPropagationTracker] CS Error:', errorData);
+              
+              // Try to report error to service worker
+              if (typeof chrome !== 'undefined' && chrome.runtime) {
+                chrome.runtime.sendMessage({
+                  type: 'error-propagation',
+                  errorData: errorData
+                }).catch(err => {
+                  console.warn('[ErrorPropagationTracker] Failed to report error to SW:', err);
+                });
+              }
+              
+              // Call original handler if it exists
+              if (originalErrorHandler) {
+                return originalErrorHandler.call(this, message, source, lineno, colno, error);
+              }
+              return false;
+            };
+            
+            window.addEventListener('unhandledrejection', (event) => {
+              const errorData = {
+                context: 'content-script',
+                type: 'unhandled-rejection',
+                reason: event.reason ? event.reason.toString() : 'Unknown rejection',
+                stack: event.reason && event.reason.stack ? event.reason.stack : null,
+                url: window.location.href,
+                timestamp: Date.now(),
+                errorId: 'error_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+              };
+              
+              console.error('[ErrorPropagationTracker] CS Unhandled Rejection:', errorData);
+              
+              // Try to report error to service worker
+              if (typeof chrome !== 'undefined' && chrome.runtime) {
+                chrome.runtime.sendMessage({
+                  type: 'error-propagation',
+                  errorData: errorData
+                }).catch(err => {
+                  console.warn('[ErrorPropagationTracker] Failed to report rejection to SW:', err);
+                });
+              }
+            });
+          }
+        }
       `,
       offscreen: `
-        // Offscreen document error handler
-        window.addEventListener('error', (event) => {
-          console.error('[Offscreen Error]', event.error);
-          // Track error propagation
-        });
+        () => {
+          // Real offscreen document error handler
+          if (typeof window !== 'undefined') {
+            const originalErrorHandler = window.onerror;
+            window.onerror = function(message, source, lineno, colno, error) {
+              const errorData = {
+                context: 'offscreen',
+                type: 'javascript-error',
+                message: message,
+                source: source,
+                line: lineno,
+                column: colno,
+                stack: error ? error.stack : null,
+                timestamp: Date.now(),
+                errorId: 'error_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+              };
+              
+              console.error('[ErrorPropagationTracker] Offscreen Error:', errorData);
+              
+              // Report AI processing errors specifically
+              if (message && (message.includes('AI') || message.includes('processing'))) {
+                if (typeof chrome !== 'undefined' && chrome.runtime) {
+                  chrome.runtime.sendMessage({
+                    type: 'ai-processing-error',
+                    errorData: errorData
+                  }).catch(err => {
+                    console.warn('[ErrorPropagationTracker] Failed to report AI error:', err);
+                  });
+                }
+              }
+              
+              // Call original handler if it exists
+              if (originalErrorHandler) {
+                return originalErrorHandler.call(this, message, source, lineno, colno, error);
+              }
+              return false;
+            };
+            
+            window.addEventListener('unhandledrejection', (event) => {
+              const errorData = {
+                context: 'offscreen',
+                type: 'unhandled-rejection',
+                reason: event.reason ? event.reason.toString() : 'Unknown rejection',
+                stack: event.reason && event.reason.stack ? event.reason.stack : null,
+                timestamp: Date.now(),
+                errorId: 'error_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+              };
+              
+              console.error('[ErrorPropagationTracker] Offscreen Unhandled Rejection:', errorData);
+            });
+          }
+        }
       `,
       ui: `
-        // UI component error handler
-        window.addEventListener('error', (event) => {
-          console.error('[UI Error]', event.error);
-          // Track error propagation
-        });
+        () => {
+          // Real UI component error handler
+          if (typeof window !== 'undefined') {
+            const originalErrorHandler = window.onerror;
+            window.onerror = function(message, source, lineno, colno, error) {
+              const errorData = {
+                context: 'ui',
+                type: 'javascript-error',
+                message: message,
+                source: source,
+                line: lineno,
+                column: colno,
+                stack: error ? error.stack : null,
+                timestamp: Date.now(),
+                errorId: 'error_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+              };
+              
+              console.error('[ErrorPropagationTracker] UI Error:', errorData);
+              
+              // Report UI errors that might affect user experience
+              if (typeof chrome !== 'undefined' && chrome.runtime) {
+                chrome.runtime.sendMessage({
+                  type: 'ui-error',
+                  errorData: errorData
+                }).catch(err => {
+                  console.warn('[ErrorPropagationTracker] Failed to report UI error:', err);
+                });
+              }
+              
+              // Call original handler if it exists
+              if (originalErrorHandler) {
+                return originalErrorHandler.call(this, message, source, lineno, colno, error);
+              }
+              return false;
+            };
+            
+            window.addEventListener('unhandledrejection', (event) => {
+              const errorData = {
+                context: 'ui',
+                type: 'unhandled-rejection',
+                reason: event.reason ? event.reason.toString() : 'Unknown rejection',
+                stack: event.reason && event.reason.stack ? event.reason.stack : null,
+                timestamp: Date.now(),
+                errorId: 'error_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+              };
+              
+              console.error('[ErrorPropagationTracker] UI Unhandled Rejection:', errorData);
+            });
+          }
+        }
       `,
     };
 
@@ -997,4 +1186,283 @@ export class ErrorPropagationTracker {
   private generateRecoveryId(): string {
     return `recovery_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
+
+  /**
+   * Start real error event monitoring across all contexts
+   */
+  private async startRealErrorEventMonitoring(): Promise<void> {
+    // Monitor console messages for real error events
+    const monitoringInterval = setInterval(async () => {
+      if (!this.isTracking) {
+        clearInterval(monitoringInterval);
+        return;
+      }
+
+      try {
+        // Get list of pages and monitor each for errors
+        const pages = await mcp_chrome_devtools_list_pages();
+
+        for (const page of pages) {
+          const contextType = this.identifyContextType(page.url);
+          if (contextType) {
+            await this.monitorContextErrors(contextType, page.index);
+          }
+        }
+      } catch (error) {
+        console.warn(
+          '[ErrorPropagationTracker] Error during real error monitoring:',
+          error
+        );
+      }
+    }, 2000); // Check every 2 seconds
+
+    // Stop monitoring after 5 minutes to prevent resource leaks
+    setTimeout(() => clearInterval(monitoringInterval), 300000);
+  }
+
+  /**
+   * Monitor errors in a specific context
+   */
+  private async monitorContextErrors(
+    context: ExtensionContext,
+    pageIndex: number
+  ): Promise<void> {
+    try {
+      await mcp_chrome_devtools_select_page({ pageIdx: pageIndex });
+
+      // Get console messages for errors
+      const consoleMessages = await mcp_chrome_devtools_list_console_messages({
+        types: ['error', 'warn'],
+        includePreservedMessages: false,
+      });
+
+      // Process real error messages
+      for (const message of consoleMessages) {
+        if (
+          message.text &&
+          message.text.includes('[ErrorPropagationTracker]')
+        ) {
+          await this.processRealErrorEvent(message, context);
+        }
+      }
+    } catch (error) {
+      console.warn(
+        `[ErrorPropagationTracker] Failed to monitor errors for ${context}:`,
+        error
+      );
+    }
+  }
+
+  /**
+   * Process real error events from console logs
+   */
+  private async processRealErrorEvent(
+    consoleMessage: any,
+    context: ExtensionContext
+  ): Promise<void> {
+    try {
+      const messageText = consoleMessage.text;
+
+      if (
+        messageText.includes('Error:') ||
+        messageText.includes('Unhandled Rejection:')
+      ) {
+        // Extract error data from console log
+        const errorMatch = messageText.match(
+          /(?:Error|Unhandled Rejection): ({.*})/
+        );
+        if (errorMatch) {
+          const errorData = JSON.parse(errorMatch[1]);
+          await this.trackRealErrorOccurrence(errorData);
+        }
+      }
+    } catch (error) {
+      console.warn(
+        '[ErrorPropagationTracker] Error processing real error event:',
+        error
+      );
+    }
+  }
+
+  /**
+   * Track real error occurrence from console data
+   */
+  private async trackRealErrorOccurrence(errorData: any): Promise<void> {
+    const errorId = errorData.errorId || this.generateErrorId();
+    const context = errorData.context as ExtensionContext;
+
+    const propagationEvent: ErrorPropagationEvent = {
+      id: errorId,
+      timestamp: new Date(errorData.timestamp),
+      originContext: context,
+      currentContext: context,
+      errorType: errorData.type,
+      originalError: errorData.message || errorData.reason,
+      propagatedError: errorData.message || errorData.reason,
+      propagationPath: [context],
+      handled: false,
+      recoveryAttempted: false,
+      recoverySuccessful: false,
+      severity: this.classifyErrorSeverity(errorData),
+    };
+
+    this.propagationEvents.set(errorId, propagationEvent);
+
+    // Create error chain
+    const chainId = this.generateChainId();
+    const errorChain: ErrorPropagationChain = {
+      chainId,
+      originError: propagationEvent,
+      propagationEvents: [propagationEvent],
+      finalResolution: 'unhandled',
+      totalPropagationTime: 0,
+    };
+
+    this.errorChains.set(chainId, errorChain);
+
+    console.log(
+      `[ErrorPropagationTracker] Real error tracked: ${errorData.type} in ${context}`
+    );
+
+    // Check for error propagation patterns
+    await this.detectRealErrorPropagation(errorData);
+  }
+
+  /**
+   * Detect real error propagation patterns
+   */
+  private async detectRealErrorPropagation(errorData: any): Promise<void> {
+    // Look for related errors in other contexts that might indicate propagation
+    try {
+      const pages = await mcp_chrome_devtools_list_pages();
+
+      for (const page of pages) {
+        const contextType = this.identifyContextType(page.url);
+        if (contextType && contextType !== errorData.context) {
+          await mcp_chrome_devtools_select_page({ pageIdx: page.index });
+
+          // Check for related errors in this context
+          const consoleMessages =
+            await mcp_chrome_devtools_list_console_messages({
+              types: ['error', 'warn'],
+              includePreservedMessages: false,
+            });
+
+          for (const message of consoleMessages) {
+            if (this.isRelatedError(errorData, message)) {
+              // Track error propagation
+              const propagationId = this.trackErrorPropagation(
+                errorData.errorId,
+                contextType,
+                message.text
+              );
+              console.log(
+                `[ErrorPropagationTracker] Real error propagation detected: ${errorData.context} -> ${contextType}`
+              );
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(
+        '[ErrorPropagationTracker] Error detecting real error propagation:',
+        error
+      );
+    }
+  }
+
+  /**
+   * Check if an error message is related to the original error
+   */
+  private isRelatedError(originalError: any, consoleMessage: any): boolean {
+    const messageText = consoleMessage.text.toLowerCase();
+    const originalMessage = (
+      originalError.message ||
+      originalError.reason ||
+      ''
+    ).toLowerCase();
+
+    // Simple heuristics for related errors
+    if (originalMessage.includes('network') && messageText.includes('network'))
+      return true;
+    if (originalMessage.includes('storage') && messageText.includes('storage'))
+      return true;
+    if (originalMessage.includes('ai') && messageText.includes('ai'))
+      return true;
+    if (
+      originalMessage.includes('processing') &&
+      messageText.includes('processing')
+    )
+      return true;
+
+    // Check for error propagation keywords
+    if (
+      messageText.includes('failed to') ||
+      messageText.includes('error in') ||
+      messageText.includes('exception')
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Classify error severity based on error data
+   */
+  private classifyErrorSeverity(errorData: any): ErrorSeverity {
+    const message = (errorData.message || errorData.reason || '').toLowerCase();
+
+    // Critical errors
+    if (
+      message.includes('crash') ||
+      message.includes('fatal') ||
+      message.includes('critical')
+    ) {
+      return 'critical';
+    }
+
+    // High severity errors
+    if (
+      message.includes('network') ||
+      message.includes('storage') ||
+      message.includes('ai')
+    ) {
+      return 'high';
+    }
+
+    // Medium severity errors
+    if (message.includes('warning') || message.includes('deprecated')) {
+      return 'medium';
+    }
+
+    // Default to medium for unhandled rejections, low for others
+    return errorData.type === 'unhandled-rejection' ? 'medium' : 'low';
+  }
+
+  /**
+   * Identify context type from page URL
+   */
+  private identifyContextType(url: string): ExtensionContext | null {
+    if (url.includes('service-worker')) return 'service-worker';
+    if (url.includes('offscreen')) return 'offscreen';
+    if (url.includes('chrome-extension://') && url.includes('/ui/'))
+      return 'ui';
+    if (url.startsWith('http')) return 'content-script';
+    return null;
+  }
+}
+
+// Global MCP function declarations
+declare global {
+  function mcp_chrome_devtools_list_pages(): Promise<any[]>;
+  function mcp_chrome_devtools_select_page(params: {
+    pageIdx: number;
+  }): Promise<void>;
+  function mcp_chrome_devtools_evaluate_script(params: {
+    function: string;
+  }): Promise<any>;
+  function mcp_chrome_devtools_list_console_messages(
+    params: any
+  ): Promise<any[]>;
 }

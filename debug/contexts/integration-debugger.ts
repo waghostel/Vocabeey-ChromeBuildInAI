@@ -391,52 +391,156 @@ export class IntegrationDebugger {
 
     await mcp_chrome_devtools_select_page({ pageIdx: sourcePageIndex });
 
-    // Simulate message sending based on context types
-    const triggerScript = this.generateMessageTriggerScript(source, target);
+    // Generate real message trigger script with proper message tracking
+    const triggerScript = this.generateRealMessageTriggerScript(source, target);
     if (triggerScript) {
       try {
         await mcp_chrome_devtools_evaluate_script({
           function: triggerScript,
         });
+        console.log(
+          `[IntegrationDebugger] Real message flow triggered: ${source} -> ${target}`
+        );
       } catch (error) {
         console.warn(
-          `[IntegrationDebugger] Failed to trigger message flow ${source} -> ${target}:`,
+          `[IntegrationDebugger] Failed to trigger real message flow ${source} -> ${target}:`,
           error
         );
       }
     }
   }
 
-  private generateMessageTriggerScript(
+  private generateRealMessageTriggerScript(
     source: ExtensionContext,
     target: ExtensionContext
   ): string | null {
-    // Generate appropriate script to trigger message flow
+    // Generate real message trigger scripts that will be tracked by the message flow tracker
     const triggerMap: Record<string, string> = {
       'content-script->service-worker': `
         () => {
           if (typeof chrome !== 'undefined' && chrome.runtime) {
-            chrome.runtime.sendMessage({
-              type: 'debug-test-message',
+            const messageId = 'debug_msg_' + Date.now();
+            const message = {
+              id: messageId,
+              type: 'content-extracted',
               source: 'content-script',
-              timestamp: Date.now()
+              timestamp: Date.now(),
+              data: {
+                url: window.location.href,
+                content: 'Debug test content extraction',
+                wordCount: 150
+              }
+            };
+            
+            console.log('[IntegrationDebugger] Sending real test message:', message);
+            chrome.runtime.sendMessage(message).then(response => {
+              console.log('[IntegrationDebugger] Received response:', response);
+            }).catch(error => {
+              console.error('[IntegrationDebugger] Message failed:', error);
             });
           }
         }
       `,
       'service-worker->offscreen': `
         () => {
-          if (typeof chrome !== 'undefined' && chrome.offscreen) {
-            chrome.offscreen.createDocument({
-              url: 'offscreen.html',
-              reasons: ['DOM_PARSER'],
-              justification: 'Debug test message'
-            }).then(() => {
-              chrome.runtime.sendMessage({
-                type: 'debug-test-message',
-                source: 'service-worker',
-                timestamp: Date.now()
-              });
+          if (typeof chrome !== 'undefined' && chrome.runtime) {
+            const messageId = 'debug_msg_' + Date.now();
+            const message = {
+              id: messageId,
+              type: 'process-content',
+              source: 'service-worker',
+              timestamp: Date.now(),
+              data: {
+                content: 'Test content for AI processing',
+                processingType: 'summarization',
+                language: 'en'
+              }
+            };
+            
+            console.log('[IntegrationDebugger] Sending real test message to offscreen:', message);
+            chrome.runtime.sendMessage(message).then(response => {
+              console.log('[IntegrationDebugger] Received offscreen response:', response);
+            }).catch(error => {
+              console.error('[IntegrationDebugger] Offscreen message failed:', error);
+            });
+          }
+        }
+      `,
+      'offscreen->service-worker': `
+        () => {
+          if (typeof chrome !== 'undefined' && chrome.runtime) {
+            const messageId = 'debug_msg_' + Date.now();
+            const message = {
+              id: messageId,
+              type: 'processing-complete',
+              source: 'offscreen',
+              timestamp: Date.now(),
+              data: {
+                result: 'AI processing completed successfully',
+                processingTime: 1500,
+                cacheHit: false
+              }
+            };
+            
+            console.log('[IntegrationDebugger] Sending real processing result:', message);
+            chrome.runtime.sendMessage(message).then(response => {
+              console.log('[IntegrationDebugger] Service worker acknowledged:', response);
+            }).catch(error => {
+              console.error('[IntegrationDebugger] Processing result message failed:', error);
+            });
+          }
+        }
+      `,
+      'service-worker->ui': `
+        () => {
+          if (typeof chrome !== 'undefined' && chrome.runtime) {
+            const messageId = 'debug_msg_' + Date.now();
+            const message = {
+              id: messageId,
+              type: 'data-update',
+              source: 'service-worker',
+              timestamp: Date.now(),
+              data: {
+                articleData: {
+                  title: 'Debug Test Article',
+                  summary: 'This is a test summary for debugging',
+                  vocabulary: ['debug', 'test', 'article']
+                },
+                processingStatus: 'completed'
+              }
+            };
+            
+            console.log('[IntegrationDebugger] Sending real UI update:', message);
+            chrome.runtime.sendMessage(message).then(response => {
+              console.log('[IntegrationDebugger] UI acknowledged update:', response);
+            }).catch(error => {
+              console.error('[IntegrationDebugger] UI update message failed:', error);
+            });
+          }
+        }
+      `,
+      'ui->service-worker': `
+        () => {
+          if (typeof chrome !== 'undefined' && chrome.runtime) {
+            const messageId = 'debug_msg_' + Date.now();
+            const message = {
+              id: messageId,
+              type: 'user-interaction',
+              source: 'ui',
+              timestamp: Date.now(),
+              data: {
+                action: 'highlight-word',
+                word: 'debug',
+                position: { x: 100, y: 200 },
+                context: 'vocabulary-learning'
+              }
+            };
+            
+            console.log('[IntegrationDebugger] Sending real user interaction:', message);
+            chrome.runtime.sendMessage(message).then(response => {
+              console.log('[IntegrationDebugger] Service worker processed interaction:', response);
+            }).catch(error => {
+              console.error('[IntegrationDebugger] User interaction message failed:', error);
             });
           }
         }
@@ -453,49 +557,82 @@ export class IntegrationDebugger {
     const testId = this.generateTestId();
     const startTime = Date.now();
 
-    // Track message sending
-    const messageId = this.messageFlowTracker.trackMessageSent(
-      source,
-      target,
-      'debug-test',
-      { testId }
+    console.log(
+      `[IntegrationDebugger] Testing real message route: ${source} -> ${target}`
     );
 
-    // Trigger message flow
+    // Trigger real message flow
     await this.triggerMessageFlow(source, target);
 
-    // Wait for response or timeout
-    const timeout = 5000;
+    // Wait for real message processing and monitor console logs
+    const timeout = 8000; // Increased timeout for real processing
     const endTime = startTime + timeout;
     let successful = false;
+    let errorMessage: string | undefined;
 
+    // Monitor for real message completion
     while (Date.now() < endTime && !successful) {
-      // Check if message was received (simplified check)
-      await new Promise(resolve => setTimeout(resolve, 100));
-      // In real implementation, would check for actual message receipt
-      successful = Math.random() > 0.2; // Simulate 80% success rate
+      try {
+        // Check target context for message reception
+        const targetPageIndex = this.contextPages.get(target);
+        if (targetPageIndex) {
+          await mcp_chrome_devtools_select_page({ pageIdx: targetPageIndex });
+
+          // Check console messages for successful message processing
+          const consoleMessages =
+            await mcp_chrome_devtools_list_console_messages({
+              types: ['log', 'info'],
+              includePreservedMessages: false,
+            });
+
+          // Look for message completion indicators
+          for (const message of consoleMessages) {
+            if (
+              message.text &&
+              (message.text.includes('Received response:') ||
+                message.text.includes('acknowledged') ||
+                message.text.includes('processed interaction'))
+            ) {
+              successful = true;
+              break;
+            }
+
+            if (message.text && message.text.includes('Message failed:')) {
+              errorMessage = 'Real message processing failed';
+              break;
+            }
+          }
+        }
+
+        if (!successful) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      } catch (error) {
+        console.warn(
+          `[IntegrationDebugger] Error monitoring message route ${source} -> ${target}:`,
+          error
+        );
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
 
-    if (successful) {
-      this.messageFlowTracker.trackMessageReceived(
-        messageId,
-        Date.now() - startTime
-      );
-    } else {
-      this.messageFlowTracker.trackMessageFailure(
-        messageId,
-        'timeout',
-        'Message timeout during test'
-      );
+    if (!successful && !errorMessage) {
+      errorMessage = 'Real message routing test timeout';
     }
+
+    const latency = Date.now() - startTime;
+
+    console.log(
+      `[IntegrationDebugger] Real message route test completed: ${source} -> ${target} - ${successful ? 'Success' : 'Failed'} (${latency}ms)`
+    );
 
     return {
       testId,
       source,
       target,
       successful,
-      latency: Date.now() - startTime,
-      errorMessage: successful ? undefined : 'Message routing test failed',
+      latency,
+      errorMessage: successful ? undefined : errorMessage,
     };
   }
 

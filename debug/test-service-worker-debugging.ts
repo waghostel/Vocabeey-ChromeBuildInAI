@@ -6,14 +6,32 @@
 import { ServiceWorkerDebugger } from './contexts/service-worker-debugger';
 import { StorageOperationDebugger } from './contexts/storage-operation-debugger';
 import { MessagePassingDebugger } from './contexts/message-passing-debugger';
+import { MCPConnectionManager } from './utils/mcp-connection-manager';
 
 async function testServiceWorkerDebugging(): Promise<void> {
-  console.log('Testing Service Worker Debugging Implementation...');
+  console.log(
+    'Testing Service Worker Debugging Implementation with Real MCP Integration...'
+  );
 
   try {
+    // Initialize MCP connection manager
+    console.log('\n0. Initializing MCP Connection...');
+    const mcpConnectionManager = new MCPConnectionManager();
+    const mcpConnected = await mcpConnectionManager.initializeMCPConnection();
+
+    if (!mcpConnected) {
+      console.warn(
+        '⚠️ MCP connection failed - tests will run with limited functionality'
+      );
+    } else {
+      console.log('✅ MCP connection established successfully');
+    }
+
     // Test Service Worker Debugger
-    console.log('\n1. Testing Service Worker Debugger...');
-    const swDebugger = new ServiceWorkerDebugger();
+    console.log(
+      '\n1. Testing Service Worker Debugger with Real MCP Integration...'
+    );
+    const swDebugger = new ServiceWorkerDebugger(mcpConnectionManager);
 
     // Test connection and monitoring
     await swDebugger.startMonitoring();
@@ -28,9 +46,21 @@ async function testServiceWorkerDebugging(): Promise<void> {
     const networkRequests = await swDebugger.trackNetworkRequests();
     console.log('Tracked Network Requests:', networkRequests.length);
 
+    // Test AI API call summary
+    const aiSummary = await swDebugger.getAIAPICallSummary();
+    console.log('AI API Call Summary:', aiSummary);
+
     // Test storage debugging
     const storageInfo = await swDebugger.debugStorageOperations();
     console.log('Storage Debug Info:', storageInfo);
+
+    // Test storage validation
+    const storageValidation = await swDebugger.validateStorageState();
+    console.log('Storage Validation:', storageValidation);
+
+    // Test captured storage operations
+    const capturedStorageOps = await swDebugger.getCapturedStorageOperations();
+    console.log('Captured Storage Operations:', capturedStorageOps.length);
 
     await swDebugger.stopMonitoring();
 

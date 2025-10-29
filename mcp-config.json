@@ -12,6 +12,10 @@
         "--profile",
         "attractive-basilisk-xLz5pT"
       ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
     }
   }
 }

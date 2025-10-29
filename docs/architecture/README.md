@@ -1214,6 +1214,8 @@ afterEach(() => {
 
 ## Related Documentation
 
+- **[Extension Structure](extension-structure.md)** - Chrome Extension Manifest V3 implementation details
+- **[Trigger Mechanism](trigger-mechanism.md)** - User interaction flow and click-based activation
 - **[API Reference](../api/README.md)** - Chrome AI integration and service details
 - **[Development Guide](../development/README.md)** - Setup and contribution guidelines
 - **[Testing Guide](../testing/README.md)** - Test architecture and strategies

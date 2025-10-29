@@ -92,5 +92,21 @@ export {
   type OptimizationResult,
 } from './performance-optimization-system.js';
 
+// MCP Integration
+export {
+  MCPConnectionManager,
+  type MCPConfiguration,
+  type MCPConnectionStatus,
+  type MCPFunctionResult,
+} from './mcp-connection-manager.js';
+export {
+  MCPFunctionVerifier,
+  type MCPFunctionTest,
+  type MCPFunctionVerificationResult,
+  type MCPVerificationReport,
+  type MCPHealthCheckConfig,
+} from './mcp-function-verifier.js';
+export { MCPConnectionValidator } from './mcp-connection-validator.js';
+
 // Types
 export * from '../types/debug-types.js';
