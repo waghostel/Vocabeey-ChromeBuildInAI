@@ -4,6 +4,14 @@ This directory contains debugging tools and utilities for the Language Learning 
 
 ## 📖 Documentation
 
+### LLM-Specific Guides
+
+- **[LLM Comprehensive Guide Index](./LLM_COMPREHENSIVE_GUIDE_INDEX.md)** - Master index for all LLM documentation
+- **[LLM Quick Reference Guide](./LLM_QUICK_REFERENCE_GUIDE.md)** - Essential commands and patterns for immediate use
+- **[LLM Extension Architecture Guide](./LLM_EXTENSION_ARCHITECTURE_GUIDE.md)** - Comprehensive system architecture overview
+- **[LLM Chrome Extension Examination Guide](./LLM_CHROME_EXTENSION_EXAMINATION_GUIDE.md)** - Detailed examination methodology
+- **[LLM Debugging Workflow Guide](./LLM_DEBUGGING_WORKFLOW_GUIDE.md)** - Step-by-step debugging procedures
+
 ### Core Debugging Documentation
 
 - **[Debugging Workflow](./DEBUGGING_WORKFLOW.md)** - Complete step-by-step debugging process and procedures
