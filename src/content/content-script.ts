@@ -3,7 +3,15 @@
  * Extracts article content from web pages
  */
 
-import type { ExtractedContent } from '../types';
+// Define types inline to avoid ES module compilation
+interface ExtractedContent {
+  title: string;
+  content: string;
+  url: string;
+  language?: string;
+  wordCount: number;
+  paragraphCount: number;
+}
 
 /**
  * Extract article content from the current page using multiple strategies
