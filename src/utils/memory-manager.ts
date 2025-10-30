@@ -262,8 +262,26 @@ export class MemoryManager {
     // Listen for tab updates (navigation away)
     chrome.tabs.onUpdated.addListener(async (tabId: number, changeInfo) => {
       if (changeInfo.url && this.activeTabs.has(tabId)) {
-        // Tab navigated away from learning interface
-        await this.unregisterTab(tabId);
+        // Get the learning interface URL
+        const learningInterfaceUrl = chrome.runtime.getURL(
+          'ui/learning-interface.html'
+        );
+
+        // Only cleanup if navigating away from learning interface
+        // Don't cleanup when initially loading the learning interface
+        if (
+          !changeInfo.url.startsWith(learningInterfaceUrl) &&
+          !changeInfo.url.startsWith('chrome-extension://')
+        ) {
+          console.log(
+            `Tab ${tabId} navigated away from learning interface to ${changeInfo.url}`
+          );
+          await this.unregisterTab(tabId);
+        } else {
+          console.log(
+            `Tab ${tabId} is still on learning interface, keeping registered`
+          );
+        }
       }
     });
   }
