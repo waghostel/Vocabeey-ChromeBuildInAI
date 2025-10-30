@@ -300,7 +300,7 @@ chrome.action.onClicked.addListener(async (tab): Promise<void> => {
  * Process the current tab and extract article content
  */
 async function processCurrentTab(tabId: number): Promise<void> {
-  const scriptPath = 'src/content/content-script.js';
+  const scriptPath = 'content/content-script.js';
   const startTime = Date.now();
 
   // Get tab information for context

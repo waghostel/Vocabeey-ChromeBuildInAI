@@ -20,7 +20,7 @@
 
 - [x] 3.1 Add unit tests for path resolution
 
-- [ ] 3.2 Add unit tests for path resolution
+- [x] 3.2 Add unit tests for path resolution
   - Create tests to verify correct file path construction
   - Test error handling scenarios with mock chrome.scripting API
   - _Requirements: 4.4, 4.5_

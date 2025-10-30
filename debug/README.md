@@ -107,6 +107,44 @@ node debug/test-real-debugging-system-optimization.ts
 
 ## 📖 Documentation
 
+### Playwright MCP Debugging (New!)
+
+**For automated browser testing and visual debugging:**
+
+- **[Playwright Debugging Guide](./PLAYWRIGHT_DEBUGGING_GUIDE.md)** - Complete guide to Playwright MCP debugging
+  - Setup and configuration
+  - Running debugging sessions
+  - Understanding reports
+  - Common issues and solutions
+  - Example debugging sessions
+  - Best practices
+
+- **[Quick Debug Scenarios](./QUICK_DEBUG_SCENARIOS.md)** - Quick reference for common issues
+  - 10 most common scenarios with quick fixes
+  - Command reference
+  - Troubleshooting decision tree
+
+- **[Troubleshooting Flowchart](./TROUBLESHOOTING_FLOWCHART.md)** - Visual debugging guides
+  - Flowcharts for common issues
+  - Decision trees
+  - Priority matrix
+
+**Quick Start with Playwright:**
+
+```bash
+# Build extension
+pnpm build
+
+# Run extension validation
+npx tsx debug/run-extension-validation.ts
+
+# Test article processing workflow
+npx tsx debug/test-article-processing-workflow.ts
+
+# Generate comprehensive report
+npx tsx debug/run-comprehensive-report-generator.ts
+```
+
 ### LLM-Specific Guides
 
 - **[LLM Comprehensive Guide Index](./LLM_COMPREHENSIVE_GUIDE_INDEX.md)** - Master index for all LLM documentation
