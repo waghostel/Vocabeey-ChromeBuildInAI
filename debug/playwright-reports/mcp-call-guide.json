@@ -1,0 +1,93 @@
+{
+  "title": "Playwright MCP Call Guide for Extension Validation",
+  "extensionId": "PLACEHOLDER_EXTENSION_ID",
+  "calls": [
+    {
+      "step": 1,
+      "name": "Navigate to Test Page",
+      "tool": "mcp_playwright_browser_navigate",
+      "params": {
+        "url": "https://example.com"
+      },
+      "purpose": "Load a page where content script should inject"
+    },
+    {
+      "step": 2,
+      "name": "Capture Page Snapshot",
+      "tool": "mcp_playwright_browser_snapshot",
+      "params": {},
+      "purpose": "Get accessibility tree for structure verification"
+    },
+    {
+      "step": 3,
+      "name": "Check Content Script",
+      "tool": "mcp_playwright_browser_evaluate",
+      "params": {
+        "function": "() => ({\n              hasExtension: typeof window.__LANGUAGE_LEARNING_EXTENSION__ !== 'undefined',\n              hasChromeRuntime: typeof chrome !== 'undefined',\n              documentReady: document.readyState\n            })"
+      },
+      "purpose": "Verify content script successfully injected"
+    },
+    {
+      "step": 4,
+      "name": "Capture All Console Messages",
+      "tool": "mcp_playwright_browser_console_messages",
+      "params": {
+        "onlyErrors": false
+      },
+      "purpose": "Get all console logs for analysis"
+    },
+    {
+      "step": 5,
+      "name": "Capture Error Messages",
+      "tool": "mcp_playwright_browser_console_messages",
+      "params": {
+        "onlyErrors": true
+      },
+      "purpose": "Get filtered error messages"
+    },
+    {
+      "step": 6,
+      "name": "Take Screenshot",
+      "tool": "mcp_playwright_browser_take_screenshot",
+      "params": {
+        "fullPage": true,
+        "type": "png"
+      },
+      "purpose": "Capture visual state for debugging"
+    },
+    {
+      "step": 7,
+      "name": "Check Network Requests",
+      "tool": "mcp_playwright_browser_network_requests",
+      "params": {},
+      "purpose": "Identify failed requests or API errors"
+    },
+    {
+      "step": 8,
+      "name": "Navigate to UI Page",
+      "tool": "mcp_playwright_browser_navigate",
+      "params": {
+        "url": "chrome-extension://PLACEHOLDER_EXTENSION_ID/ui/learning.html"
+      },
+      "purpose": "Test UI page accessibility"
+    },
+    {
+      "step": 9,
+      "name": "Capture UI Console Messages",
+      "tool": "mcp_playwright_browser_console_messages",
+      "params": {
+        "onlyErrors": true
+      },
+      "purpose": "Check for UI page errors"
+    },
+    {
+      "step": 10,
+      "name": "Take UI Screenshot",
+      "tool": "mcp_playwright_browser_take_screenshot",
+      "params": {
+        "type": "png"
+      },
+      "purpose": "Capture UI page state"
+    }
+  ]
+}

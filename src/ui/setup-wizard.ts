@@ -212,7 +212,7 @@ async function startTutorial(): Promise<void> {
 
     // Open learning interface with tutorial article
     const learningInterfaceUrl = chrome.runtime.getURL(
-      'src/ui/learning-interface.html'
+      'ui/learning-interface.html'
     );
     await chrome.tabs.create({
       url: `${learningInterfaceUrl}?articleId=tutorial-alice&tutorial=true`,

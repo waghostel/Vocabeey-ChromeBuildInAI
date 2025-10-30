@@ -2,7 +2,7 @@
 
 This directory contains debugging tools and utilities for the Language Learning Chrome Extension using chrome-devtools MCP.
 
-## 🤖 For Coding Agents (Kiro, Amazon Q, etc.)
+## 🤖 For Coding Agents (Gemini, Kiro, Amazon Q, etc.)
 
 ### Quick Start for LLMs
 

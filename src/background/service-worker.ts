@@ -106,7 +106,7 @@ function getBuildTimestamp(): string | undefined {
     // Try to get build timestamp from manifest or other sources
     const manifest = chrome.runtime.getManifest();
     return manifest.version_name || manifest.version;
-  } catch (error) {
+  } catch {
     return undefined;
   }
 }
