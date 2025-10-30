@@ -228,8 +228,9 @@ describe('Real Debug Data Aggregator', () => {
     };
 
     // Add data to aggregator
-    console.log('Adding test results and report to aggregator...');
-    aggregator.addRealTestResults(sampleTestResults);
+    console.log('Adding report to aggregator (which includes test results)...');
+    // Only add the report, which will automatically include the test results
+    // Don't add test results separately to avoid duplication
     aggregator.addRealReport(sampleReport);
 
     // Test aggregation

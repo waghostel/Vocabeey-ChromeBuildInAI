@@ -245,7 +245,8 @@ export type MessageType =
   | 'TRANSLATE_TEXT'
   | 'ANALYZE_VOCABULARY'
   | 'EXPORT_DATA'
-  | 'IMPORT_DATA';
+  | 'IMPORT_DATA'
+  | 'GET_INJECTION_DEBUG_INFO';
 
 export interface Message<T = unknown> {
   type: MessageType;
@@ -278,4 +279,51 @@ export interface ChromeStorageData {
   vocabulary: Record<string, VocabularyItem>;
   sentences: Record<string, SentenceItem>;
   extensionState: ExtensionState;
+}
+
+// ============================================================================
+// Content Script Injection Types
+// ============================================================================
+
+export interface InjectionError {
+  attemptedPath: string;
+  tabId: number;
+  tabUrl?: string;
+  error: string;
+  timestamp: number;
+  suggestions: string[];
+  chromeErrorCode?: string;
+  contextInfo: {
+    manifestVersion: string;
+    extensionId: string;
+    buildTimestamp?: string;
+  };
+}
+
+export interface InjectionSuccess {
+  scriptPath: string;
+  tabId: number;
+  tabUrl?: string;
+  timestamp: number;
+  injectionTime: number;
+  contextInfo: {
+    manifestVersion: string;
+    extensionId: string;
+  };
+}
+
+export interface InjectionDebugInfo {
+  recentErrors: InjectionError[];
+  recentSuccesses: InjectionSuccess[];
+  statistics: {
+    totalErrors: number;
+    totalSuccesses: number;
+    successRate: number;
+    averageInjectionTime: number;
+  };
+  systemInfo: {
+    manifestVersion: string;
+    extensionId: string;
+    buildVersion: string;
+  };
 }

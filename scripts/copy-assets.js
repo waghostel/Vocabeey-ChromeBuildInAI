@@ -1,5 +1,5 @@
-import { copyFileSync, mkdirSync, existsSync } from 'fs';
-import { dirname } from 'path';
+import { copyFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'fs';
+import { dirname, join } from 'path';
 
 const assets = [
   { src: 'manifest.json', dest: 'dist/manifest.json' },
@@ -33,9 +33,19 @@ function copyDirectory(src, dest) {
   if (!existsSync(dest)) {
     mkdirSync(dest, { recursive: true });
   }
-  // For now, just ensure the directory exists
-  // Icons will be added manually
-  console.log(`Created directory: ${dest}`);
+
+  const items = readdirSync(src);
+  items.forEach(item => {
+    const srcPath = join(src, item);
+    const destPath = join(dest, item);
+
+    if (statSync(srcPath).isDirectory()) {
+      copyDirectory(srcPath, destPath);
+    } else {
+      copyFileSync(srcPath, destPath);
+      console.log(`Copied: ${srcPath} -> ${destPath}`);
+    }
+  });
 }
 
 assets.forEach(({ src, dest, isDir }) => {

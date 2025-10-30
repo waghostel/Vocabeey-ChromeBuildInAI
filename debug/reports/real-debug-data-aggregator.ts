@@ -366,6 +366,55 @@ export class RealDebugDataAggregator {
       realDataEvidence: any;
     }> = [];
 
+    // Add recommendations from reports
+    reports.forEach(report => {
+      if (report.realRecommendations) {
+        report.realRecommendations.forEach(rec => {
+          recommendations.push({
+            title: rec.title,
+            description: rec.description,
+            impact: rec.severity as 'low' | 'medium' | 'high' | 'critical',
+            effort: 'medium', // Default effort level
+            affectedScenarios: rec.relatedScenarios || [],
+            mcpFunctionsAffected: rec.mcpFunctionImpact || [],
+            realDataEvidence: rec.realDataEvidence,
+          });
+        });
+      }
+    });
+
+    // Generate recommendations based on failed results
+    const failedResults = results.filter(r => !r.passed);
+    if (failedResults.length > 0) {
+      const timeoutErrors = failedResults.filter(
+        r => r.error && r.error.includes('timeout')
+      );
+
+      if (timeoutErrors.length > 0) {
+        recommendations.push({
+          title: 'Increase timeout values',
+          description:
+            'Multiple timeout errors detected, consider increasing timeout values',
+          impact: 'medium',
+          effort: 'low',
+          affectedScenarios: [
+            ...new Set(timeoutErrors.map(r => r.scenarioName)),
+          ],
+          mcpFunctionsAffected: [
+            ...new Set(
+              timeoutErrors.flatMap(r =>
+                r.mcpFunctionCalls.map(c => c.functionName)
+              )
+            ),
+          ],
+          realDataEvidence: {
+            timeoutCount: timeoutErrors.length,
+            scenarios: timeoutErrors.map(r => r.scenarioName),
+          },
+        });
+      }
+    }
+
     return { priority: recommendations };
   }
 
