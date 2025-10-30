@@ -64,7 +64,7 @@ export class OffscreenDocumentManager {
     }
 
     const documentConfig: OffscreenDocumentConfig = {
-      url: chrome.runtime.getURL('dist/offscreen/ai-processor.html'),
+      url: chrome.runtime.getURL('offscreen/ai-processor.html'),
       reasons: [
         chrome.offscreen.Reason.DOM_PARSER,
         chrome.offscreen.Reason.USER_MEDIA,
