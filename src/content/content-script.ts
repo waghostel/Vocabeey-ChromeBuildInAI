@@ -227,10 +227,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return false;
 });
 
-// Extract content when script is injected
-const extractedContent = extractContent();
-if (extractedContent) {
-  sendContentToBackground(extractedContent);
-} else {
-  showErrorNotification('Could not find article content on this page');
-}
+// Extract content when script is injected (wrapped in IIFE to avoid global scope pollution)
+(function initContentScript() {
+  const extractedContent = extractContent();
+  if (extractedContent) {
+    sendContentToBackground(extractedContent);
+  } else {
+    showErrorNotification('Could not find article content on this page');
+  }
+})();

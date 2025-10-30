@@ -1,158 +1,232 @@
 /**
- * Article processing pipeline using Chrome AI
- * Coordinates content extraction and AI processing
+ * Article Processor - Converts ExtractedContent to ProcessedArticle
+ * Handles language detection, content splitting, and structure creation
  */
 
-import { getChromeAI } from './chrome-ai';
-import { ContentExtractionCoordinator } from './content-extraction';
+import type { ExtractedContent, ProcessedArticle, ArticlePart } from '../types';
 
-import type { ProcessedArticle, ArticlePart, UserSettings } from '../types';
+/**
+ * Process extracted content into a structured article
+ */
+export async function processArticle(
+  extracted: ExtractedContent
+): Promise<ProcessedArticle> {
+  // Generate unique ID
+  const articleId = generateArticleId();
 
-export class ArticleProcessor {
-  private chromeAI = getChromeAI();
-  private contentExtractor: ContentExtractionCoordinator;
+  // Detect language (use provided or detect from content)
+  const language = await detectLanguage(extracted);
 
-  constructor(jinaApiKey?: string) {
-    this.contentExtractor = new ContentExtractionCoordinator(jinaApiKey);
+  // Split content into parts for better UX
+  const parts = splitContentIntoParts(extracted.content, articleId);
+
+  // Create ProcessedArticle
+  const processedArticle: ProcessedArticle = {
+    id: articleId,
+    url: extracted.url,
+    title: extracted.title,
+    originalLanguage: language,
+    processedAt: new Date(),
+    parts,
+    processingStatus: 'completed',
+    cacheExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+  };
+
+  return processedArticle;
+}
+
+/**
+ * Generate unique article ID
+ */
+function generateArticleId(): string {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 9);
+  return `article_${timestamp}_${random}`;
+}
+
+/**
+ * Detect language from extracted content
+ */
+async function detectLanguage(extracted: ExtractedContent): Promise<string> {
+  // If language is already provided, use it
+  if (extracted.language) {
+    return extracted.language;
   }
 
-  /**
-   * Process article from document to structured learning content
-   */
-  async processArticle(
-    document: Document,
-    settings: UserSettings
-  ): Promise<ProcessedArticle> {
-    try {
-      // Step 1: Extract content
-      const extracted = await this.contentExtractor.extractContent(document);
+  try {
+    // Try to detect language using Chrome AI or Gemini API
+    const textSample = extracted.content.substring(0, 1000); // First 1000 chars
 
-      // Step 2: Detect language
-      const language = await this.chromeAI.detectLanguage(extracted.content);
+    const response = await chrome.runtime.sendMessage({
+      type: 'DETECT_LANGUAGE',
+      data: { text: textSample },
+    });
 
-      // Step 3: Summarize and clean content
-      const summarized = await this.chromeAI.summarizeContent(
-        extracted.content,
-        {
-          maxLength: 300,
-          format: 'paragraph',
-        }
-      );
+    if (response?.success && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.warn('Language detection failed, using fallback:', error);
+  }
 
-      // Step 4: Subdivide into parts
-      const contentParts = await this.chromeAI.subdivideArticle(summarized);
+  // Fallback: Try to detect from common patterns
+  return detectLanguageFallback(extracted.content);
+}
 
-      // Step 5: Adapt difficulty for each part
-      const adaptedParts = await Promise.all(
-        contentParts.map(part =>
-          this.chromeAI.rewriteContent(part, settings.difficultyLevel)
+/**
+ * Fallback language detection using simple heuristics
+ */
+function detectLanguageFallback(content: string): string {
+  const sample = content.substring(0, 500).toLowerCase();
+
+  // Common word patterns for different languages
+  const patterns = {
+    en: /\b(the|and|is|in|to|of|a|for|on|with)\b/g,
+    es: /\b(el|la|de|que|y|en|un|por|con|para)\b/g,
+    fr: /\b(le|la|de|et|un|une|dans|pour|avec|sur)\b/g,
+    de: /\b(der|die|das|und|in|zu|den|von|mit|für)\b/g,
+    it: /\b(il|la|di|e|un|una|in|per|con|da)\b/g,
+    pt: /\b(o|a|de|que|e|do|da|em|um|para)\b/g,
+  };
+
+  let maxMatches = 0;
+  let detectedLang = 'en';
+
+  for (const [lang, pattern] of Object.entries(patterns)) {
+    const matches = sample.match(pattern);
+    const count = matches ? matches.length : 0;
+
+    if (count > maxMatches) {
+      maxMatches = count;
+      detectedLang = lang;
+    }
+  }
+
+  return detectedLang;
+}
+
+/**
+ * Split content into manageable parts
+ */
+function splitContentIntoParts(
+  content: string,
+  articleId: string
+): ArticlePart[] {
+  const MAX_WORDS_PER_PART = 500;
+  const parts: ArticlePart[] = [];
+
+  // Split by paragraphs first
+  const paragraphs = content.split(/\n\n+/).filter(p => p.trim());
+
+  if (paragraphs.length === 0) {
+    // No paragraphs found, treat entire content as one part
+    return [createArticlePart(content, content, articleId, 0)];
+  }
+
+  let currentPart = '';
+  let currentWordCount = 0;
+  let partIndex = 0;
+
+  for (const paragraph of paragraphs) {
+    const paragraphWords = countWords(paragraph);
+
+    // If adding this paragraph exceeds limit and we have content, create a part
+    if (
+      currentWordCount + paragraphWords > MAX_WORDS_PER_PART &&
+      currentPart.length > 0
+    ) {
+      parts.push(
+        createArticlePart(
+          currentPart.trim(),
+          currentPart.trim(),
+          articleId,
+          partIndex
         )
       );
-
-      // Step 6: Create article parts
-      const parts: ArticlePart[] = adaptedParts.map((content, index) => ({
-        id: `${Date.now()}-${index}`,
-        content,
-        originalContent: contentParts[index],
-        vocabulary: [],
-        sentences: [],
-        partIndex: index,
-      }));
-
-      // Create processed article
-      const article: ProcessedArticle = {
-        id: `article-${Date.now()}`,
-        url: extracted.url,
-        title: extracted.title,
-        originalLanguage: language,
-        processedAt: new Date(),
-        parts,
-        processingStatus: 'completed',
-        cacheExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      };
-
-      return article;
-    } catch (error) {
-      throw new Error(
-        `Article processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      partIndex++;
+      currentPart = '';
+      currentWordCount = 0;
     }
+
+    // Add paragraph to current part
+    currentPart += (currentPart ? '\n\n' : '') + paragraph;
+    currentWordCount += paragraphWords;
   }
 
-  /**
-   * Process vocabulary for an article part
-   */
-  async processVocabulary(
-    words: string[],
-    context: string,
-    sourceLanguage: string,
-    targetLanguage: string
-  ) {
-    try {
-      // Translate vocabulary in batch
-      const translations = await this.chromeAI.batchTranslateVocabulary(
-        words,
-        sourceLanguage,
-        targetLanguage,
-        context
-      );
-
-      // Analyze vocabulary
-      const analyses = await this.chromeAI.analyzeVocabulary(words, context);
-
-      // Combine results
-      return translations.map(translation => {
-        const analysis = analyses.find(a => a.word === translation.original);
-
-        return {
-          word: translation.original,
-          translation: translation.translation,
-          context: translation.context || context,
-          difficulty: analysis?.difficulty || 5,
-          isTechnicalTerm: analysis?.isTechnicalTerm || false,
-          exampleSentences: analysis?.exampleSentences || [],
-        };
-      });
-    } catch (error) {
-      throw new Error(
-        `Vocabulary processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  }
-
-  /**
-   * Translate a sentence
-   */
-  async translateSentence(
-    sentence: string,
-    sourceLanguage: string,
-    targetLanguage: string
-  ): Promise<string> {
-    return await this.chromeAI.translateText(
-      sentence,
-      sourceLanguage,
-      targetLanguage
+  // Add remaining content as final part
+  if (currentPart.trim()) {
+    parts.push(
+      createArticlePart(
+        currentPart.trim(),
+        currentPart.trim(),
+        articleId,
+        partIndex
+      )
     );
   }
 
-  /**
-   * Check if Chrome AI is available
-   */
-  async checkAvailability() {
-    return await this.chromeAI.checkAvailability();
+  // If no parts were created, create one with all content
+  if (parts.length === 0) {
+    parts.push(createArticlePart(content, content, articleId, 0));
   }
 
-  /**
-   * Update Jina API key
-   */
-  updateJinaApiKey(apiKey: string): void {
-    this.contentExtractor.updateJinaApiKey(apiKey);
+  return parts;
+}
+
+/**
+ * Create an article part
+ */
+function createArticlePart(
+  content: string,
+  originalContent: string,
+  articleId: string,
+  partIndex: number
+): ArticlePart {
+  const partId = `${articleId}_part_${partIndex + 1}`;
+
+  return {
+    id: partId,
+    content,
+    originalContent,
+    vocabulary: [],
+    sentences: [],
+    partIndex,
+  };
+}
+
+/**
+ * Count words in text
+ */
+function countWords(text: string): number {
+  if (!text) return 0;
+  return text
+    .trim()
+    .split(/\s+/)
+    .filter(word => word.length > 0).length;
+}
+
+/**
+ * Validate processed article
+ */
+export function validateProcessedArticle(article: ProcessedArticle): boolean {
+  if (!article.id || !article.url || !article.title) {
+    return false;
   }
 
-  /**
-   * Cleanup resources
-   */
-  destroy(): void {
-    this.chromeAI.destroy();
+  if (!article.parts || article.parts.length === 0) {
+    return false;
   }
+
+  if (!article.originalLanguage) {
+    return false;
+  }
+
+  // Validate each part
+  for (const part of article.parts) {
+    if (!part.id || !part.content) {
+      return false;
+    }
+  }
+
+  return true;
 }

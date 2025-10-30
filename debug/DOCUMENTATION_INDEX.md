@@ -360,3 +360,57 @@ This documentation provides comprehensive coverage of Playwright MCP debugging f
 **Best Practices**: [Playwright Best Practices](./PLAYWRIGHT_BEST_PRACTICES.md)
 
 Happy debugging! 🚀
+
+---
+
+## 🐛 Article Data Issue Documentation (FIXED)
+
+### Issue: "No article data found" Error
+
+Complete documentation for the article data processing issue that was identified and fixed.
+
+| Document                                                           | Purpose                     | When to Use                    |
+| ------------------------------------------------------------------ | --------------------------- | ------------------------------ |
+| [FIX_SUMMARY.md](./FIX_SUMMARY.md)                                 | Quick overview of the fix   | Quick reference                |
+| [ARTICLE_DATA_ISSUE_ANALYSIS.md](./ARTICLE_DATA_ISSUE_ANALYSIS.md) | Complete technical analysis | Understanding the issue        |
+| [diagnose-article-data-issue.md](./diagnose-article-data-issue.md) | Diagnosis details           | Troubleshooting similar issues |
+| [TESTING_THE_FIX.md](./TESTING_THE_FIX.md)                         | Testing guide               | Verifying the fix works        |
+| [test-article-data-flow.ts](./test-article-data-flow.ts)           | Test script                 | Automated verification         |
+
+### Quick Summary
+
+**Problem**: Extension showed "No article data found" when testing articles.
+
+**Root Cause**: Missing article processing step - content script extracted raw data but learning interface expected processed data.
+
+**Solution**: Created `src/utils/article-processor.ts` to convert `ExtractedContent` to `ProcessedArticle`.
+
+**Status**: ✅ Fixed and tested
+
+### Testing the Fix
+
+```bash
+# Build the extension
+pnpm build
+
+# Run tests
+pnpm test article-processor.test.ts
+
+# Load in Chrome and test with:
+# https://www.iana.org/help/example-domains
+```
+
+### Files Changed
+
+- ✅ `src/utils/article-processor.ts` (NEW)
+- ✅ `src/background/service-worker.ts` (UPDATED)
+- ✅ `tests/article-processor.test.ts` (NEW)
+
+### Related Issues
+
+If you encounter similar data structure mismatches:
+
+1. Check [ARTICLE_DATA_ISSUE_ANALYSIS.md](./ARTICLE_DATA_ISSUE_ANALYSIS.md) for patterns
+2. Review type definitions in `src/types/index.ts`
+3. Verify data flow between components
+4. Add processing/conversion steps where needed

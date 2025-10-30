@@ -13,8 +13,9 @@ import {
   shutdownOffscreenManagement,
 } from '../utils/offscreen-manager';
 
-import type { ExtractedContent } from '../types';
+import type { ExtractedContent, ProcessedArticle } from '../types';
 import { globalErrorHandler } from '../utils/error-handler';
+import { processArticle } from '../utils/article-processor';
 
 interface SystemCapabilities {
   hasChromeAI: boolean;
@@ -437,7 +438,7 @@ chrome.runtime.onMessage.addListener(
         return true;
 
       case 'OPEN_LEARNING_INTERFACE':
-        openLearningInterface(message.data as ExtractedContent)
+        openLearningInterface(message.data as ProcessedArticle)
           .then(tabId => sendResponse({ success: true, data: { tabId } }))
           .catch(error =>
             sendResponse({ success: false, error: error.message })
@@ -466,20 +467,40 @@ async function handleContentExtracted(
 ): Promise<void> {
   console.log('Content extracted:', content);
 
-  // Store the extracted content temporarily
-  await chrome.storage.session.set({
-    [`pending_article_${Date.now()}`]: content,
-  });
+  try {
+    // Process the extracted content into a structured article
+    console.log('Processing article...');
+    const processedArticle = await processArticle(content);
+    console.log('Article processed successfully:', {
+      id: processedArticle.id,
+      parts: processedArticle.parts.length,
+      language: processedArticle.originalLanguage,
+    });
 
-  // Open learning interface tab with extracted content
-  await openLearningInterface(content);
+    // Store the processed article temporarily
+    await chrome.storage.session.set({
+      [`pending_article_${Date.now()}`]: processedArticle,
+    });
+
+    // Open learning interface tab with processed article
+    await openLearningInterface(processedArticle);
+  } catch (error) {
+    console.error('Failed to process article:', error);
+
+    const processingError = globalErrorHandler.normalizeError(
+      error,
+      'article processing'
+    );
+
+    throw processingError;
+  }
 }
 
 /**
  * Open learning interface in a new tab
  */
 async function openLearningInterface(
-  content: ExtractedContent
+  article: ProcessedArticle
 ): Promise<number> {
   try {
     const tab = await chrome.tabs.create({
@@ -494,9 +515,15 @@ async function openLearningInterface(
     // Register tab with memory manager
     memoryManager.registerTab(tab.id);
 
-    // Store content for the new tab to retrieve
+    // Store processed article for the new tab to retrieve
     await chrome.storage.session.set({
-      [`article_${tab.id}`]: content,
+      [`article_${tab.id}`]: article,
+    });
+
+    console.log(`Article stored for tab ${tab.id}:`, {
+      id: article.id,
+      title: article.title,
+      parts: article.parts.length,
     });
 
     return tab.id;

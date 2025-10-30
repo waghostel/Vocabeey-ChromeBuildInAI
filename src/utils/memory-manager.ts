@@ -206,7 +206,7 @@ export class MemoryManager {
       return;
     }
 
-    this.monitoringInterval = window.setInterval(async () => {
+    this.monitoringInterval = setInterval(async () => {
       const usage = await this.getResourceUsage();
 
       // Notify callbacks
@@ -220,7 +220,7 @@ export class MemoryManager {
 
       // Check for cleanup needs
       await this.checkMemoryPressure();
-    }, this.MONITORING_INTERVAL);
+    }, this.MONITORING_INTERVAL) as unknown as number;
 
     console.log('Memory monitoring started');
   }
@@ -465,15 +465,12 @@ export class MemoryManager {
   private forceGarbageCollection(): void {
     try {
       // Try to trigger garbage collection
-      if ('gc' in window) {
-        (window as any).gc();
+      // Note: gc() is only available with --js-flags=--expose-gc in Chrome
+      if ('gc' in globalThis) {
+        (globalThis as any).gc();
         console.log('Forced garbage collection');
-      } else if ('webkitRequestAnimationFrame' in window) {
-        // Fallback: trigger through animation frame
-        requestAnimationFrame(() => {
-          // This can sometimes trigger GC
-        });
       }
+      // Service workers don't have requestAnimationFrame, so we skip that fallback
     } catch {
       // GC not available or failed
     }

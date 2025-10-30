@@ -1,6 +1,6 @@
 {
   "title": "Playwright MCP Call Guide for Extension Validation",
-  "extensionId": "PLACEHOLDER_EXTENSION_ID",
+  "extensionId": "ckehhllajbfpeoejdjifemgbidefoaka",
   "calls": [
     {
       "step": 1,
@@ -67,7 +67,7 @@
       "name": "Navigate to UI Page",
       "tool": "mcp_playwright_browser_navigate",
       "params": {
-        "url": "chrome-extension://PLACEHOLDER_EXTENSION_ID/ui/learning.html"
+        "url": "chrome-extension://ckehhllajbfpeoejdjifemgbidefoaka/ui/learning.html"
       },
       "purpose": "Test UI page accessibility"
     },

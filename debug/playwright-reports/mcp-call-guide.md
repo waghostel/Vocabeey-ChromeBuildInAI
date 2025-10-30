@@ -1,6 +1,6 @@
 # Playwright MCP Call Guide for Extension Validation
 
-**Extension ID:** PLACEHOLDER_EXTENSION_ID
+**Extension ID:** ckehhllajbfpeoejdjifemgbidefoaka
 
 ## Step 1: Navigate to Test Page
 
@@ -105,7 +105,7 @@
 
 ```json
 {
-  "url": "chrome-extension://PLACEHOLDER_EXTENSION_ID/ui/learning.html"
+  "url": "chrome-extension://ckehhllajbfpeoejdjifemgbidefoaka/ui/learning.html"
 }
 ```
 
