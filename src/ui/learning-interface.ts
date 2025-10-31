@@ -344,11 +344,31 @@ function renderPartVocabularyCards(part: ArticlePart): void {
         toggleCardCollapse(vocab.id, 'vocab')
       );
 
+      // Original language speaker
       const pronounceBtn = card.querySelector('.pronounce-btn');
       if (pronounceBtn) {
         pronounceBtn.addEventListener('click', e => {
           e.stopPropagation();
-          void handlePronounceClick(pronounceBtn as HTMLElement, vocab.word);
+          void handlePronounceClick(
+            pronounceBtn as HTMLElement,
+            vocab.word,
+            state.currentArticle?.originalLanguage
+          );
+        });
+      }
+
+      // Translation language speaker
+      const pronounceBtnTranslation = card.querySelector(
+        '.pronounce-btn-translation'
+      );
+      if (pronounceBtnTranslation) {
+        pronounceBtnTranslation.addEventListener('click', e => {
+          e.stopPropagation();
+          void handlePronounceClick(
+            pronounceBtnTranslation as HTMLElement,
+            vocab.translation,
+            state.targetLanguage
+          );
         });
       }
     }
@@ -364,10 +384,13 @@ function createVocabularyCardHTML(vocab: VocabularyItem): string {
       <div class="card-header">
         <span class="card-word">${escapeHtml(vocab.word)}</span>
         <div class="card-actions">
-          <button class="card-action-btn pronounce-btn" title="Pronounce">🔊</button>
+          <button class="card-action-btn pronounce-btn" data-lang="original" title="Pronounce original">🔊</button>
         </div>
       </div>
-      <div class="card-translation">${escapeHtml(vocab.translation)}</div>
+      <div class="card-translation">
+        ${escapeHtml(vocab.translation)}
+        <button class="card-action-btn pronounce-btn-translation" data-lang="translation" title="Pronounce translation">🔊</button>
+      </div>
       <div class="card-details">
         <div class="card-context">"${escapeHtml(vocab.context)}"</div>
         ${
@@ -409,13 +432,30 @@ function renderPartSentenceCards(part: ArticlePart): void {
         toggleCardCollapse(sentence.id, 'sentence')
       );
 
+      // Original language speaker
       const pronounceBtn = card.querySelector('.pronounce-btn');
       if (pronounceBtn) {
         pronounceBtn.addEventListener('click', e => {
           e.stopPropagation();
           void handlePronounceClick(
             pronounceBtn as HTMLElement,
-            sentence.content
+            sentence.content,
+            state.currentArticle?.originalLanguage
+          );
+        });
+      }
+
+      // Translation language speaker
+      const pronounceBtnTranslation = card.querySelector(
+        '.pronounce-btn-translation'
+      );
+      if (pronounceBtnTranslation) {
+        pronounceBtnTranslation.addEventListener('click', e => {
+          e.stopPropagation();
+          void handlePronounceClick(
+            pronounceBtnTranslation as HTMLElement,
+            sentence.translation,
+            state.targetLanguage
           );
         });
       }
@@ -432,11 +472,14 @@ function createSentenceCardHTML(sentence: SentenceItem): string {
       <div class="card-header">
         <span class="card-sentence">${escapeHtml(sentence.content)}</span>
         <div class="card-actions">
-          <button class="card-action-btn pronounce-btn" title="Pronounce">🔊</button>
+          <button class="card-action-btn pronounce-btn" data-lang="original" title="Pronounce original">🔊</button>
         </div>
       </div>
       <div class="card-details">
-        <div class="card-translation">${escapeHtml(sentence.translation)}</div>
+        <div class="card-translation">
+          ${escapeHtml(sentence.translation)}
+          <button class="card-action-btn pronounce-btn-translation" data-lang="translation" title="Pronounce translation">🔊</button>
+        </div>
       </div>
     </div>
   `;
@@ -555,12 +598,31 @@ function renderSentenceLearningMode(): void {
       `[data-sentence-learning-id="${sentence.id}"]`
     );
     if (card) {
+      // Original language button
       const pronounceBtn = card.querySelector(
         '.sentence-pronounce-btn'
       ) as HTMLElement;
       if (pronounceBtn) {
         pronounceBtn.addEventListener('click', () =>
-          handlePronounceClick(pronounceBtn, sentence.content)
+          handlePronounceClick(
+            pronounceBtn,
+            sentence.content,
+            state.currentArticle?.originalLanguage
+          )
+        );
+      }
+
+      // Translation language button
+      const pronounceBtnTranslation = card.querySelector(
+        '.sentence-pronounce-btn-translation'
+      ) as HTMLElement;
+      if (pronounceBtnTranslation) {
+        pronounceBtnTranslation.addEventListener('click', () =>
+          handlePronounceClick(
+            pronounceBtnTranslation,
+            sentence.translation,
+            state.targetLanguage
+          )
         );
       }
     }
@@ -576,9 +638,13 @@ function createSentenceLearningCardHTML(sentence: SentenceItem): string {
       <div class="sentence-learning-content">${escapeHtml(sentence.content)}</div>
       <div class="sentence-learning-translation">${escapeHtml(sentence.translation)}</div>
       <div class="sentence-learning-actions">
-        <button class="sentence-action-btn sentence-pronounce-btn">
+        <button class="sentence-action-btn sentence-pronounce-btn" data-lang="original">
           <span>🔊</span>
-          Pronounce
+          Pronounce Original
+        </button>
+        <button class="sentence-action-btn sentence-pronounce-btn-translation" data-lang="translation">
+          <span>🔊</span>
+          Pronounce Translation
         </button>
       </div>
     </div>
@@ -723,7 +789,8 @@ let currentSpeakingButton: HTMLElement | null = null;
  */
 async function handlePronounceClick(
   button: HTMLElement,
-  text: string
+  text: string,
+  language?: string
 ): Promise<void> {
   try {
     const { speak, stopSpeaking, isTTSSupported, getTTSService } = await import(
@@ -751,10 +818,7 @@ async function handlePronounceClick(
     // Show TTS indicator
     showTTSIndicator(text);
 
-    // Get language from current article
-    const language = state.currentArticle?.originalLanguage;
-
-    // Speak the text
+    // Speak the text with specified language
     await speak(text, { language });
 
     // Remove speaking indicators when done
