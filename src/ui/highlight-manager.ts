@@ -176,12 +176,21 @@ async function handleVocabularyHighlight(
     void pronounceText(text);
   });
 
-  // Add hover listener for translation popup
+  // Add hover listener for translation popup with delay
+  let hoverTimeout: number | null = null;
+
   highlightData.highlightElement.addEventListener('mouseenter', e => {
-    showTranslationPopup(e.target as HTMLElement, translation);
+    // Add delay to avoid accidental triggers and cursor overlap
+    hoverTimeout = window.setTimeout(() => {
+      showTranslationPopup(e.target as HTMLElement, translation);
+    }, 200);
   });
 
   highlightData.highlightElement.addEventListener('mouseleave', () => {
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+      hoverTimeout = null;
+    }
     hideTranslationPopup();
   });
 
@@ -531,7 +540,7 @@ function showTooltip(message: string, range: Range): void {
 }
 
 /**
- * Show translation popup
+ * Show translation popup with smart positioning
  */
 function showTranslationPopup(element: HTMLElement, translation: string): void {
   // Remove existing popup
@@ -551,13 +560,48 @@ function showTranslationPopup(element: HTMLElement, translation: string): void {
     z-index: 1000;
     max-width: 300px;
     pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
   `;
 
-  const rect = element.getBoundingClientRect();
-  popup.style.left = `${rect.left + window.scrollX}px`;
-  popup.style.top = `${rect.bottom + window.scrollY + 5}px`;
-
   document.body.appendChild(popup);
+
+  // Get dimensions after adding to DOM
+  const rect = element.getBoundingClientRect();
+  const popupRect = popup.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+
+  const offset = 12; // Distance from the word
+
+  // Always show above the word to avoid cursor overlap
+  // (users typically hover from bottom of word)
+  popup.style.top = `${rect.top + window.scrollY - popupRect.height - offset}px`;
+
+  // If popup would go off top of screen, adjust position
+  if (rect.top - popupRect.height - offset < 0) {
+    popup.style.top = `${window.scrollY + 10}px`; // 10px from top of viewport
+  }
+
+  // Smart horizontal positioning
+  let leftPosition = rect.left + window.scrollX;
+
+  // Check if popup would overflow right edge
+  if (leftPosition + popupRect.width > viewportWidth) {
+    // Align to right edge of word
+    leftPosition = rect.right + window.scrollX - popupRect.width;
+  }
+
+  // Ensure popup doesn't overflow left edge
+  if (leftPosition < 0) {
+    leftPosition = 10; // Small margin from edge
+  }
+
+  popup.style.left = `${leftPosition}px`;
+
+  // Fade in
+  requestAnimationFrame(() => {
+    popup.style.opacity = '1';
+  });
 }
 
 /**

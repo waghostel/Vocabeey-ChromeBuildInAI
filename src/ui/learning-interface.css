@@ -713,6 +713,34 @@ body.dark-mode {
 }
 
 /* ============================================================================
+   Translation Popup
+   ============================================================================ */
+
+.translation-popup {
+  position: absolute;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-width: 300px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+body.dark-mode .translation-popup {
+  background: #2c3e50;
+  border-color: #34495e;
+  color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================================
    Context Menu
    ============================================================================ */
 
