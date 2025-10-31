@@ -46,6 +46,9 @@ export function initializeHighlightManager(
   // Setup selection listener
   document.addEventListener('mouseup', handleTextSelection);
   document.addEventListener('touchend', handleTextSelection);
+
+  // Setup double-click listener for sentence mode
+  document.addEventListener('dblclick', handleDoubleClick);
 }
 
 /**
@@ -68,6 +71,7 @@ export function getHighlightMode(): HighlightMode {
 export function cleanupHighlightManager(): void {
   document.removeEventListener('mouseup', handleTextSelection);
   document.removeEventListener('touchend', handleTextSelection);
+  document.removeEventListener('dblclick', handleDoubleClick);
   highlights.clear();
 }
 
@@ -76,10 +80,130 @@ export function cleanupHighlightManager(): void {
 // ============================================================================
 
 /**
+ * Handle double-click for sentence selection in sentence mode
+ */
+async function handleDoubleClick(event: MouseEvent): Promise<void> {
+  // Only handle in sentence mode
+  if (currentMode !== 'sentence') return;
+
+  const target = event.target as HTMLElement;
+
+  // Check if double-click is within article content
+  const articleContent = document.querySelector('.article-part-content');
+  if (!articleContent || !articleContent.contains(target)) return;
+
+  // Allow double-click on existing highlights - overlapping is supported
+
+  // Find the sentence containing the clicked word
+  const sentence = findSentenceAtPoint(event);
+  if (!sentence) return;
+
+  try {
+    // Create a range for the sentence
+    const range = document.createRange();
+    range.selectNodeContents(sentence.node);
+    range.setStart(sentence.node, sentence.startOffset);
+    range.setEnd(sentence.node, sentence.endOffset);
+
+    // Select the sentence visually (optional, for user feedback)
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    // Process the sentence highlight
+    await handleSentenceHighlight(sentence.text, range);
+
+    // Clear selection after processing
+    if (selection) {
+      selection.removeAllRanges();
+    }
+  } catch (error) {
+    console.error('Error handling double-click sentence selection:', error);
+  }
+}
+
+/**
+ * Find the complete sentence at the clicked point
+ */
+function findSentenceAtPoint(event: MouseEvent): {
+  text: string;
+  node: Node;
+  startOffset: number;
+  endOffset: number;
+} | null {
+  const target = event.target as Node;
+
+  // Get the text node
+  let textNode: Node | null = target;
+  if (textNode.nodeType !== Node.TEXT_NODE) {
+    // If clicked on an element, try to find text node
+    const walker = document.createTreeWalker(
+      target,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+    textNode = walker.nextNode();
+  }
+
+  if (!textNode || textNode.nodeType !== Node.TEXT_NODE) return null;
+
+  const fullText = textNode.textContent || '';
+
+  // Get the character offset within the text node
+  const range = document.caretRangeFromPoint(event.clientX, event.clientY);
+  if (!range) return null;
+
+  const clickOffset = range.startOffset;
+
+  // Sentence boundary patterns
+  // Matches: . ! ? followed by space/newline/end, or start of text
+  const sentenceEndPattern = /[.!?][\s\n]|[.!?]$/g;
+
+  // Find sentence start (look backwards from click point)
+  let startOffset = 0;
+  const textBeforeClick = fullText.substring(0, clickOffset);
+  const matches = Array.from(textBeforeClick.matchAll(sentenceEndPattern));
+  if (matches.length > 0) {
+    const lastMatch = matches[matches.length - 1];
+    startOffset = (lastMatch.index || 0) + lastMatch[0].length;
+  }
+
+  // Find sentence end (look forwards from click point)
+  let endOffset = fullText.length;
+  const textAfterClick = fullText.substring(clickOffset);
+  const endMatch = textAfterClick.match(sentenceEndPattern);
+  if (endMatch && endMatch.index !== undefined) {
+    endOffset = clickOffset + endMatch.index + endMatch[0].trimEnd().length;
+  }
+
+  // Extract sentence text and trim
+  const sentenceText = fullText.substring(startOffset, endOffset).trim();
+
+  // Adjust offsets for trimmed text
+  const trimStart = fullText
+    .substring(startOffset, endOffset)
+    .indexOf(sentenceText);
+  startOffset += trimStart;
+  endOffset = startOffset + sentenceText.length;
+
+  // Validate sentence (should be at least 10 characters)
+  if (sentenceText.length < 10) return null;
+
+  return {
+    text: sentenceText,
+    node: textNode,
+    startOffset,
+    endOffset,
+  };
+}
+
+/**
  * Handle text selection
  */
 async function handleTextSelection(
-  event: MouseEvent | TouchEvent
+  _event: MouseEvent | TouchEvent
 ): Promise<void> {
   if (currentMode === 'none') return;
 
@@ -96,14 +220,8 @@ async function handleTextSelection(
   const range = selection.getRangeAt(0);
   if (!articleContent.contains(range.commonAncestorContainer)) return;
 
-  // Prevent highlighting if clicking on existing highlight
-  const target = event.target as HTMLElement;
-  if (
-    target.classList.contains('highlight-vocabulary') ||
-    target.classList.contains('highlight-sentence')
-  ) {
-    return;
-  }
+  // Allow selection within existing highlights - overlapping is now supported
+  // No need to prevent highlighting on existing highlights
 
   try {
     if (currentMode === 'vocabulary') {
@@ -171,9 +289,15 @@ async function handleVocabularyHighlight(
     type: 'vocabulary',
   });
 
-  // Add click listener for pronunciation
-  highlightData.highlightElement.addEventListener('click', () => {
-    void pronounceText(text);
+  // Add click listener - mode-aware behavior
+  highlightData.highlightElement.addEventListener('click', (e: Event) => {
+    e.stopPropagation(); // Prevent event bubbling
+
+    // In vocabulary mode, clicking should NOT pronounce (user is selecting)
+    // Only pronounce if we're NOT in vocabulary mode or if explicitly requested
+    if (currentMode !== 'vocabulary') {
+      void pronounceText(text);
+    }
   });
 
   // Add hover listener for translation popup with delay
@@ -247,9 +371,15 @@ async function handleSentenceHighlight(
     type: 'sentence',
   });
 
-  // Add click listener for pronunciation
-  highlightData.highlightElement.addEventListener('click', () => {
-    void pronounceText(text);
+  // Add click listener - mode-aware behavior
+  highlightData.highlightElement.addEventListener('click', (e: Event) => {
+    e.stopPropagation(); // Prevent event bubbling
+
+    // In sentence mode, clicking should NOT pronounce (user is selecting)
+    // Only pronounce if we're NOT in sentence mode or if explicitly requested
+    if (currentMode !== 'sentence') {
+      void pronounceText(text);
+    }
   });
 
   // Add context menu listener
@@ -263,7 +393,7 @@ async function handleSentenceHighlight(
 }
 
 /**
- * Create highlight element
+ * Create highlight element with support for overlapping highlights
  */
 function createHighlight(
   text: string,
@@ -273,20 +403,45 @@ function createHighlight(
   const highlightClass =
     type === 'vocabulary' ? 'highlight-vocabulary' : 'highlight-sentence';
 
-  // Create highlight span
+  // Get context before modifying DOM
+  const context = getContext(range, 100);
+
+  // Check for trailing whitespace before extracting
+  const rangeText = range.toString();
+  const hasTrailingSpace = rangeText !== rangeText.trimEnd();
+  const trailingWhitespace = hasTrailingSpace
+    ? rangeText.slice(rangeText.trimEnd().length)
+    : '';
+
+  // Extract the contents of the range (may include existing highlights)
+  const fragment = range.extractContents();
+
+  // Create new highlight span
   const highlight = document.createElement('span');
   highlight.className = highlightClass;
-  highlight.textContent = text;
   highlight.setAttribute('data-highlight-type', type);
   highlight.setAttribute('data-highlight-text', text);
 
-  // Get context
-  const context = getContext(range, 100);
+  // Check if fragment contains existing highlights
+  const existingHighlights = fragment.querySelectorAll('[data-highlight-type]');
 
-  // Replace range with highlight
+  if (existingHighlights.length > 0) {
+    // Preserve existing highlights by wrapping them
+    highlight.appendChild(fragment);
+  } else {
+    // No existing highlights, just set text content
+    highlight.textContent = text;
+  }
+
+  // Insert the new highlight
   try {
-    range.deleteContents();
     range.insertNode(highlight);
+
+    // Restore trailing whitespace if it was present
+    if (trailingWhitespace) {
+      const whitespaceNode = document.createTextNode(trailingWhitespace);
+      highlight.parentNode?.insertBefore(whitespaceNode, highlight.nextSibling);
+    }
   } catch (error) {
     console.error('Error creating highlight:', error);
   }

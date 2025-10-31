@@ -1151,3 +1151,107 @@ body.dark-mode .translation-popup {
     transform: scale(1.1);
   }
 }
+
+/* ============================================================================
+   Text Highlighting Styles
+   ============================================================================ */
+
+/* Vocabulary highlights */
+.highlight-vocabulary {
+  background-color: rgba(255, 235, 59, 0.4);
+  border-bottom: 2px solid rgba(255, 193, 7, 0.8);
+  cursor: pointer;
+  padding: 2px 0;
+  transition: background-color 0.2s ease;
+  position: relative;
+  display: inline;
+}
+
+.highlight-vocabulary:hover {
+  background-color: rgba(255, 235, 59, 0.6);
+}
+
+/* Sentence highlights */
+.highlight-sentence {
+  background-color: rgba(129, 212, 250, 0.3);
+  border-bottom: 2px solid rgba(33, 150, 243, 0.6);
+  cursor: pointer;
+  padding: 2px 0;
+  transition: background-color 0.2s ease;
+  position: relative;
+  display: inline;
+}
+
+.highlight-sentence:hover {
+  background-color: rgba(129, 212, 250, 0.5);
+}
+
+/* Overlapping highlights - vocabulary inside sentence */
+.highlight-sentence .highlight-vocabulary {
+  /* Vocabulary takes visual precedence when nested */
+  background-color: rgba(255, 235, 59, 0.5);
+  border-bottom: 2px solid rgba(255, 193, 7, 0.9);
+  /* Add subtle outline to show both highlights */
+  outline: 1px solid rgba(33, 150, 243, 0.3);
+  outline-offset: -1px;
+}
+
+.highlight-sentence .highlight-vocabulary:hover {
+  background-color: rgba(255, 235, 59, 0.7);
+}
+
+/* Overlapping highlights - sentence inside vocabulary (less common) */
+.highlight-vocabulary .highlight-sentence {
+  /* Maintain sentence appearance when nested in vocabulary */
+  background-color: rgba(129, 212, 250, 0.4);
+  border-bottom: 2px solid rgba(33, 150, 243, 0.7);
+  outline: 1px solid rgba(255, 193, 7, 0.3);
+  outline-offset: -1px;
+}
+
+.highlight-vocabulary .highlight-sentence:hover {
+  background-color: rgba(129, 212, 250, 0.6);
+}
+
+/* Translation popup */
+.translation-popup {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    Cantarell, sans-serif;
+  line-height: 1.4;
+  color: var(--text-primary);
+  word-wrap: break-word;
+}
+
+/* Highlight tooltip */
+.highlight-tooltip {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    Cantarell, sans-serif;
+  white-space: nowrap;
+}
+
+/* Dark mode support for highlights */
+body.dark-mode .highlight-vocabulary {
+  background-color: rgba(255, 235, 59, 0.25);
+  border-bottom-color: rgba(255, 193, 7, 0.6);
+}
+
+body.dark-mode .highlight-vocabulary:hover {
+  background-color: rgba(255, 235, 59, 0.35);
+}
+
+body.dark-mode .highlight-sentence {
+  background-color: rgba(129, 212, 250, 0.2);
+  border-bottom-color: rgba(33, 150, 243, 0.5);
+}
+
+body.dark-mode .highlight-sentence:hover {
+  background-color: rgba(129, 212, 250, 0.3);
+}
+
+body.dark-mode .translation-popup {
+  background: #2c3e50;
+  color: #ecf0f1;
+  border-color: #34495e;
+}
