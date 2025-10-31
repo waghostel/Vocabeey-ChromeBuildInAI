@@ -397,10 +397,18 @@ async function translateVocabulary(
   context: string
 ): Promise<string> {
   try {
+    // Get user-selected target language
+    const { targetLanguage } = await chrome.storage.local.get('targetLanguage');
+
     // Send message to background script for translation
     const response = await chrome.runtime.sendMessage({
       type: 'TRANSLATE_TEXT',
-      payload: { text, context, type: 'vocabulary' },
+      payload: {
+        text,
+        context,
+        type: 'vocabulary',
+        targetLanguage: targetLanguage || 'en',
+      },
     });
 
     if (response.success) {
@@ -420,10 +428,17 @@ async function translateVocabulary(
  */
 async function translateSentence(text: string): Promise<string> {
   try {
+    // Get user-selected target language
+    const { targetLanguage } = await chrome.storage.local.get('targetLanguage');
+
     // Send message to background script for translation
     const response = await chrome.runtime.sendMessage({
       type: 'TRANSLATE_TEXT',
-      payload: { text, type: 'sentence' },
+      payload: {
+        text,
+        type: 'sentence',
+        targetLanguage: targetLanguage || 'en',
+      },
     });
 
     if (response.success) {
@@ -580,16 +595,40 @@ function showContextMenu(
  */
 async function pronounceText(text: string): Promise<void> {
   try {
-    const { speak, isTTSSupported } = await import('../utils/tts-service');
+    const { speak, isTTSSupported } = await import('../utils/tts-service.js');
 
     if (!isTTSSupported()) {
       console.warn('Text-to-speech is not supported in this browser');
       return;
     }
 
-    await speak(text);
+    // Get language from article metadata
+    const language = await getArticleLanguage();
+
+    await speak(text, { language });
   } catch (error) {
     console.error('TTS error:', error);
+  }
+}
+
+/**
+ * Get the language of the current article
+ */
+async function getArticleLanguage(): Promise<string | undefined> {
+  if (!currentArticleId) return undefined;
+
+  try {
+    // Get article from session storage
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tabId = tabs[0]?.id;
+    if (!tabId) return undefined;
+
+    const data = await chrome.storage.session.get(`article_${tabId}`);
+    const article = data[`article_${tabId}`];
+    return article?.originalLanguage;
+  } catch (error) {
+    console.error('Error getting article language:', error);
+    return undefined;
   }
 }
 

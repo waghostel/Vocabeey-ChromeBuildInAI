@@ -22,6 +22,39 @@ import type {
 } from '../types';
 
 // ============================================================================
+// Language Data
+// ============================================================================
+
+const LANGUAGES = [
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Spanish' },
+  { code: 'fr', name: 'French' },
+  { code: 'de', name: 'German' },
+  { code: 'it', name: 'Italian' },
+  { code: 'pt', name: 'Portuguese' },
+  { code: 'ru', name: 'Russian' },
+  { code: 'ja', name: 'Japanese' },
+  { code: 'ko', name: 'Korean' },
+  { code: 'zh-CN', name: 'Chinese (Simplified)' },
+  { code: 'zh-TW', name: 'Chinese (Traditional)' },
+  { code: 'ar', name: 'Arabic' },
+  { code: 'hi', name: 'Hindi' },
+  { code: 'nl', name: 'Dutch' },
+  { code: 'pl', name: 'Polish' },
+  { code: 'tr', name: 'Turkish' },
+  { code: 'vi', name: 'Vietnamese' },
+  { code: 'th', name: 'Thai' },
+  { code: 'sv', name: 'Swedish' },
+  { code: 'no', name: 'Norwegian' },
+  { code: 'da', name: 'Danish' },
+  { code: 'fi', name: 'Finnish' },
+  { code: 'cs', name: 'Czech' },
+  { code: 'hu', name: 'Hungarian' },
+  { code: 'ro', name: 'Romanian' },
+  { code: 'uk', name: 'Ukrainian' },
+];
+
+// ============================================================================
 // State Management
 // ============================================================================
 
@@ -33,6 +66,7 @@ interface UIState {
   vocabularyItems: VocabularyItem[];
   sentenceItems: SentenceItem[];
   highlightMode: HighlightMode;
+  targetLanguage: string;
 }
 
 const state: UIState = {
@@ -43,6 +77,7 @@ const state: UIState = {
   vocabularyItems: [],
   sentenceItems: [],
   highlightMode: 'vocabulary',
+  targetLanguage: 'en',
 };
 
 // ============================================================================
@@ -62,6 +97,13 @@ const elements = {
   articleTitle: document.querySelector('.article-title') as HTMLElement,
   articleUrl: document.querySelector('.article-url') as HTMLElement,
   articleLanguage: document.querySelector('.article-language') as HTMLElement,
+
+  // Language selector
+  languageInput: document.getElementById(
+    'target-language-input'
+  ) as HTMLInputElement,
+  languageDropdown: document.querySelector('.language-dropdown') as HTMLElement,
+  languageOptions: document.querySelector('.language-options') as HTMLElement,
 
   // Article content
   articlePartContent: document.querySelector(
@@ -105,6 +147,9 @@ async function initialize(): Promise<void> {
 
     // Initialize memory monitoring
     initializeMemoryMonitoring();
+
+    // Initialize language selector
+    await initializeLanguageSelector();
 
     // Get article data from session storage
     const tabId = await getCurrentTabId();
@@ -682,7 +727,7 @@ async function handlePronounceClick(
 ): Promise<void> {
   try {
     const { speak, stopSpeaking, isTTSSupported, getTTSService } = await import(
-      '../utils/tts-service'
+      '../utils/tts-service.js'
     );
 
     if (!isTTSSupported()) {
@@ -754,7 +799,7 @@ function showTTSIndicator(text: string): void {
   const stopBtn = indicator.querySelector('.tts-stop-btn');
   if (stopBtn) {
     stopBtn.addEventListener('click', async () => {
-      const { stopSpeaking } = await import('../utils/tts-service');
+      const { stopSpeaking } = await import('../utils/tts-service.js');
       stopSpeaking();
       removeSpeakingIndicators();
     });
@@ -919,7 +964,7 @@ async function handleContextMenuAction(event: Event): Promise<void> {
   if (!itemId || !itemType) return;
 
   if (action === 'remove') {
-    const { removeHighlight } = await import('./highlight-manager');
+    const { removeHighlight } = await import('./highlight-manager.js');
     void removeHighlight(itemId, itemType);
   }
 
@@ -1014,6 +1059,273 @@ function showMemoryWarning(_usage: ResourceUsage): void {
   }, 10000);
 
   document.body.appendChild(warning);
+}
+
+// ============================================================================
+// Language Selector
+// ============================================================================
+
+/**
+ * Initialize language selector
+ */
+async function initializeLanguageSelector(): Promise<void> {
+  // Load saved target language
+  const data = await chrome.storage.local.get('targetLanguage');
+  state.targetLanguage = data.targetLanguage || 'en';
+
+  // Set initial value
+  const selectedLang = LANGUAGES.find(l => l.code === state.targetLanguage);
+  if (selectedLang && elements.languageInput) {
+    elements.languageInput.value = selectedLang.name;
+  }
+
+  // Populate language options
+  populateLanguageOptions();
+
+  // Setup event listeners
+  if (elements.languageInput) {
+    elements.languageInput.addEventListener('focus', () => {
+      showLanguageDropdown();
+    });
+
+    elements.languageInput.addEventListener('input', () => {
+      filterLanguageOptions(elements.languageInput.value);
+    });
+
+    elements.languageInput.addEventListener('blur', () => {
+      // Delay to allow click on option
+      setTimeout(() => {
+        hideLanguageDropdown();
+      }, 200);
+    });
+  }
+}
+
+/**
+ * Populate language options
+ */
+function populateLanguageOptions(): void {
+  if (!elements.languageOptions) return;
+
+  elements.languageOptions.innerHTML = LANGUAGES.map(
+    lang => `
+    <div class="language-option" data-code="${lang.code}">
+      ${escapeHtml(lang.name)}
+    </div>
+  `
+  ).join('');
+
+  // Add click listeners
+  const options = elements.languageOptions.querySelectorAll('.language-option');
+  options.forEach(option => {
+    option.addEventListener('click', () => {
+      const code = (option as HTMLElement).dataset.code;
+      if (code) {
+        void selectLanguage(code);
+      }
+    });
+  });
+}
+
+/**
+ * Show language dropdown
+ */
+function showLanguageDropdown(): void {
+  if (elements.languageDropdown) {
+    elements.languageDropdown.classList.add('active');
+  }
+  filterLanguageOptions(elements.languageInput?.value || '');
+}
+
+/**
+ * Hide language dropdown
+ */
+function hideLanguageDropdown(): void {
+  if (elements.languageDropdown) {
+    elements.languageDropdown.classList.remove('active');
+  }
+}
+
+/**
+ * Filter language options based on search
+ */
+function filterLanguageOptions(search: string): void {
+  if (!elements.languageOptions) return;
+
+  const searchLower = search.toLowerCase();
+  const options = elements.languageOptions.querySelectorAll('.language-option');
+
+  options.forEach(option => {
+    const name = option.textContent?.toLowerCase() || '';
+    if (name.includes(searchLower)) {
+      (option as HTMLElement).style.display = 'block';
+    } else {
+      (option as HTMLElement).style.display = 'none';
+    }
+  });
+}
+
+/**
+ * Select a language
+ */
+async function selectLanguage(code: string): Promise<void> {
+  const lang = LANGUAGES.find(l => l.code === code);
+  if (!lang) return;
+
+  const previousLanguage = state.targetLanguage;
+
+  // Update state
+  state.targetLanguage = code;
+
+  // Update input
+  if (elements.languageInput) {
+    elements.languageInput.value = lang.name;
+  }
+
+  // Save to storage
+  await chrome.storage.local.set({ targetLanguage: code });
+
+  // Hide dropdown
+  hideLanguageDropdown();
+
+  // Show confirmation with option to re-translate
+  if (previousLanguage !== code && state.vocabularyItems.length > 0) {
+    showLanguageChangeConfirmation(lang.name);
+  } else {
+    showTooltip(`Translation language set to ${lang.name}`);
+  }
+}
+
+/**
+ * Show language change confirmation with re-translate option
+ */
+function showLanguageChangeConfirmation(languageName: string): void {
+  const confirmation = document.createElement('div');
+  confirmation.className = 'language-change-confirmation';
+  confirmation.innerHTML = `
+    <div class="confirmation-content">
+      <p>Translation language changed to <strong>${languageName}</strong></p>
+      <p>Would you like to re-translate existing vocabulary?</p>
+      <div class="confirmation-actions">
+        <button class="btn-retranslate">Re-translate</button>
+        <button class="btn-dismiss">Not now</button>
+      </div>
+    </div>
+  `;
+
+  confirmation.style.cssText = `
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: white;
+    border: 2px solid var(--primary-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
+    max-width: 400px;
+    animation: slideIn 0.3s ease-out;
+  `;
+
+  document.body.appendChild(confirmation);
+
+  // Add event listeners
+  const retranslateBtn = confirmation.querySelector('.btn-retranslate');
+  const dismissBtn = confirmation.querySelector('.btn-dismiss');
+
+  retranslateBtn?.addEventListener('click', async () => {
+    confirmation.remove();
+    await retranslateAllVocabulary();
+  });
+
+  dismissBtn?.addEventListener('click', () => {
+    confirmation.remove();
+    showTooltip(`Translation language set to ${languageName}`);
+  });
+
+  // Auto-dismiss after 10 seconds
+  setTimeout(() => {
+    if (document.body.contains(confirmation)) {
+      confirmation.remove();
+      showTooltip(`Translation language set to ${languageName}`);
+    }
+  }, 10000);
+}
+
+/**
+ * Re-translate all vocabulary items to the new target language
+ */
+async function retranslateAllVocabulary(): Promise<void> {
+  if (state.vocabularyItems.length === 0) return;
+
+  showLoading(
+    `Re-translating ${state.vocabularyItems.length} vocabulary items...`
+  );
+
+  try {
+    let successCount = 0;
+    let failCount = 0;
+
+    // Re-translate each vocabulary item
+    for (const vocab of state.vocabularyItems) {
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: 'TRANSLATE_TEXT',
+          payload: {
+            text: vocab.word,
+            context: vocab.context,
+            type: 'vocabulary',
+            targetLanguage: state.targetLanguage,
+          },
+        });
+
+        if (response.success) {
+          // Update the vocabulary item with new translation
+          vocab.translation = response.data.translation;
+          successCount++;
+        } else {
+          failCount++;
+          console.error('Failed to translate:', vocab.word, response.error);
+        }
+      } catch (error) {
+        failCount++;
+        console.error('Error translating:', vocab.word, error);
+      }
+    }
+
+    // Save updated vocabulary to storage
+    const vocabMap: Record<string, VocabularyItem> = {};
+    state.vocabularyItems.forEach(v => {
+      vocabMap[v.id] = v;
+    });
+    await chrome.storage.local.set({ vocabulary: vocabMap });
+
+    // Re-render current part
+    if (state.currentArticle) {
+      const part = state.currentArticle.parts[state.currentPartIndex];
+      if (part) {
+        renderPartVocabularyCards(part);
+      }
+    }
+
+    // Re-render vocabulary learning mode if active
+    if (state.currentMode === 'vocabulary') {
+      renderVocabularyLearningMode();
+    }
+
+    hideLoading();
+
+    // Show result
+    if (failCount === 0) {
+      showTooltip(`✓ Successfully re-translated ${successCount} items`);
+    } else {
+      showTooltip(`Re-translated ${successCount} items (${failCount} failed)`);
+    }
+  } catch (error) {
+    console.error('Error during re-translation:', error);
+    hideLoading();
+    showTooltip('Failed to re-translate vocabulary');
+  }
 }
 
 // ============================================================================

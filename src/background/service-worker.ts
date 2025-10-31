@@ -485,14 +485,21 @@ async function handleTranslateText(payload: {
   text: string;
   context?: string;
   type?: 'vocabulary' | 'sentence';
+  targetLanguage?: string;
 }): Promise<string> {
   try {
     console.log('TRANSLATE_TEXT request:', payload);
 
     // Get user settings for language preferences
-    const { settings } = await chrome.storage.local.get('settings');
+    const { settings, targetLanguage: userSelectedLanguage } =
+      await chrome.storage.local.get(['settings', 'targetLanguage']);
     const sourceLanguage = settings?.learningLanguage || 'es';
-    const targetLanguage = settings?.nativeLanguage || 'en';
+    // Use user-selected target language, fallback to settings, then default to 'en'
+    const targetLanguage =
+      payload.targetLanguage ||
+      userSelectedLanguage ||
+      settings?.nativeLanguage ||
+      'en';
 
     // Route translation to offscreen document where Chrome AI APIs are available
     try {

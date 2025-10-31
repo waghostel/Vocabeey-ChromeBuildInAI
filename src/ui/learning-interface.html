@@ -34,20 +34,37 @@
             <span class="article-url"></span>
             <span class="article-language"></span>
           </div>
-          <div class="highlight-mode-selector">
-            <label>Highlight Mode:</label>
-            <button
-              class="highlight-mode-btn active"
-              data-highlight-mode="vocabulary"
-            >
-              📝 Vocabulary
-            </button>
-            <button class="highlight-mode-btn" data-highlight-mode="sentence">
-              💬 Sentences
-            </button>
-            <button class="highlight-mode-btn" data-highlight-mode="none">
-              🚫 None
-            </button>
+          <div class="header-controls">
+            <div class="language-selector-container">
+              <label for="target-language-input">Translate to:</label>
+              <div class="language-selector-wrapper">
+                <input
+                  type="text"
+                  id="target-language-input"
+                  class="language-input"
+                  placeholder="Search language..."
+                  autocomplete="off"
+                />
+                <div class="language-dropdown">
+                  <div class="language-options"></div>
+                </div>
+              </div>
+            </div>
+            <div class="highlight-mode-selector">
+              <label>Highlight Mode:</label>
+              <button
+                class="highlight-mode-btn active"
+                data-highlight-mode="vocabulary"
+              >
+                📝 Vocabulary
+              </button>
+              <button class="highlight-mode-btn" data-highlight-mode="sentence">
+                💬 Sentences
+              </button>
+              <button class="highlight-mode-btn" data-highlight-mode="none">
+                🚫 None
+              </button>
+            </div>
           </div>
         </header>
 
