@@ -11,11 +11,13 @@ import {
 import {
   initializeOffscreenManagement,
   shutdownOffscreenManagement,
+  executeOffscreenAITask,
 } from '../utils/offscreen-manager';
 
 import type { ExtractedContent, ProcessedArticle } from '../types';
 import { globalErrorHandler } from '../utils/error-handler';
 import { processArticle } from '../utils/article-processor';
+import { GeminiAPIClient } from '../utils/gemini-api';
 
 interface SystemCapabilities {
   hasChromeAI: boolean;
@@ -414,7 +416,7 @@ async function processCurrentTab(tabId: number): Promise<void> {
  */
 chrome.runtime.onMessage.addListener(
   (
-    message: { type: string; data?: unknown },
+    message: { type: string; data?: unknown; payload?: unknown },
     _sender,
     sendResponse
   ): boolean => {
@@ -453,11 +455,99 @@ chrome.runtime.onMessage.addListener(
           );
         return true;
 
+      case 'TRANSLATE_TEXT':
+        handleTranslateText(
+          (message.payload || message.data) as {
+            text: string;
+            context?: string;
+            type?: 'vocabulary' | 'sentence';
+          }
+        )
+          .then(translation =>
+            sendResponse({ success: true, data: { translation } })
+          )
+          .catch(error =>
+            sendResponse({ success: false, error: error.message })
+          );
+        return true;
+
       default:
         return false;
     }
   }
 );
+
+/**
+ * Handle text translation request
+ * Routes translation to offscreen document where Chrome AI APIs are available
+ */
+async function handleTranslateText(payload: {
+  text: string;
+  context?: string;
+  type?: 'vocabulary' | 'sentence';
+}): Promise<string> {
+  try {
+    console.log('TRANSLATE_TEXT request:', payload);
+
+    // Get user settings for language preferences
+    const { settings } = await chrome.storage.local.get('settings');
+    const sourceLanguage = settings?.learningLanguage || 'es';
+    const targetLanguage = settings?.nativeLanguage || 'en';
+
+    // Route translation to offscreen document where Chrome AI APIs are available
+    try {
+      // Execute translation task in offscreen document
+      const translation = await executeOffscreenAITask<string>(
+        'translation',
+        {
+          text: payload.text,
+          sourceLanguage,
+          targetLanguage,
+          context: payload.context,
+        },
+        15000 // 15 second timeout for translation
+      );
+
+      console.log(
+        'Translation successful (Chrome AI via offscreen):',
+        translation
+      );
+      return translation;
+    } catch (offscreenError) {
+      console.warn(
+        'Offscreen translation failed, falling back to Gemini:',
+        offscreenError
+      );
+    }
+
+    // Fallback to Gemini API
+    const { apiKeys } = settings || {};
+    const geminiKey = apiKeys?.gemini;
+
+    if (!geminiKey) {
+      throw new Error(
+        'Translation API not available and no Gemini API key configured'
+      );
+    }
+
+    // Use Gemini API (already imported at top)
+    const geminiAPI = new GeminiAPIClient({ apiKey: geminiKey });
+
+    const translation = await geminiAPI.translateText(
+      payload.text,
+      sourceLanguage,
+      targetLanguage
+    );
+
+    console.log('Translation successful (Gemini):', translation);
+    return translation;
+  } catch (error) {
+    console.error('TRANSLATE_TEXT error:', error);
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(errorMessage);
+  }
+}
 
 /**
  * Handle extracted content from content script
@@ -552,20 +642,23 @@ async function checkSystemCapabilities(): Promise<SystemCapabilities> {
   };
 
   try {
-    // Check for Chrome AI APIs availability
-    // Note: These APIs are experimental and may not be available
+    // Check for window.ai APIs (Summarizer, Rewriter, Prompt API)
     if ('ai' in self) {
       capabilities.hasChromeAI = true;
 
-      // Check individual API availability
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ai = (self as any).ai;
-      capabilities.hasLanguageDetector = 'languageDetector' in ai;
       capabilities.hasSummarizer = 'summarizer' in ai;
       capabilities.hasRewriter = 'rewriter' in ai;
-      capabilities.hasTranslator = 'translator' in ai;
       capabilities.hasPromptAPI = 'languageModel' in ai;
     }
+
+    // Check for global APIs (Translator, LanguageDetector)
+    // Note: These are NOT under window.ai
+    capabilities.hasTranslator =
+      typeof (self as any).Translator !== 'undefined';
+    capabilities.hasLanguageDetector =
+      typeof (self as any).LanguageDetector !== 'undefined';
 
     // Try to get hardware info if available
     if ('navigator' in self && 'deviceMemory' in navigator) {

@@ -12,15 +12,22 @@ import type {
 
 // ============================================================================
 // Chrome AI API Type Definitions
+// Based on official Chrome documentation:
+// - Translator API: Global API (not under window.ai)
+// - Language Detector API: Global API (not under window.ai)
+// - Summarizer API: Under window.ai
+// - Rewriter API: Under window.ai
+// - Prompt API (languageModel): Under window.ai
 // ============================================================================
 
-interface LanguageDetector {
+// Instance interfaces
+interface LanguageDetectorInstance {
   detect(
     text: string
   ): Promise<{ detectedLanguage: string; confidence: number }[]>;
 }
 
-interface Summarizer {
+interface SummarizerInstance {
   summarize(
     text: string,
     options?: { length?: 'short' | 'medium' | 'long' }
@@ -28,7 +35,7 @@ interface Summarizer {
   destroy(): void;
 }
 
-interface Rewriter {
+interface RewriterInstance {
   rewrite(
     text: string,
     options?: { tone?: string; length?: string }
@@ -36,8 +43,9 @@ interface Rewriter {
   destroy(): void;
 }
 
-interface Translator {
+interface TranslatorInstance {
   translate(text: string): Promise<string>;
+  translateStreaming(text: string): AsyncIterable<string>;
   destroy(): void;
 }
 
@@ -46,17 +54,33 @@ interface PromptSession {
   destroy(): void;
 }
 
+// Global Translator API (NOT under window.ai)
+interface TranslatorAPI {
+  availability(options: {
+    sourceLanguage: string;
+    targetLanguage: string;
+  }): Promise<'readily' | 'after-download' | 'no'>;
+
+  create(options: {
+    sourceLanguage: string;
+    targetLanguage: string;
+    monitor?: (m: EventTarget) => void;
+  }): Promise<TranslatorInstance>;
+}
+
+// Global Language Detector API (NOT under window.ai)
+interface LanguageDetectorAPI {
+  create(): Promise<LanguageDetectorInstance>;
+}
+
+// window.ai namespace (for Summarizer, Rewriter, Prompt API only)
 interface ChromeAI {
-  languageDetector?: {
-    create(): Promise<LanguageDetector>;
-    capabilities(): Promise<{ available: string }>;
-  };
   summarizer?: {
     create(options?: {
       type?: string;
       format?: string;
       length?: string;
-    }): Promise<Summarizer>;
+    }): Promise<SummarizerInstance>;
     capabilities(): Promise<{ available: string }>;
   };
   rewriter?: {
@@ -64,26 +88,20 @@ interface ChromeAI {
       tone?: string;
       format?: string;
       length?: string;
-    }): Promise<Rewriter>;
+    }): Promise<RewriterInstance>;
     capabilities(): Promise<{ available: string }>;
   };
-  translator?: {
-    create(options: {
-      sourceLanguage: string;
-      targetLanguage: string;
-    }): Promise<Translator>;
-    capabilities(): Promise<{
-      available: string;
-      languagePairAvailable(source: string, target: string): Promise<string>;
-    }>;
-  };
-  assistant?: {
+  languageModel?: {
     create(options?: { systemPrompt?: string }): Promise<PromptSession>;
     capabilities(): Promise<{ available: string }>;
   };
 }
 
 declare global {
+  // Global APIs (top-level, not under window.ai)
+  const Translator: TranslatorAPI;
+  const LanguageDetector: LanguageDetectorAPI;
+
   interface Window {
     ai?: ChromeAI;
   }
@@ -109,24 +127,16 @@ export class ChromeLanguageDetector {
     }
 
     try {
-      // Check if API is available
-      if (!window.ai?.languageDetector) {
+      // Check if API is available (global LanguageDetector)
+      if (typeof LanguageDetector === 'undefined') {
         throw this.createError(
           'api_unavailable',
-          'Language Detector API not available'
-        );
-      }
-
-      const capabilities = await window.ai.languageDetector.capabilities();
-      if (capabilities.available !== 'readily') {
-        throw this.createError(
-          'api_unavailable',
-          'Language Detector not ready'
+          'Language Detector API not available in this context'
         );
       }
 
       // Create detector and detect language
-      const detector = await window.ai.languageDetector.create();
+      const detector = await LanguageDetector.create();
       const results = await detector.detect(text);
 
       if (!results || results.length === 0) {
@@ -160,12 +170,8 @@ export class ChromeLanguageDetector {
    */
   async isAvailable(): Promise<boolean> {
     try {
-      if (!window.ai?.languageDetector) {
-        return false;
-      }
-
-      const capabilities = await window.ai.languageDetector.capabilities();
-      return capabilities.available === 'readily';
+      // Check for global LanguageDetector API
+      return typeof LanguageDetector !== 'undefined';
     } catch {
       return false;
     }
@@ -228,7 +234,7 @@ export class ChromeLanguageDetector {
 // ============================================================================
 
 export class ChromeSummarizer {
-  private activeSessions: Summarizer[] = [];
+  private activeSessions: SummarizerInstance[] = [];
 
   /**
    * Summarize content with hierarchical approach for long content
@@ -469,7 +475,7 @@ export class ChromeSummarizer {
 // ============================================================================
 
 export class ChromeRewriter {
-  private activeSessions: Rewriter[] = [];
+  private activeSessions: RewriterInstance[] = [];
 
   /**
    * Rewrite content based on user difficulty level (1-10)
@@ -687,7 +693,7 @@ export interface TranslationResult {
 }
 
 export class ChromeTranslator {
-  private activeSessions: Map<string, Translator> = new Map();
+  private activeSessions: Map<string, TranslatorInstance> = new Map();
   private translationCache: Map<string, string> = new Map();
   private readonly maxCacheSize = 500;
   private readonly maxBatchSize = 20;
@@ -699,7 +705,7 @@ export class ChromeTranslator {
     text: string,
     sourceLanguage: string,
     targetLanguage: string,
-    context?: string
+    _context?: string
   ): Promise<string> {
     try {
       // Check cache first
@@ -709,26 +715,21 @@ export class ChromeTranslator {
         return cached;
       }
 
-      // Check if API is available
-      if (!window.ai?.translator) {
+      // Check if global Translator API is available
+      if (typeof Translator === 'undefined') {
         throw this.createError(
           'api_unavailable',
-          'Translator API not available'
+          'Translator API not available in this context'
         );
       }
 
       // Check if language pair is available
-      const capabilities = await window.ai.translator.capabilities();
-      if (capabilities.available !== 'readily') {
-        throw this.createError('api_unavailable', 'Translator not ready');
-      }
-
-      const pairAvailable = await capabilities.languagePairAvailable(
+      const availability = await Translator.availability({
         sourceLanguage,
-        targetLanguage
-      );
+        targetLanguage,
+      });
 
-      if (pairAvailable !== 'readily') {
+      if (availability === 'no') {
         throw this.createError(
           'api_unavailable',
           `Translation not available for ${sourceLanguage} to ${targetLanguage}`
@@ -741,19 +742,13 @@ export class ChromeTranslator {
         targetLanguage
       );
 
-      // Translate with context if provided
-      const textToTranslate = context ? `${context}\n\n${text}` : text;
-      const translation = await translator.translate(textToTranslate);
-
-      // If we added context, extract just the translation of the target text
-      const finalTranslation = context
-        ? this.extractTranslation(translation)
-        : translation;
+      // Translate (without context for now - context handling can be improved)
+      const translation = await translator.translate(text);
 
       // Cache the result
-      this.cacheTranslation(cacheKey, finalTranslation);
+      this.cacheTranslation(cacheKey, translation);
 
-      return finalTranslation;
+      return translation;
     } catch (error) {
       if (this.isAIError(error)) {
         throw error;
@@ -761,6 +756,45 @@ export class ChromeTranslator {
       throw this.createError(
         'processing_failed',
         `Translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Translate text with streaming for long content
+   */
+  async translateStreaming(
+    text: string,
+    sourceLanguage: string,
+    targetLanguage: string,
+    onChunk: (chunk: string) => void
+  ): Promise<string> {
+    try {
+      const translator = await this.getTranslator(
+        sourceLanguage,
+        targetLanguage
+      );
+
+      let fullTranslation = '';
+      const stream = translator.translateStreaming(text);
+
+      for await (const chunk of stream) {
+        fullTranslation += chunk;
+        onChunk(chunk);
+      }
+
+      // Cache the result
+      const cacheKey = this.getCacheKey(text, sourceLanguage, targetLanguage);
+      this.cacheTranslation(cacheKey, fullTranslation);
+
+      return fullTranslation;
+    } catch (error) {
+      if (this.isAIError(error)) {
+        throw error;
+      }
+      throw this.createError(
+        'processing_failed',
+        `Streaming translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
@@ -872,24 +906,43 @@ export class ChromeTranslator {
     targetLanguage: string
   ): Promise<boolean> {
     try {
-      if (!window.ai?.translator) {
+      // Check for global Translator API
+      if (typeof Translator === 'undefined') {
         return false;
       }
 
-      const capabilities = await window.ai.translator.capabilities();
-      if (capabilities.available !== 'readily') {
-        return false;
-      }
-
-      const pairAvailable = await capabilities.languagePairAvailable(
+      const availability = await Translator.availability({
         sourceLanguage,
-        targetLanguage
-      );
+        targetLanguage,
+      });
 
-      return pairAvailable === 'readily';
+      return availability === 'readily' || availability === 'after-download';
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Get download progress for a language pair
+   */
+  async createWithProgress(
+    sourceLanguage: string,
+    targetLanguage: string,
+    onProgress: (loaded: number, total: number) => void
+  ): Promise<TranslatorInstance> {
+    if (typeof Translator === 'undefined') {
+      throw this.createError('api_unavailable', 'Translator API not available');
+    }
+
+    return await Translator.create({
+      sourceLanguage,
+      targetLanguage,
+      monitor(m) {
+        m.addEventListener('downloadprogress', (e: any) => {
+          onProgress(e.loaded || 0, e.total || 1);
+        });
+      },
+    });
   }
 
   /**
@@ -919,12 +972,13 @@ export class ChromeTranslator {
   private async getTranslator(
     sourceLanguage: string,
     targetLanguage: string
-  ): Promise<Translator> {
+  ): Promise<TranslatorInstance> {
     const sessionKey = `${sourceLanguage}-${targetLanguage}`;
 
     let translator = this.activeSessions.get(sessionKey);
     if (!translator) {
-      translator = await window.ai!.translator!.create({
+      // Use global Translator.create()
+      translator = await Translator.create({
         sourceLanguage,
         targetLanguage,
       });
@@ -932,19 +986,6 @@ export class ChromeTranslator {
     }
 
     return translator;
-  }
-
-  /**
-   * Extract translation when context was prepended
-   */
-  private extractTranslation(fullTranslation: string): string {
-    // Try to find the translation after the context
-    // This is a simple heuristic - split by double newline and take the last part
-    const parts = fullTranslation.split(/\n\n+/);
-    if (parts.length > 1) {
-      return parts[parts.length - 1].trim();
-    }
-    return fullTranslation.trim();
   }
 
   /**
@@ -1051,11 +1092,11 @@ Respond in JSON format:
   ): Promise<VocabularyAnalysis[]> {
     try {
       // Check if API is available
-      if (!window.ai?.assistant) {
+      if (!window.ai?.languageModel) {
         throw this.createError('api_unavailable', 'Prompt API not available');
       }
 
-      const capabilities = await window.ai.assistant.capabilities();
+      const capabilities = await window.ai.languageModel.capabilities();
       if (capabilities.available !== 'readily') {
         throw this.createError('api_unavailable', 'Prompt API not ready');
       }
@@ -1130,11 +1171,11 @@ Return only the sentences, one per line, without numbering or additional text.`;
    */
   async isAvailable(): Promise<boolean> {
     try {
-      if (!window.ai?.assistant) {
+      if (!window.ai?.languageModel) {
         return false;
       }
 
-      const capabilities = await window.ai.assistant.capabilities();
+      const capabilities = await window.ai.languageModel.capabilities();
       return capabilities.available === 'readily';
     } catch {
       return false;
@@ -1160,7 +1201,7 @@ Return only the sentences, one per line, without numbering or additional text.`;
    */
   private async getSession(): Promise<PromptSession> {
     if (!this.activeSession) {
-      this.activeSession = await window.ai!.assistant!.create({
+      this.activeSession = await window.ai!.languageModel!.create({
         systemPrompt: this.systemPrompt,
       });
     }

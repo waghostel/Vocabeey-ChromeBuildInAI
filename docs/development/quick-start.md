@@ -10,6 +10,12 @@ Ensure you have:
 - ✅ pnpm 8+ (`pnpm --version`)
 - ✅ Chrome 140+ (for built-in AI APIs)
 
+**Enable Chrome AI**:
+
+1. Go to `chrome://flags/#optimization-guide-on-device-model`
+2. Set to **Enabled** and relaunch Chrome
+3. Verify: Run `console.log('ai' in window);` in any webpage console
+
 ## 1. Install Dependencies
 
 ```bash

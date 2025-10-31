@@ -145,7 +145,7 @@ class OffscreenAIProcessor {
   /**
    * Process translation
    */
-  private async processTranslation(data: {
+  async processTranslation(data: {
     text: string;
     sourceLanguage: string;
     targetLanguage: string;
@@ -225,9 +225,16 @@ processor = new OffscreenAIProcessor();
 // Handle messages from service worker
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'OFFSCREEN_TASK' && processor) {
+    // Extract the actual task type
+    // If taskType is 'ai_processing', use the taskType from data
+    const actualTaskType =
+      message.taskType === 'ai_processing' && message.data?.taskType
+        ? message.data.taskType
+        : message.taskType;
+
     // Process task asynchronously
     processor
-      .processTask(message.taskId, message.taskType, message.data)
+      .processTask(message.taskId, actualTaskType, message.data)
       .then(() => {
         // Task result is sent via separate message
         sendResponse({ success: true });

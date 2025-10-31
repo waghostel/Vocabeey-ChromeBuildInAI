@@ -162,8 +162,57 @@ window.addEventListener('unhandledrejection', event => {
 
 ### Chrome AI Issues
 
+**Check if Chrome AI is enabled**:
+
 - Check Chrome flags: `chrome://flags/#optimization-guide-on-device-model`
-- Verify Chrome version (121+)
+- Verify Chrome version (140+)
+
+**Check if Gemini Nano model is downloaded**:
+
+```javascript
+// In any webpage console
+await ai.languageModel.capabilities();
+// Expected: { available: "readily" } or "available"
+// If "downloading": wait a few minutes
+// If "downloadable": model needs download
+// If "unavailable": device doesn't support it
+```
+
+**Check model status via Chrome internals**:
+
+1. Go to `chrome://on-device-internals`
+2. Click "Model Status" tab
+3. Check for Gemini Nano status and errors
+
+**Test specific AI APIs**:
+
+```javascript
+// Test Language Detector
+if (window.ai?.languageDetector) {
+  const caps = await window.ai.languageDetector.capabilities();
+  console.log('Language Detector:', caps.available);
+}
+
+// Test Translator
+if (window.ai?.translator) {
+  const caps = await window.ai.translator.capabilities();
+  console.log('Translator:', caps.available);
+  // Check specific language pair
+  const pairStatus = await caps.languagePairAvailable('en', 'es');
+  console.log('EN->ES available:', pairStatus);
+}
+
+// Test Summarizer
+if (window.ai?.summarizer) {
+  const caps = await window.ai.summarizer.capabilities();
+  console.log('Summarizer:', caps.available);
+}
+```
+
+**Common issues**:
+
+- Model not downloaded: Ensure 22GB free storage, unmetered connection
+- Translation fails: Check language pair support with `languagePairAvailable()`
 - Test on different websites
 
 ### Storage Problems

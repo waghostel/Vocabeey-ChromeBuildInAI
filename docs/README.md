@@ -9,6 +9,7 @@ This directory contains all documentation for the Language Learning Chrome Exten
 - **[Project Overview](overview.md)** - Product vision, features, and architecture
 - **[Development Guide](development/README.md)** - Setup, workflow, and contribution guidelines
 - **[API Documentation](api/README.md)** - Chrome AI integration and API references
+- **[Chrome AI Code Snippets](chrome-ai-code-snippets.md)** - Code examples for implementing Chrome Built-in AI APIs
 
 ### Getting Started
 

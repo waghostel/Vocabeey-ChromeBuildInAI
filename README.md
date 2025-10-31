@@ -50,6 +50,38 @@ pnpm test:coverage
 - Node.js 18+ & pnpm 8+
 - Chrome 140+ (for built-in AI APIs)
 
+### Chrome AI Module Requirements
+
+Chrome's built-in AI APIs require:
+
+- **Chrome Version**: 140+ (stable channel)
+- **Storage**: 22GB for AI model downloads (automatic)
+- **RAM**: 4GB minimum, 8GB recommended
+- **VRAM**: 4GB recommended
+- **Platform**: Windows 10+, macOS 13+, Linux, or ChromeOS
+
+**Chrome Built-in AI APIs Used**:
+
+1. **Language Detector API** - Automatic language detection for articles
+2. **Summarizer API** - Content summarization for learning
+3. **Rewriter API** - Difficulty-based content rewriting (1-10 scale)
+4. **Translator API** - Vocabulary and sentence translation
+5. **Prompt API (Language Model)** - Advanced vocabulary analysis using Gemini Nano
+
+**Setup Steps**:
+
+1. Navigate to `chrome://flags/#optimization-guide-on-device-model`
+2. Set "Optimization Guide On Device Model" to **Enabled**
+3. Relaunch Chrome
+4. AI models will download automatically (22GB)
+
+**Verify Installation**:
+
+```javascript
+// Open any webpage console and run:
+console.log('Chrome AI available:', 'ai' in window);
+```
+
 ### Project Structure
 
 ```
@@ -109,7 +141,12 @@ pnpm validate:extension  # Full validation pipeline
 ## Architecture
 
 - **Chrome Extension**: Manifest V3 with service worker architecture
-- **AI Integration**: Chrome Built-in AI APIs (Summarizer, Translator, Rewriter, Language Detector) with Gemini fallback
+- **AI Integration**: Chrome Built-in AI APIs with Gemini fallback
+  - Language Detector API - Automatic language detection
+  - Summarizer API - Content summarization
+  - Rewriter API - Difficulty-based rewriting
+  - Translator API - Vocabulary and sentence translation
+  - Prompt API (Language Model) - Vocabulary analysis with Gemini Nano
 - **Content Processing**: Multi-stage extraction pipeline with caching
 - **Storage**: Versioned schema with local-first privacy approach
 - **Testing**: Vitest with jsdom environment and Chrome API mocking

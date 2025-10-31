@@ -16,6 +16,20 @@ Chrome's built-in AI APIs provide local, privacy-focused AI processing without r
 - **Hardware**: 4GB RAM, 22GB storage, 4GB VRAM (recommended)
 - **Platform**: Windows 10+, macOS 13+, Linux, ChromeOS
 
+### Setup
+
+1. Navigate to `chrome://flags/#optimization-guide-on-device-model`
+2. Set "Optimization Guide On Device Model" to **Enabled**
+3. Relaunch Chrome
+4. AI models will download automatically (22GB)
+
+**Verify Installation**:
+
+```javascript
+// Open any webpage console and run:
+console.log('Chrome AI available:', 'ai' in window);
+```
+
 ### Global AI Interface
 
 Chrome AI APIs are accessed through the global `window.ai` object:
@@ -1006,6 +1020,65 @@ cacheManager.resetPerformanceMetrics();
 - **Large Content**: Samples every nth character for performance
 - **Small Content**: Processes all characters for accuracy
 - **Threshold**: 1,000 characters determines sampling strategy
+
+## Troubleshooting Chrome AI
+
+### Check Model Download Status
+
+**Method 1: Console check**
+
+```javascript
+// Open any webpage console (F12)
+await ai.languageModel.capabilities();
+// Returns: { available: "readily" } = ready
+//          "downloading" = in progress
+//          "downloadable" = needs download
+//          "unavailable" = not supported
+```
+
+**Method 2: Chrome internals**
+
+1. Navigate to `chrome://on-device-internals`
+2. Click "Model Status" tab
+3. Check Gemini Nano status and errors
+
+### Debug Translation Issues
+
+**Check translator availability**:
+
+```javascript
+if (window.ai?.translator) {
+  const caps = await window.ai.translator.capabilities();
+  console.log('Translator available:', caps.available);
+
+  // Check specific language pair
+  const pairStatus = await caps.languagePairAvailable('en', 'es');
+  console.log('EN->ES supported:', pairStatus); // "readily", "after-download", or "no"
+}
+```
+
+**Common translation issues**:
+
+- Language pair not supported: Check with `languagePairAvailable()`
+- Model not downloaded: Verify with `capabilities().available`
+- Insufficient storage: Ensure 22GB free space
+- Network issues: Use unmetered connection for model download
+
+### Debug Other AI Services
+
+```javascript
+// Language Detector
+const ldCaps = await window.ai.languageDetector.capabilities();
+console.log('Language Detector:', ldCaps.available);
+
+// Summarizer
+const sumCaps = await window.ai.summarizer.capabilities();
+console.log('Summarizer:', sumCaps.available);
+
+// Rewriter
+const rwCaps = await window.ai.rewriter.capabilities();
+console.log('Rewriter:', rwCaps.available);
+```
 
 ## Browser Compatibility and Requirements
 

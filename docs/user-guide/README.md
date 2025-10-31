@@ -13,6 +13,22 @@ Transform any web article into an interactive language learning experience using
 - **Hardware**: 4GB RAM minimum, 8GB recommended for optimal AI processing
 - **Internet**: Required for article processing and optional Gemini API fallback
 
+### Enable Chrome Built-in AI
+
+Before using the extension, enable Chrome's AI features:
+
+1. Open Chrome and navigate to `chrome://flags/#optimization-guide-on-device-model`
+2. Set "Optimization Guide On Device Model" to **Enabled**
+3. Click "Relaunch" to restart Chrome
+4. Chrome will automatically download AI models (22GB) in the background
+
+**Verify AI is enabled**:
+
+- Open any webpage
+- Press F12 to open DevTools Console
+- Run: `console.log('Chrome AI available:', 'ai' in window);`
+- Should show: `Chrome AI available: true`
+
 ### Install the Extension
 
 1. Load the extension in Chrome Developer Mode (currently in development)
@@ -316,13 +332,79 @@ Note: Keyboard shortcuts are ignored when typing in input fields or text areas.
 
 #### "Chrome AI Not Available"
 
-- **Cause**: Chrome Built-in AI APIs not supported or enabled
-- **Solution**: Update to Chrome 140+, check hardware requirements, or add Gemini API key
+- **Cause**: Chrome Built-in AI APIs not supported or enabled, or Gemini Nano model not downloaded
+- **Solution**:
+  1. Update to Chrome 140+
+  2. Enable flag: `chrome://flags/#optimization-guide-on-device-model`
+  3. Check model download status (see below)
+  4. Add Gemini API key as fallback
+
+**Check if Gemini Nano model is downloaded**:
+
+1. Open DevTools Console (F12) on any webpage
+2. Run: `await ai.languageModel.capabilities()`
+3. Check result:
+   - `{ available: "readily" }` → Model ready ✅
+   - `"downloading"` → Download in progress, wait a few minutes
+   - `"downloadable"` → Model not downloaded, needs user activation
+   - `"unavailable"` → Device doesn't meet requirements
+
+**Alternative check via Chrome internals**:
+
+1. Navigate to `chrome://on-device-internals`
+2. Click "Model Status" tab
+3. Verify Gemini Nano status and check for errors
+4. Ensure 22GB storage available
+
+**If model won't download**:
+
+- Ensure 22GB free storage space
+- Use unmetered network connection (Wi-Fi, not cellular)
+- Restart Chrome and wait 5-10 minutes
+- Check `chrome://on-device-internals` for error messages
 
 #### "Translation failed" Messages
 
-- **Cause**: AI service unavailable or unsupported language pair
-- **Solution**: Verify language settings, check API key configuration, ensure internet connectivity
+**Error**: "No AI services available for translation"
+
+**Cause**: Both Chrome AI and Gemini API are unavailable
+
+**Solutions**:
+
+1. **Check Chrome AI availability**:
+
+   ```javascript
+   // In DevTools Console (F12)
+   await window.ai.translator.capabilities();
+   // Should return: { available: "readily" }
+   ```
+
+2. **Verify language pair support**:
+
+   ```javascript
+   const caps = await window.ai.translator.capabilities();
+   await caps.languagePairAvailable('en', 'es'); // Your languages
+   // Returns: "readily", "after-download", or "no"
+   ```
+
+3. **Check model download** at `chrome://on-device-internals`
+
+4. **Quick fix - Add Gemini API key**:
+   - Get key from: https://aistudio.google.com/app/apikey
+   - Extension Settings → API Configuration → Add key
+   - This bypasses Chrome AI requirement
+
+5. **Ensure requirements met**:
+   - Chrome 140+ installed
+   - 22GB free storage
+   - Unmetered network (Wi-Fi)
+   - Flag enabled: `chrome://flags/#optimization-guide-on-device-model`
+
+**Other translation errors**:
+
+- Unsupported language pair: Use Gemini API fallback
+- Network issues: Check internet connectivity
+- Invalid API key: Verify key in settings
 
 #### "Network Error" During Processing
 

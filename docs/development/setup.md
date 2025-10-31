@@ -11,6 +11,15 @@ Complete setup guide for the Language Learning Chrome Extension development envi
 - **Chrome 140+**: For built-in AI APIs testing
 - **Git**: Version control
 
+### Chrome AI Setup
+
+Enable Chrome's built-in AI before development:
+
+1. Navigate to `chrome://flags/#optimization-guide-on-device-model`
+2. Set "Optimization Guide On Device Model" to **Enabled**
+3. Relaunch Chrome
+4. Verify: Open console and run `console.log('ai' in window);`
+
 ### Verification
 
 ```bash
