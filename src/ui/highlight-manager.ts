@@ -280,6 +280,12 @@ async function handleVocabularyHighlight(
   // Save to storage
   await saveVocabularyItem(vocabItem);
 
+  // Set the ID attribute on the DOM element for removal
+  highlightData.highlightElement.setAttribute(
+    'data-highlight-id',
+    vocabItem.id
+  );
+
   // Store highlight reference
   highlights.set(vocabItem.id, {
     id: vocabItem.id,
@@ -321,7 +327,7 @@ async function handleVocabularyHighlight(
   // Add context menu listener
   highlightData.highlightElement.addEventListener('contextmenu', e => {
     e.preventDefault();
-    showContextMenu(e as MouseEvent, vocabItem.id, 'vocabulary');
+    showContextMenu(highlightData.highlightElement, vocabItem.id, 'vocabulary');
   });
 
   // Trigger UI update
@@ -362,6 +368,12 @@ async function handleSentenceHighlight(
   // Save to storage
   await saveSentenceItem(sentenceItem);
 
+  // Set the ID attribute on the DOM element for removal
+  highlightData.highlightElement.setAttribute(
+    'data-highlight-id',
+    sentenceItem.id
+  );
+
   // Store highlight reference
   highlights.set(sentenceItem.id, {
     id: sentenceItem.id,
@@ -385,7 +397,11 @@ async function handleSentenceHighlight(
   // Add context menu listener
   highlightData.highlightElement.addEventListener('contextmenu', e => {
     e.preventDefault();
-    showContextMenu(e as MouseEvent, sentenceItem.id, 'sentence');
+    showContextMenu(
+      highlightData.highlightElement,
+      sentenceItem.id,
+      'sentence'
+    );
   });
 
   // Trigger UI update
@@ -770,10 +786,10 @@ function hideTranslationPopup(): void {
 }
 
 /**
- * Show context menu
+ * Show context menu with smart positioning relative to the highlighted word
  */
 function showContextMenu(
-  event: MouseEvent,
+  element: HTMLElement,
   itemId: string,
   type: 'vocabulary' | 'sentence'
 ): void {
@@ -781,8 +797,40 @@ function showContextMenu(
   if (!contextMenu) return;
 
   contextMenu.classList.remove('hidden');
-  contextMenu.style.left = `${event.pageX}px`;
-  contextMenu.style.top = `${event.pageY}px`;
+
+  // Get the position of the highlighted word
+  const rect = element.getBoundingClientRect();
+  const menuRect = contextMenu.getBoundingClientRect();
+
+  const offset = 8; // Distance from the word
+
+  // Position below the word (preferred)
+  let top = rect.bottom + window.scrollY + offset;
+  let left = rect.left + window.scrollX;
+
+  // Boundary checking for viewport edges
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  // Check if menu would overflow bottom of viewport
+  if (rect.bottom + menuRect.height + offset > viewportHeight) {
+    // Position above the word instead
+    top = rect.top + window.scrollY - menuRect.height - offset;
+  }
+
+  // Check if menu would overflow right edge
+  if (left + menuRect.width > viewportWidth) {
+    left = rect.right + window.scrollX - menuRect.width;
+  }
+
+  // Check if menu would overflow left edge
+  if (left < 0) {
+    left = 10; // Small margin from edge
+  }
+
+  // Apply positioning
+  contextMenu.style.left = `${left}px`;
+  contextMenu.style.top = `${top}px`;
 
   // Store item info for context menu actions
   contextMenu.dataset.itemId = itemId;
