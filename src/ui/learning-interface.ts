@@ -9,6 +9,7 @@ import {
   initializeHighlightManager,
   setHighlightMode,
   cleanupHighlightManager,
+  showContextMenu,
   type HighlightMode,
 } from './highlight-manager';
 
@@ -371,6 +372,17 @@ function renderPartVocabularyCards(part: ArticlePart): void {
           );
         });
       }
+
+      // Add context menu listener
+      card.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        showContextMenu(
+          card as HTMLElement,
+          vocab.id,
+          'vocabulary',
+          e as MouseEvent
+        );
+      });
     }
   });
 }
@@ -459,6 +471,17 @@ function renderPartSentenceCards(part: ArticlePart): void {
           );
         });
       }
+
+      // Add context menu listener
+      card.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        showContextMenu(
+          card as HTMLElement,
+          sentence.id,
+          'sentence',
+          e as MouseEvent
+        );
+      });
     }
   });
 }

@@ -786,41 +786,67 @@ function hideTranslationPopup(): void {
 }
 
 /**
- * Show context menu with smart positioning relative to the highlighted word
+ * Show context menu with smart positioning relative to the highlighted word or cursor
  */
-function showContextMenu(
+export function showContextMenu(
   element: HTMLElement,
   itemId: string,
-  type: 'vocabulary' | 'sentence'
+  type: 'vocabulary' | 'sentence',
+  event?: MouseEvent
 ): void {
   const contextMenu = document.querySelector('.context-menu') as HTMLElement;
   if (!contextMenu) return;
 
   contextMenu.classList.remove('hidden');
 
-  // Get the position of the highlighted word
+  // Get the position of the element
   const rect = element.getBoundingClientRect();
   const menuRect = contextMenu.getBoundingClientRect();
 
-  const offset = 8; // Distance from the word
+  const offset = 8; // Distance from the cursor/element
 
-  // Position below the word (preferred)
-  let top = rect.bottom + window.scrollY + offset;
-  let left = rect.left + window.scrollX;
+  // Determine positioning based on whether event is provided
+  let top: number;
+  let left: number;
+  let referenceY: number; // Y position to check against viewport
+
+  if (event) {
+    // For cards: position relative to cursor
+    referenceY = event.clientY; // Cursor position in viewport
+    top = event.pageY + offset; // Position below cursor
+    left = event.pageX; // Horizontal at cursor
+  } else {
+    // For highlights: position relative to element
+    referenceY = rect.bottom; // Element bottom in viewport
+    top = rect.bottom + window.scrollY + offset; // Position below element
+    left = rect.left + window.scrollX; // Horizontal at element
+  }
 
   // Boundary checking for viewport edges
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
 
   // Check if menu would overflow bottom of viewport
-  if (rect.bottom + menuRect.height + offset > viewportHeight) {
-    // Position above the word instead
-    top = rect.top + window.scrollY - menuRect.height - offset;
+  if (referenceY + menuRect.height + offset > viewportHeight) {
+    // Not enough space below, position above instead
+    if (event) {
+      // Position above cursor
+      top = event.pageY - menuRect.height - offset;
+    } else {
+      // Position above element
+      top = rect.top + window.scrollY - menuRect.height - offset;
+    }
+  }
+
+  // Ensure menu doesn't go above viewport top
+  const minTop = window.scrollY + 10; // 10px margin from top
+  if (top < minTop) {
+    top = minTop;
   }
 
   // Check if menu would overflow right edge
   if (left + menuRect.width > viewportWidth) {
-    left = rect.right + window.scrollX - menuRect.width;
+    left = viewportWidth - menuRect.width - 10;
   }
 
   // Check if menu would overflow left edge
