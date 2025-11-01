@@ -26,6 +26,8 @@ let currentMode: HighlightMode = 'none';
 let currentArticleId: string | null = null;
 let currentPartId: string | null = null;
 let highlights: Map<string, Highlight> = new Map();
+let pendingSelection: { text: string; range: Range; context: string } | null =
+  null;
 
 // ============================================================================
 // Initialization
@@ -49,6 +51,9 @@ export function initializeHighlightManager(
 
   // Setup double-click listener for sentence mode
   document.addEventListener('dblclick', handleDoubleClick);
+
+  // Setup context menu listener to prevent native menu in None mode
+  document.addEventListener('contextmenu', handleContextMenu);
 }
 
 /**
@@ -72,12 +77,49 @@ export function cleanupHighlightManager(): void {
   document.removeEventListener('mouseup', handleTextSelection);
   document.removeEventListener('touchend', handleTextSelection);
   document.removeEventListener('dblclick', handleDoubleClick);
+  document.removeEventListener('contextmenu', handleContextMenu);
   highlights.clear();
 }
 
 // ============================================================================
 // Text Selection and Highlighting
 // ============================================================================
+
+/**
+ * Handle context menu event to prevent native menu in None mode
+ */
+function handleContextMenu(event: MouseEvent): void {
+  // Check if right-click is within article content
+  const articleContent = document.querySelector('.article-part-content');
+  if (!articleContent) return;
+
+  const target = event.target as HTMLElement;
+  if (!articleContent.contains(target)) return;
+
+  // Check if there's a text selection
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) return;
+
+  const selectedText = selection.toString().trim();
+  if (!selectedText) return;
+
+  // In None mode, prevent native context menu and show custom menu
+  if (currentMode === 'none') {
+    event.preventDefault();
+    handleNoneModeSelection(selectedText, selection.getRangeAt(0), event);
+    return;
+  }
+
+  // For other modes (vocabulary/sentence), check if clicking on existing highlight
+  // If clicking on existing highlight, it has its own contextmenu handler
+  // If clicking on new selection, let the mode handle it normally
+  const isHighlight = target.closest('[data-highlight-type]');
+  if (!isHighlight) {
+    // New selection in vocabulary/sentence mode - prevent native menu
+    // The mouseup handler will create the highlight automatically
+    event.preventDefault();
+  }
+}
 
 /**
  * Handle double-click for sentence selection in sentence mode
@@ -205,8 +247,6 @@ function findSentenceAtPoint(event: MouseEvent): {
 async function handleTextSelection(
   _event: MouseEvent | TouchEvent
 ): Promise<void> {
-  if (currentMode === 'none') return;
-
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed) return;
 
@@ -219,6 +259,11 @@ async function handleTextSelection(
 
   const range = selection.getRangeAt(0);
   if (!articleContent.contains(range.commonAncestorContainer)) return;
+
+  // In None mode, do nothing on mouseup - wait for contextmenu event (right-click)
+  if (currentMode === 'none') {
+    return;
+  }
 
   // Allow selection within existing highlights - overlapping is now supported
   // No need to prevent highlighting on existing highlights
@@ -235,6 +280,44 @@ async function handleTextSelection(
   } catch (error) {
     console.error('Error handling highlight:', error);
   }
+}
+
+/**
+ * Handle text selection in None mode - show context menu
+ */
+function handleNoneModeSelection(
+  text: string,
+  range: Range,
+  event: MouseEvent | TouchEvent
+): void {
+  // Store the selection for later use
+  const context = getContext(range, 100);
+
+  // Clone the range to preserve it
+  const clonedRange = range.cloneRange();
+
+  pendingSelection = {
+    text,
+    range: clonedRange,
+    context,
+  };
+
+  // Get mouse position for context menu
+  let clientX: number;
+  let clientY: number;
+
+  if (event instanceof MouseEvent) {
+    clientX = event.clientX;
+    clientY = event.clientY;
+  } else {
+    // TouchEvent
+    const touch = event.changedTouches[0];
+    clientX = touch.clientX;
+    clientY = touch.clientY;
+  }
+
+  // Show context menu with selection options
+  showSelectionContextMenu(text, clientX, clientY);
 }
 
 /**
@@ -786,6 +869,83 @@ function hideTranslationPopup(): void {
 }
 
 /**
+ * Show context menu for text selection in None mode
+ */
+function showSelectionContextMenu(
+  text: string,
+  clientX: number,
+  clientY: number
+): void {
+  const contextMenu = document.querySelector('.context-menu') as HTMLElement;
+  if (!contextMenu) return;
+
+  // Show appropriate menu items for selection
+  const removeBtn = contextMenu.querySelector(
+    '[data-action="remove"]'
+  ) as HTMLElement;
+  const addVocabBtn = contextMenu.querySelector(
+    '[data-action="add-vocabulary"]'
+  ) as HTMLElement;
+  const addSentenceBtn = contextMenu.querySelector(
+    '[data-action="add-sentence"]'
+  ) as HTMLElement;
+  const pronounceBtn = contextMenu.querySelector(
+    '[data-action="pronounce"]'
+  ) as HTMLElement;
+
+  if (removeBtn) removeBtn.style.display = 'none';
+  if (addVocabBtn) addVocabBtn.style.display = 'block';
+  if (addSentenceBtn) addSentenceBtn.style.display = 'block';
+  if (pronounceBtn) pronounceBtn.style.display = 'block';
+
+  contextMenu.classList.remove('hidden');
+
+  // Position menu at cursor
+  const pageX = clientX + window.scrollX;
+  const pageY = clientY + window.scrollY;
+
+  // Get menu dimensions after showing
+  const menuRect = contextMenu.getBoundingClientRect();
+  const offset = 8;
+
+  let top = pageY + offset;
+  let left = pageX;
+
+  // Boundary checking
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  // Check if menu would overflow bottom
+  if (clientY + menuRect.height + offset > viewportHeight) {
+    top = pageY - menuRect.height - offset;
+  }
+
+  // Check if menu would overflow right edge
+  if (clientX + menuRect.width > viewportWidth) {
+    left = pageX - menuRect.width;
+  }
+
+  // Ensure menu doesn't go off left edge
+  if (left < window.scrollX) {
+    left = window.scrollX + 10;
+  }
+
+  // Ensure menu doesn't go off top
+  const minTop = window.scrollY + 10;
+  if (top < minTop) {
+    top = minTop;
+  }
+
+  contextMenu.style.left = `${left}px`;
+  contextMenu.style.top = `${top}px`;
+
+  // Store selection info
+  contextMenu.dataset.itemId = '';
+  contextMenu.dataset.itemType = 'selection';
+  contextMenu.dataset.selectedText = text;
+}
+
+/**
  * Show context menu with smart positioning relative to the highlighted word or cursor
  */
 export function showContextMenu(
@@ -796,6 +956,25 @@ export function showContextMenu(
 ): void {
   const contextMenu = document.querySelector('.context-menu') as HTMLElement;
   if (!contextMenu) return;
+
+  // Show appropriate menu items for existing highlights
+  const removeBtn = contextMenu.querySelector(
+    '[data-action="remove"]'
+  ) as HTMLElement;
+  const addVocabBtn = contextMenu.querySelector(
+    '[data-action="add-vocabulary"]'
+  ) as HTMLElement;
+  const addSentenceBtn = contextMenu.querySelector(
+    '[data-action="add-sentence"]'
+  ) as HTMLElement;
+  const pronounceBtn = contextMenu.querySelector(
+    '[data-action="pronounce"]'
+  ) as HTMLElement;
+
+  if (removeBtn) removeBtn.style.display = 'block';
+  if (addVocabBtn) addVocabBtn.style.display = 'none';
+  if (addSentenceBtn) addSentenceBtn.style.display = 'none';
+  if (pronounceBtn) pronounceBtn.style.display = 'block';
 
   contextMenu.classList.remove('hidden');
 
@@ -861,6 +1040,7 @@ export function showContextMenu(
   // Store item info for context menu actions
   contextMenu.dataset.itemId = itemId;
   contextMenu.dataset.itemType = type;
+  contextMenu.dataset.selectedText = '';
 }
 
 /**
@@ -918,4 +1098,47 @@ function generateId(): string {
 function dispatchHighlightEvent(eventName: string, detail: unknown): void {
   const event = new CustomEvent(eventName, { detail });
   document.dispatchEvent(event);
+}
+
+/**
+ * Handle context menu action for pending selection
+ */
+export async function handleSelectionContextMenuAction(
+  action: string
+): Promise<void> {
+  if (!pendingSelection) return;
+
+  const { text, range } = pendingSelection;
+
+  try {
+    if (action === 'add-vocabulary') {
+      // Validate vocabulary selection (should be 1-3 words)
+      const wordCount = text.split(/\s+/).length;
+      if (wordCount > 3) {
+        showTooltip('Please select 1-3 words for vocabulary', range);
+        return;
+      }
+      await handleVocabularyHighlight(text, range);
+    } else if (action === 'add-sentence') {
+      // Validate sentence selection
+      if (text.length < 10) {
+        showTooltip('Please select a complete sentence', range);
+        return;
+      }
+      await handleSentenceHighlight(text, range);
+    } else if (action === 'pronounce') {
+      await pronounceText(text);
+    }
+  } catch (error) {
+    console.error('Error handling selection action:', error);
+  } finally {
+    // Clear pending selection
+    pendingSelection = null;
+
+    // Clear text selection
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+    }
+  }
 }

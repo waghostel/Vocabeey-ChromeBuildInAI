@@ -56,16 +56,22 @@
                 <button
                   class="highlight-mode-btn active"
                   data-highlight-mode="vocabulary"
+                  title="Switch to Vocabulary mode (Press 1)"
                 >
                   📝 Vocabulary
                 </button>
                 <button
                   class="highlight-mode-btn"
                   data-highlight-mode="sentence"
+                  title="Switch to Sentence mode (Press 2)"
                 >
                   💬 Sentences
                 </button>
-                <button class="highlight-mode-btn" data-highlight-mode="none">
+                <button
+                  class="highlight-mode-btn"
+                  data-highlight-mode="none"
+                  title="Disable highlighting (Press 0, 3, or Esc)"
+                >
                   🚫 None
                 </button>
               </div>
@@ -144,6 +150,15 @@
     <!-- Context Menu (for right-click on highlights) -->
     <div class="context-menu hidden">
       <button class="context-menu-item" data-action="remove">Remove</button>
+      <button class="context-menu-item" data-action="add-vocabulary">
+        Add as Vocabulary
+      </button>
+      <button class="context-menu-item" data-action="add-sentence">
+        Add as Sentence
+      </button>
+      <button class="context-menu-item" data-action="pronounce">
+        Pronounce
+      </button>
     </div>
 
     <script src="learning-interface.js" type="module"></script>

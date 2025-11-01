@@ -206,6 +206,13 @@ Access settings through the dedicated settings interface:
 - **V**: Switch to Vocabulary mode (📝)
 - **S**: Switch to Sentences mode (💬)
 
+### Highlight Mode Switching (in Reading Mode)
+
+- **1**: Switch to Vocabulary highlight mode
+- **2**: Switch to Sentence highlight mode
+- **3** or **0**: Switch to None highlight mode (disable highlighting)
+- **Escape**: Switch to None highlight mode (alternative)
+
 ### Learning Interactions
 
 - **Click**: Highlight vocabulary (in vocabulary mode) or pronounce highlighted text
@@ -215,7 +222,6 @@ Access settings through the dedicated settings interface:
 
 ### Interface Controls
 
-- **Escape**: Close context menus and popups
 - **Tab**: Navigate between interface elements
 - **Enter**: Activate buttons and controls
 
@@ -225,11 +231,19 @@ Keyboard shortcuts are defined in the user settings and can be customized:
 
 ```typescript
 keyboardShortcuts: {
+  // Navigation
   navigateLeft: 'ArrowLeft',
   navigateRight: 'ArrowRight',
+
+  // Main mode switching
   vocabularyMode: 'v',
   sentenceMode: 's',
-  readingMode: 'r'
+  readingMode: 'r',
+
+  // Highlight mode switching
+  highlightVocabulary: '1',
+  highlightSentence: '2',
+  highlightNone: '0' // or '3'
 }
 ```
 

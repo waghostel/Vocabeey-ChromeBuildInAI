@@ -770,12 +770,7 @@ function setupEventListeners(): void {
   highlightModeButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       const mode = (btn as HTMLElement).dataset.highlightMode as HighlightMode;
-      state.highlightMode = mode;
-      setHighlightMode(mode);
-
-      // Update active state
-      highlightModeButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      switchHighlightMode(mode);
     });
   });
 
@@ -839,7 +834,62 @@ function handleKeyboardShortcuts(event: KeyboardEvent): void {
       event.preventDefault();
       switchMode('reading');
       break;
+
+    case 'Escape':
+      event.preventDefault();
+      switchHighlightMode('none');
+      break;
+
+    case '1':
+      event.preventDefault();
+      switchHighlightMode('vocabulary');
+      break;
+
+    case '2':
+      event.preventDefault();
+      switchHighlightMode('sentence');
+      break;
+
+    case '0':
+    case '3':
+      event.preventDefault();
+      switchHighlightMode('none');
+      break;
   }
+}
+
+// ============================================================================
+// Highlight Mode Switching
+// ============================================================================
+
+/**
+ * Switch highlight mode and update UI
+ */
+function switchHighlightMode(mode: HighlightMode): void {
+  // Update state
+  state.highlightMode = mode;
+
+  // Update highlight manager
+  setHighlightMode(mode);
+
+  // Update button active states
+  const highlightModeButtons = document.querySelectorAll('.highlight-mode-btn');
+  highlightModeButtons.forEach(btn => {
+    const btnMode = (btn as HTMLElement).dataset.highlightMode;
+    if (btnMode === mode) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Show brief feedback
+  const modeNames = {
+    vocabulary: 'Vocabulary',
+    sentence: 'Sentences',
+    none: 'None',
+  };
+  showTooltip(`Highlight mode: ${modeNames[mode]}`);
 }
 
 // ============================================================================
@@ -1088,13 +1138,46 @@ async function handleContextMenuAction(event: Event): Promise<void> {
   if (!contextMenu) return;
 
   const itemId = contextMenu.dataset.itemId;
-  const itemType = contextMenu.dataset.itemType as 'vocabulary' | 'sentence';
+  const itemType = contextMenu.dataset.itemType as
+    | 'vocabulary'
+    | 'sentence'
+    | 'selection';
 
+  // Handle selection context menu (None mode)
+  if (itemType === 'selection') {
+    if (
+      action === 'add-vocabulary' ||
+      action === 'add-sentence' ||
+      action === 'pronounce'
+    ) {
+      const { handleSelectionContextMenuAction } = await import(
+        './highlight-manager.js'
+      );
+      await handleSelectionContextMenuAction(action);
+    }
+    contextMenu.classList.add('hidden');
+    return;
+  }
+
+  // Handle existing highlight context menu
   if (!itemId || !itemType) return;
 
   if (action === 'remove') {
     const { removeHighlight } = await import('./highlight-manager.js');
     void removeHighlight(itemId, itemType);
+  } else if (action === 'pronounce') {
+    // Get the highlight element and pronounce its text
+    const highlightElement = document.querySelector(
+      `[data-highlight-id="${itemId}"]`
+    );
+    if (highlightElement) {
+      const text = highlightElement.textContent || '';
+      await handlePronounceClick(
+        highlightElement as HTMLElement,
+        text,
+        state.currentArticle?.originalLanguage
+      );
+    }
   }
 
   // Hide context menu
