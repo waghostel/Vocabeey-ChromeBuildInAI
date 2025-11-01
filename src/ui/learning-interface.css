@@ -983,6 +983,10 @@ body.dark-mode .translation-popup {
   text-align: center;
 }
 
+.text-secondary {
+  color: var(--text-secondary);
+}
+
 .mt-1 {
   margin-top: 0.5rem;
 }
