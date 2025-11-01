@@ -590,6 +590,12 @@ body.dark-mode {
   gap: 1.5rem;
 }
 
+.vocabulary-grid > p.text-center {
+  grid-column: 1 / -1; /* Span all columns */
+  text-align: center;
+  padding: 1.5rem 1rem;
+}
+
 .vocab-learning-card {
   background: white;
   border-radius: 12px;
@@ -661,6 +667,12 @@ body.dark-mode {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.sentence-list > p.text-center {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  width: 100%;
 }
 
 .sentence-learning-card {
