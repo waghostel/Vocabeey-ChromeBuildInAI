@@ -553,9 +553,44 @@ function renderVocabularyLearningMode(): void {
       `[data-vocab-learning-id="${vocab.id}"]`
     ) as HTMLElement;
     if (card) {
-      card.addEventListener('click', () =>
-        handlePronounceClick(card, vocab.word)
-      );
+      // Add click listener to the word (original language)
+      const wordElement = card.querySelector(
+        '.vocab-learning-word'
+      ) as HTMLElement;
+      if (wordElement) {
+        wordElement.addEventListener('click', e => {
+          e.stopPropagation();
+          void handlePronounceClick(
+            wordElement,
+            vocab.word,
+            state.currentArticle?.originalLanguage
+          );
+        });
+      }
+
+      // Add click listener to the translation (target language)
+      const translationElement = card.querySelector(
+        '.vocab-learning-translation'
+      ) as HTMLElement;
+      if (translationElement) {
+        translationElement.addEventListener('click', e => {
+          e.stopPropagation();
+          void handlePronounceClick(
+            translationElement,
+            vocab.translation,
+            state.targetLanguage
+          );
+        });
+      }
+
+      // Fallback: clicking on card (but not on word or translation) pronounces the word
+      card.addEventListener('click', () => {
+        void handlePronounceClick(
+          card,
+          vocab.word,
+          state.currentArticle?.originalLanguage
+        );
+      });
     }
   });
 }
@@ -572,8 +607,8 @@ function createVocabularyLearningCardHTML(vocab: VocabularyItem): string {
 
   return `
     <div class="vocab-learning-card" data-vocab-learning-id="${vocab.id}">
-      ${showWord ? `<div class="vocab-learning-word">${escapeHtml(vocab.word)}</div>` : ''}
-      ${showTranslation ? `<div class="vocab-learning-translation ${hideTranslation ? 'hidden-lang' : ''}">${escapeHtml(vocab.translation)}</div>` : ''}
+      ${showWord ? `<div class="vocab-learning-word clickable-text" title="Click to pronounce">${escapeHtml(vocab.word)}</div>` : ''}
+      ${showTranslation ? `<div class="vocab-learning-translation clickable-text ${hideTranslation ? 'hidden-lang' : ''}" title="Click to pronounce translation">${escapeHtml(vocab.translation)}</div>` : ''}
     </div>
   `;
 }

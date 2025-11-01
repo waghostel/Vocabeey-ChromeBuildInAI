@@ -622,6 +622,28 @@ body.dark-mode {
   color: var(--text-secondary);
 }
 
+.clickable-text {
+  cursor: pointer;
+  transition: var(--transition);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.clickable-text:hover {
+  background: var(--secondary-color);
+  transform: scale(1.05);
+}
+
+.clickable-text:active {
+  transform: scale(0.98);
+}
+
+.clickable-text.speaking {
+  background: var(--primary-color);
+  color: white;
+  animation: pulse 1s infinite;
+}
+
 .vocab-learning-translation.hidden-lang {
   opacity: 0;
   transition: opacity 0.3s ease;

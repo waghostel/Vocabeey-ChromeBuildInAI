@@ -90,3 +90,64 @@ Build completed successfully with no errors:
 
 1. `src/ui/learning-interface.ts` - Added dual language TTS support
 2. `src/ui/learning-interface.css` - Added styling for translation speaker button
+
+## Update: Vocabulary Learning Mode (A+B Mode)
+
+### New Interactive Click Behavior
+
+In the Vocabulary Learning Mode, users can now click directly on text to pronounce it:
+
+**Behavior:**
+
+- Click on the **top text** (original word) → Pronounces in original language
+- Click on the **bottom text** (translation) → Pronounces in target language
+- No speaker icons needed - the text itself is clickable
+
+**Visual Feedback:**
+
+- Hover effect: Text gets a subtle background and scales slightly
+- Speaking state: Text highlights with primary color and pulses
+- Cursor changes to pointer on hover
+- Tooltips show "Click to pronounce" hints
+
+**Example:**
+
+```
+┌─────────────────────────────────────┐
+│                                     │
+│         maintained                  │  ← Click here for English
+│                                     │
+│         mantenuto                   │  ← Click here for Italian
+│                                     │
+└─────────────────────────────────────┘
+```
+
+### Technical Implementation
+
+**Event Handling:**
+
+- Separate click listeners for word and translation elements
+- `stopPropagation()` prevents event bubbling
+- Language automatically selected based on clicked element
+- Fallback: clicking card background pronounces original word
+
+**CSS Enhancements:**
+
+- `.clickable-text` class for interactive text elements
+- Smooth hover transitions with background and scale effects
+- Active state feedback on click
+- Speaking animation reuses existing pulse keyframes
+
+### Code Changes
+
+**Modified Functions:**
+
+1. `renderVocabularyLearningMode()` - Added separate click handlers for word and translation
+2. `createVocabularyLearningCardHTML()` - Added `clickable-text` class and tooltips
+
+**CSS Additions:**
+
+- `.clickable-text` - Base clickable text styling
+- `.clickable-text:hover` - Hover state with background and scale
+- `.clickable-text:active` - Click feedback
+- `.clickable-text.speaking` - Speaking state with pulse animation
