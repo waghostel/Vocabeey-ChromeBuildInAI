@@ -321,6 +321,127 @@ function handleNoneModeSelection(
 }
 
 /**
+ * Detect overlapping vocabulary highlights within a range
+ */
+function detectOverlappingVocabulary(range: Range): string[] {
+  const overlappingIds: string[] = [];
+
+  try {
+    // Clone the range to avoid modifying the original
+    const clonedRange = range.cloneRange();
+    const fragment = clonedRange.cloneContents();
+
+    // Find all vocabulary highlights within the fragment
+    const vocabularyHighlights = fragment.querySelectorAll(
+      '[data-highlight-type="vocabulary"][data-highlight-id]'
+    );
+
+    vocabularyHighlights.forEach(element => {
+      const id = element.getAttribute('data-highlight-id');
+      if (id) {
+        overlappingIds.push(id);
+      }
+    });
+  } catch (error) {
+    console.error('Error detecting overlapping vocabulary:', error);
+  }
+
+  return overlappingIds;
+}
+
+/**
+ * Remove subsumed vocabulary items from storage and DOM
+ */
+async function removeSubsumedVocabulary(
+  vocabularyIds: string[]
+): Promise<void> {
+  if (vocabularyIds.length === 0) return;
+
+  try {
+    // Get current vocabulary from storage
+    const data = await chrome.storage.local.get('vocabulary');
+    const vocabulary: Record<string, VocabularyItem> = data.vocabulary || {};
+
+    // Collect words for notification
+    const removedWords: string[] = [];
+
+    // Remove each vocabulary item
+    for (const id of vocabularyIds) {
+      if (vocabulary[id]) {
+        removedWords.push(vocabulary[id].word);
+        delete vocabulary[id];
+      }
+
+      // Remove from highlights map
+      highlights.delete(id);
+
+      // Dispatch removal event for UI update
+      dispatchHighlightEvent('vocabulary-removed', { id });
+    }
+
+    // Batch update storage (single write operation)
+    await chrome.storage.local.set({ vocabulary });
+
+    // Show consolidation notification if items were removed
+    if (removedWords.length > 0) {
+      showConsolidationNotification(removedWords.length, removedWords);
+    }
+  } catch (error) {
+    console.error('Error removing subsumed vocabulary:', error);
+  }
+}
+
+/**
+ * Show consolidation notification
+ */
+function showConsolidationNotification(count: number, words: string[]): void {
+  // Only show in vocabulary mode
+  if (currentMode !== 'vocabulary') return;
+
+  const notification = document.createElement('div');
+  notification.className = 'consolidation-notification';
+
+  const message =
+    count === 1
+      ? `Consolidated "${words[0]}" into larger phrase`
+      : count <= 3
+        ? `Consolidated ${count} items: ${words.join(', ')}`
+        : `Consolidated ${count} vocabulary items into phrase`;
+
+  notification.textContent = message;
+  notification.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #4CAF50;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    max-width: 300px;
+  `;
+
+  document.body.appendChild(notification);
+
+  // Fade in
+  requestAnimationFrame(() => {
+    notification.style.opacity = '1';
+  });
+
+  // Auto-dismiss after 2 seconds
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    setTimeout(() => {
+      notification.remove();
+    }, 300);
+  }, 2000);
+}
+
+/**
  * Handle vocabulary highlighting
  */
 async function handleVocabularyHighlight(
@@ -334,6 +455,14 @@ async function handleVocabularyHighlight(
   if (wordCount > 3) {
     showTooltip('Please select 1-3 words for vocabulary', range);
     return;
+  }
+
+  // Detect overlapping vocabulary highlights
+  const overlappingIds = detectOverlappingVocabulary(range);
+
+  // Remove subsumed vocabulary items before creating new highlight
+  if (overlappingIds.length > 0) {
+    await removeSubsumedVocabulary(overlappingIds);
   }
 
   // Get context (surrounding text)
@@ -633,9 +762,26 @@ export async function removeHighlight(
     `[data-highlight-id="${highlightId}"]`
   );
   highlightElements.forEach(el => {
-    const text = el.textContent || '';
-    const textNode = document.createTextNode(text);
-    el.parentNode?.replaceChild(textNode, el);
+    // Check if this highlight contains nested highlights
+    const nestedHighlights = el.querySelectorAll('[data-highlight-type]');
+
+    if (nestedHighlights.length > 0) {
+      // Has nested highlights - unwrap the outer element while preserving inner content
+      const parent = el.parentNode;
+      if (parent) {
+        // Move all child nodes to the parent
+        while (el.firstChild) {
+          parent.insertBefore(el.firstChild, el);
+        }
+        // Remove the now-empty outer element
+        parent.removeChild(el);
+      }
+    } else {
+      // No nested highlights - replace with text node as before
+      const text = el.textContent || '';
+      const textNode = document.createTextNode(text);
+      el.parentNode?.replaceChild(textNode, el);
+    }
   });
 
   // Remove from map

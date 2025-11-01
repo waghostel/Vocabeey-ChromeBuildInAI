@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overlapping Vocabulary Fix - Test Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        
+        .test-section {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .test-content {
+            background: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 18px;
+            line-height: 1.8;
+        }
+        
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin: 8px 0;
+        }
+        
+        .expected-result {
+            background: #e8f5e9;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .expected-result strong {
+            color: #2e7d32;
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d32f2f;
+        }
+        
+        .highlight-vocabulary {
+            background-color: #fff59d;
+            padding: 2px 4px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .highlight-sentence {
+            background-color: #b3e5fc;
+            padding: 2px 4px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .note {
+            background: #fff3e0;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid #ff9800;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Overlapping Vocabulary Fix - Test Page</h1>
+    
+    <div class="note">
+        <strong>Note:</strong> This is a test page to verify the overlapping vocabulary fix. 
+        Load this page in the Chrome extension's learning interface to test the functionality.
+    </div>
+
+    <div class="test-section">
+        <h2>Test Case 1: Basic Overlap (Smaller → Larger)</h2>
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Switch to <strong>Vocabulary mode</strong></li>
+                <li>Highlight the word <code>an</code></li>
+                <li>Then highlight <code>an apple</code> (which includes "an")</li>
+            </ol>
+        </div>
+        <div class="test-content">
+            This is an apple on the table. The apple is red and delicious.
+        </div>
+        <div class="expected-result">
+            <strong>✅ Expected Result:</strong>
+            <ul>
+                <li>Notification appears: "Consolidated 'an' into larger phrase"</li>
+                <li>Only "an apple" vocabulary card exists</li>
+                <li>"an" card is removed from vocabulary list</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Case 2: Multiple Overlaps</h2>
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Highlight <code>the</code></li>
+                <li>Highlight <code>the cat</code></li>
+                <li>Highlight <code>the cat sat</code></li>
+            </ol>
+        </div>
+        <div class="test-content">
+            The cat sat on the mat. The cat was very comfortable.
+        </div>
+        <div class="expected-result">
+            <strong>✅ Expected Result:</strong>
+            <ul>
+                <li>Notification: "Consolidated 2 items: the, the cat"</li>
+                <li>Only "the cat sat" vocabulary card exists</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Case 3: Three-Level Nesting</h2>
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Highlight <code>big</code></li>
+                <li>Highlight <code>big red</code></li>
+                <li>Highlight <code>big red apple</code></li>
+            </ol>
+        </div>
+        <div class="test-content">
+            I saw a big red apple in the store. The big red apple looked delicious.
+        </div>
+        <div class="expected-result">
+            <strong>✅ Expected Result:</strong>
+            <ul>
+                <li>Each step consolidates previous highlights</li>
+                <li>Final result: Only "big red apple" card exists</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Case 4: Non-Overlapping Highlights</h2>
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Highlight <code>cat</code></li>
+                <li>Highlight <code>dog</code> (separate word)</li>
+            </ol>
+        </div>
+        <div class="test-content">
+            The cat and the dog are playing together in the garden.
+        </div>
+        <div class="expected-result">
+            <strong>✅ Expected Result:</strong>
+            <ul>
+                <li>Both vocabulary cards exist</li>
+                <li>No consolidation notification appears</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Case 5: Deletion Test</h2>
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Highlight <code>beautiful</code></li>
+                <li>Highlight <code>beautiful flower</code> (consolidates "beautiful")</li>
+                <li>Right-click on "beautiful flower" and delete it</li>
+            </ol>
+        </div>
+        <div class="test-content">
+            Look at this beautiful flower in the garden. The beautiful flower smells amazing.
+        </div>
+        <div class="expected-result">
+            <strong>✅ Expected Result:</strong>
+            <ul>
+                <li>"beautiful flower" highlight is removed from DOM</li>
+                <li>"beautiful flower" card is removed from vocabulary list</li>
+                <li>No orphaned cards remain</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Case 6: Sentence Mode (Should Not Affect Vocabulary)</h2>
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>First, in Vocabulary mode, highlight <code>quick</code> and <code>brown</code></li>
+                <li>Switch to <strong>Sentence mode</strong></li>
+                <li>Highlight the entire sentence</li>
+            </ol>
+        </div>
+        <div class="test-content">
+            The quick brown fox jumps over the lazy dog.
+        </div>
+        <div class="expected-result">
+            <strong>✅ Expected Result:</strong>
+            <ul>
+                <li>Sentence highlight is created</li>
+                <li>Vocabulary highlights remain unchanged</li>
+                <li>No consolidation occurs for sentence highlights</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Case 7: Rapid Highlighting</h2>
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Quickly highlight: <code>very</code>, <code>very good</code>, <code>very good book</code></li>
+                <li>Do this rapidly without waiting</li>
+            </ol>
+        </div>
+        <div class="test-content">
+            This is a very good book. I really enjoyed reading this very good book.
+        </div>
+        <div class="expected-result">
+            <strong>✅ Expected Result:</strong>
+            <ul>
+                <li>All consolidations are handled correctly</li>
+                <li>Final result: Only "very good book" card exists</li>
+                <li>No race conditions or errors</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="note">
+        <strong>💡 Pro Tip:</strong> Open the browser console (F12) to see detailed logs of the 
+        consolidation process, including which vocabulary items are being removed and when.
+    </div>
+
+    <div class="note">
+        <strong>🐛 Reporting Issues:</strong> If you encounter any issues during testing, please note:
+        <ul>
+            <li>Which test case failed</li>
+            <li>What you expected to happen</li>
+            <li>What actually happened</li>
+            <li>Any console errors</li>
+        </ul>
+    </div>
+</body>
+</html>
