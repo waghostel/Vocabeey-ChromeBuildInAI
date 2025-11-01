@@ -734,8 +734,12 @@ function setupEventListeners(): void {
   document.addEventListener('keydown', handleKeyboardShortcuts);
 
   // Close context menu on click outside
-  document.addEventListener('click', () => {
-    elements.contextMenu.classList.add('hidden');
+  document.addEventListener('click', e => {
+    const target = e.target as HTMLElement;
+    // Don't hide if clicking inside the context menu
+    if (!elements.contextMenu.contains(target)) {
+      elements.contextMenu.classList.add('hidden');
+    }
   });
 
   // Highlight mode switching
@@ -761,7 +765,10 @@ function setupEventListeners(): void {
   // Context menu actions
   const contextMenuItems = document.querySelectorAll('.context-menu-item');
   contextMenuItems.forEach(item => {
-    item.addEventListener('click', handleContextMenuAction);
+    item.addEventListener('click', e => {
+      e.stopPropagation(); // Prevent document click from hiding menu prematurely
+      void handleContextMenuAction(e);
+    });
   });
 }
 
