@@ -1,6 +1,6 @@
 ## High
 
-[ ] Language detection is not display
+[ ] Language detection is not display correctly
 
 # Medium
 
