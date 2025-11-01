@@ -1096,7 +1096,11 @@ function generateId(): string {
  * Dispatch custom event for UI updates
  */
 function dispatchHighlightEvent(eventName: string, detail: unknown): void {
-  const event = new CustomEvent(eventName, { detail });
+  const event = new CustomEvent(eventName, {
+    detail,
+    bubbles: true,
+    composed: true,
+  });
   document.dispatchEvent(event);
 }
 

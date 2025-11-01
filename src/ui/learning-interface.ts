@@ -1164,7 +1164,28 @@ async function handleContextMenuAction(event: Event): Promise<void> {
 
   if (action === 'remove') {
     const { removeHighlight } = await import('./highlight-manager.js');
-    void removeHighlight(itemId, itemType);
+    await removeHighlight(itemId, itemType);
+
+    // Direct state update and re-render as fallback
+    if (itemType === 'vocabulary') {
+      state.vocabularyItems = state.vocabularyItems.filter(
+        v => v.id !== itemId
+      );
+      if (state.currentArticle) {
+        const part = state.currentArticle.parts[state.currentPartIndex];
+        if (part) {
+          renderPartVocabularyCards(part);
+        }
+      }
+    } else if (itemType === 'sentence') {
+      state.sentenceItems = state.sentenceItems.filter(s => s.id !== itemId);
+      if (state.currentArticle) {
+        const part = state.currentArticle.parts[state.currentPartIndex];
+        if (part) {
+          renderPartSentenceCards(part);
+        }
+      }
+    }
   } else if (action === 'pronounce') {
     // Get the highlight element and pronounce its text
     const highlightElement = document.querySelector(
