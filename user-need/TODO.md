@@ -1,7 +1,6 @@
 ## High
 
-[ ] Add delete context menu on vocabularary card
-[ ] Add delete on sentence card
+[ ] Language detection is not display
 
 # Medium
 
@@ -11,3 +10,6 @@
 [ ] Dark theme
 
 ## done
+
+[x] Add delete context menu on vocabularary card
+[x] Add delete on sentence card
