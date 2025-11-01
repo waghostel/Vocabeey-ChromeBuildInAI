@@ -914,21 +914,20 @@ describe('UI Components - Highlighting System', () => {
       }
     });
 
-    it('should validate vocabulary selection length (1-3 words)', () => {
+    it('should accept vocabulary selections of any length', () => {
       const selections = [
         'word',
         'two words',
         'three word phrase',
-        'this is too many words for vocabulary',
+        'as a matter of fact',
+        'in the nick of time',
+        'this is a longer phrase that should be accepted',
       ];
 
-      selections.forEach((text, index) => {
+      // All selections should be valid (no word count restriction)
+      selections.forEach(text => {
         const wordCount = text.split(/\s+/).length;
-        if (index < 3) {
-          expect(wordCount).toBeLessThanOrEqual(3);
-        } else {
-          expect(wordCount).toBeGreaterThan(3);
-        }
+        expect(wordCount).toBeGreaterThan(0); // Only check non-empty
       });
     });
 

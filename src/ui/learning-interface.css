@@ -1361,3 +1361,40 @@ body.dark-mode .translation-popup {
   color: #ecf0f1;
   border-color: #34495e;
 }
+
+/* ============================================================================
+   Bulk Delete Feature (None Mode - Keyboard Only)
+   ============================================================================ */
+
+/* Preview state for highlights about to be deleted */
+.highlight-vocabulary.will-delete,
+.highlight-sentence.will-delete {
+  background-color: rgba(244, 67, 54, 0.3) !important;
+  border: 2px solid rgba(244, 67, 54, 0.8) !important;
+  border-radius: 3px;
+  animation: pulse-delete 1s ease-in-out infinite;
+}
+
+@keyframes pulse-delete {
+  0%,
+  100% {
+    background-color: rgba(244, 67, 54, 0.3);
+  }
+  50% {
+    background-color: rgba(244, 67, 54, 0.5);
+  }
+}
+
+/* Bulk delete notification */
+.bulk-delete-notification {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    Cantarell, sans-serif;
+}
+
+/* Dark mode support for bulk delete */
+body.dark-mode .highlight-vocabulary.will-delete,
+body.dark-mode .highlight-sentence.will-delete {
+  background-color: rgba(244, 67, 54, 0.4) !important;
+  border-color: rgba(244, 67, 54, 0.9) !important;
+}

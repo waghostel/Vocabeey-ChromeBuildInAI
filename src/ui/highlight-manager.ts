@@ -34,6 +34,13 @@ let selectedHighlightId: string | null = null;
 let selectedHighlightType: 'vocabulary' | 'sentence' | null = null;
 let selectedHighlightElement: HTMLElement | null = null;
 
+// Bulk delete state for None mode (keyboard-only)
+let highlightsToDelete: Array<{
+  id: string;
+  type: 'vocabulary' | 'sentence';
+  element: HTMLElement;
+}> = [];
+
 // ============================================================================
 // Selection Management
 // ============================================================================
@@ -108,12 +115,328 @@ async function deleteSelectedHighlight(): Promise<void> {
   }
 }
 
+// ============================================================================
+// Bulk Delete Functionality (None Mode)
+// ============================================================================
+
+/**
+ * Check if a highlight element is fully enclosed within a selection range
+ */
+function isHighlightFullyEnclosed(
+  highlightElement: HTMLElement,
+  selectionRange: Range
+): boolean {
+  try {
+    // Create a range for the highlight element
+    const highlightRange = document.createRange();
+    highlightRange.selectNodeContents(highlightElement);
+
+    // Compare ranges
+    // Highlight is fully enclosed if:
+    // - Selection starts before or at highlight start
+    // - Selection ends after or at highlight end
+    const startComparison = selectionRange.compareBoundaryPoints(
+      Range.START_TO_START,
+      highlightRange
+    );
+    const endComparison = selectionRange.compareBoundaryPoints(
+      Range.END_TO_END,
+      highlightRange
+    );
+
+    // startComparison <= 0 means selection starts before or at highlight
+    // endComparison >= 0 means selection ends after or at highlight
+    return startComparison <= 0 && endComparison >= 0;
+  } catch (error) {
+    console.error('Error checking highlight enclosure:', error);
+    return false;
+  }
+}
+
+/**
+ * Get all highlights (vocabulary and sentence) that are fully enclosed in a range
+ */
+function getHighlightsInRange(range: Range): Array<{
+  id: string;
+  type: 'vocabulary' | 'sentence';
+  element: HTMLElement;
+}> {
+  const enclosedHighlights: Array<{
+    id: string;
+    type: 'vocabulary' | 'sentence';
+    element: HTMLElement;
+  }> = [];
+
+  // Find all highlight elements in the article content
+  const articleContent = document.querySelector('.article-part-content');
+  if (!articleContent) return enclosedHighlights;
+
+  // Get all vocabulary and sentence highlights
+  const allHighlights = articleContent.querySelectorAll(
+    '[data-highlight-type][data-highlight-id]'
+  );
+
+  allHighlights.forEach(element => {
+    const highlightElement = element as HTMLElement;
+    const id = highlightElement.getAttribute('data-highlight-id');
+    const type = highlightElement.getAttribute('data-highlight-type') as
+      | 'vocabulary'
+      | 'sentence';
+
+    if (!id || !type) return;
+
+    // Check if this highlight is fully enclosed in the selection
+    if (isHighlightFullyEnclosed(highlightElement, range)) {
+      enclosedHighlights.push({ id, type, element: highlightElement });
+    }
+  });
+
+  return enclosedHighlights;
+}
+
+/**
+ * Clear bulk delete preview state (keyboard-only workflow)
+ */
+function clearBulkDeletePreview(): void {
+  // Clear preview highlighting
+  highlightsToDelete.forEach(({ element }) => {
+    element.classList.remove('will-delete');
+  });
+
+  highlightsToDelete = [];
+
+  // Clear text selection
+  const selection = window.getSelection();
+  if (selection) {
+    selection.removeAllRanges();
+  }
+}
+
+/**
+ * Execute bulk delete of all selected highlights (keyboard-triggered)
+ */
+async function executeBulkDelete(): Promise<void> {
+  if (highlightsToDelete.length === 0) return;
+
+  const count = highlightsToDelete.length;
+
+  try {
+    // Separate vocabulary and sentence IDs
+    const vocabularyIds: string[] = [];
+    const sentenceIds: string[] = [];
+
+    highlightsToDelete.forEach(({ id, type }) => {
+      if (type === 'vocabulary') {
+        vocabularyIds.push(id);
+      } else {
+        sentenceIds.push(id);
+      }
+    });
+
+    // Remove vocabulary items
+    if (vocabularyIds.length > 0) {
+      await bulkRemoveVocabulary(vocabularyIds);
+    }
+
+    // Remove sentence items
+    if (sentenceIds.length > 0) {
+      await bulkRemoveSentences(sentenceIds);
+    }
+
+    // Show success notification
+    showBulkDeleteNotification(count, vocabularyIds.length, sentenceIds.length);
+  } catch (error) {
+    console.error('Error executing bulk delete:', error);
+  } finally {
+    // Clean up preview state
+    clearBulkDeletePreview();
+  }
+}
+
+/**
+ * Bulk remove vocabulary items
+ */
+async function bulkRemoveVocabulary(vocabularyIds: string[]): Promise<void> {
+  if (vocabularyIds.length === 0) return;
+
+  try {
+    // Get current vocabulary from storage
+    const data = await chrome.storage.local.get('vocabulary');
+    const vocabulary: Record<string, VocabularyItem> = data.vocabulary || {};
+
+    // Remove each vocabulary item
+    for (const id of vocabularyIds) {
+      delete vocabulary[id];
+
+      // Remove DOM highlight elements
+      removeDOMHighlight(id);
+
+      // Remove from highlights map
+      highlights.delete(id);
+
+      // Dispatch removal event for UI update
+      dispatchHighlightEvent('vocabulary-removed', { id });
+    }
+
+    // Batch update storage (single write operation)
+    await chrome.storage.local.set({ vocabulary });
+  } catch (error) {
+    console.error('Error bulk removing vocabulary:', error);
+  }
+}
+
+/**
+ * Bulk remove sentence items
+ */
+async function bulkRemoveSentences(sentenceIds: string[]): Promise<void> {
+  if (sentenceIds.length === 0) return;
+
+  try {
+    // Get current sentences from storage
+    const data = await chrome.storage.local.get('sentences');
+    const sentences: Record<string, SentenceItem> = data.sentences || {};
+
+    // Remove each sentence item
+    for (const id of sentenceIds) {
+      delete sentences[id];
+
+      // Remove DOM highlight elements
+      removeDOMHighlight(id);
+
+      // Remove from highlights map
+      highlights.delete(id);
+
+      // Dispatch removal event for UI update
+      dispatchHighlightEvent('sentence-removed', { id });
+    }
+
+    // Batch update storage (single write operation)
+    await chrome.storage.local.set({ sentences });
+  } catch (error) {
+    console.error('Error bulk removing sentences:', error);
+  }
+}
+
+/**
+ * Show bulk delete success notification
+ */
+function showBulkDeleteNotification(
+  total: number,
+  vocabCount: number,
+  sentenceCount: number
+): void {
+  const notification = document.createElement('div');
+  notification.className = 'bulk-delete-notification';
+
+  let message = `Deleted ${total} highlight${total > 1 ? 's' : ''}`;
+  if (vocabCount > 0 && sentenceCount > 0) {
+    message += ` (${vocabCount} vocabulary, ${sentenceCount} sentence${sentenceCount > 1 ? 's' : ''})`;
+  } else if (vocabCount > 0) {
+    message += ` (vocabulary)`;
+  } else if (sentenceCount > 0) {
+    message += ` (sentence${sentenceCount > 1 ? 's' : ''})`;
+  }
+
+  notification.textContent = message;
+  notification.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #4CAF50;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    max-width: 350px;
+  `;
+
+  document.body.appendChild(notification);
+
+  // Fade in
+  requestAnimationFrame(() => {
+    notification.style.opacity = '1';
+  });
+
+  // Auto-dismiss after 3 seconds
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    setTimeout(() => {
+      notification.remove();
+    }, 300);
+  }, 3000);
+}
+
+/**
+ * Handle text selection in None mode for bulk delete (keyboard-only)
+ */
+function handleNoneModeTextSelection(_event: MouseEvent | TouchEvent): void {
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) {
+    // No selection, clear preview if visible
+    if (highlightsToDelete.length > 0) {
+      clearBulkDeletePreview();
+    }
+    return;
+  }
+
+  const selectedText = selection.toString().trim();
+  if (!selectedText) {
+    if (highlightsToDelete.length > 0) {
+      clearBulkDeletePreview();
+    }
+    return;
+  }
+
+  // Check if selection is within article content
+  const articleContent = document.querySelector('.article-part-content');
+  if (!articleContent) return;
+
+  const range = selection.getRangeAt(0);
+  if (!articleContent.contains(range.commonAncestorContainer)) return;
+
+  // Get all highlights fully enclosed in the selection
+  const enclosedHighlights = getHighlightsInRange(range);
+
+  if (enclosedHighlights.length === 0) {
+    // No highlights to delete, clear any existing preview
+    if (highlightsToDelete.length > 0) {
+      clearBulkDeletePreview();
+    }
+    return;
+  }
+
+  // Clear previous preview
+  highlightsToDelete.forEach(({ element }) => {
+    element.classList.remove('will-delete');
+  });
+
+  // Store highlights to delete
+  highlightsToDelete = enclosedHighlights;
+
+  // Add preview highlighting (red tint with pulsing animation)
+  highlightsToDelete.forEach(({ element }) => {
+    element.classList.add('will-delete');
+  });
+}
+
 /**
  * Handle keyboard events for highlight management
  */
 function handleKeyPress(event: KeyboardEvent): void {
-  // Delete or Backspace key - delete selected highlight
+  // Delete or Backspace key - delete selected highlight or bulk delete
   if (event.key === 'Delete' || event.key === 'Backspace') {
+    // Check if we're in bulk delete mode (None mode with text selection)
+    if (currentMode === 'none' && highlightsToDelete.length > 0) {
+      event.preventDefault();
+      void executeBulkDelete();
+      return;
+    }
+
+    // Otherwise, handle single highlight deletion
     const selected = getSelectedHighlight();
     if (selected) {
       event.preventDefault(); // Prevent browser back navigation on Backspace
@@ -121,9 +444,13 @@ function handleKeyPress(event: KeyboardEvent): void {
     }
   }
 
-  // Escape key - deselect without deleting
+  // Escape key - deselect without deleting or cancel bulk delete
   if (event.key === 'Escape') {
-    deselectHighlight();
+    if (currentMode === 'none' && highlightsToDelete.length > 0) {
+      clearBulkDeletePreview();
+    } else {
+      deselectHighlight();
+    }
   }
 }
 
@@ -164,6 +491,8 @@ export function setHighlightMode(mode: HighlightMode): void {
   currentMode = mode;
   // Clear selection when mode changes
   deselectHighlight();
+  // Clear bulk delete state when mode changes
+  clearBulkDeletePreview();
 }
 
 /**
@@ -184,6 +513,7 @@ export function cleanupHighlightManager(): void {
   document.removeEventListener('keydown', handleKeyPress);
   highlights.clear();
   deselectHighlight();
+  clearBulkDeletePreview();
 }
 
 // ============================================================================
@@ -350,13 +680,24 @@ function findSentenceAtPoint(event: MouseEvent): {
  * Handle text selection
  */
 async function handleTextSelection(
-  _event: MouseEvent | TouchEvent
+  event: MouseEvent | TouchEvent
 ): Promise<void> {
   const selection = window.getSelection();
-  if (!selection || selection.isCollapsed) return;
+  if (!selection || selection.isCollapsed) {
+    // No selection - clear bulk delete preview if in None mode
+    if (currentMode === 'none' && highlightsToDelete.length > 0) {
+      clearBulkDeletePreview();
+    }
+    return;
+  }
 
   const selectedText = selection.toString().trim();
-  if (!selectedText) return;
+  if (!selectedText) {
+    if (currentMode === 'none' && highlightsToDelete.length > 0) {
+      clearBulkDeletePreview();
+    }
+    return;
+  }
 
   // Check if selection is within article content
   const articleContent = document.querySelector('.article-part-content');
@@ -365,8 +706,9 @@ async function handleTextSelection(
   const range = selection.getRangeAt(0);
   if (!articleContent.contains(range.commonAncestorContainer)) return;
 
-  // In None mode, do nothing on mouseup - wait for contextmenu event (right-click)
+  // In None mode, handle bulk delete selection (keyboard-only)
   if (currentMode === 'none') {
+    handleNoneModeTextSelection(event);
     return;
   }
 
@@ -591,13 +933,6 @@ async function handleVocabularyHighlight(
   range: Range
 ): Promise<void> {
   if (!currentArticleId || !currentPartId) return;
-
-  // Validate vocabulary selection (should be 1-3 words)
-  const wordCount = text.split(/\s+/).length;
-  if (wordCount > 3) {
-    showTooltip('Please select 1-3 words for vocabulary', range);
-    return;
-  }
 
   // Detect overlapping vocabulary highlights
   const overlappingIds = detectOverlappingVocabulary(range);
@@ -1403,12 +1738,6 @@ export async function handleSelectionContextMenuAction(
 
   try {
     if (action === 'add-vocabulary') {
-      // Validate vocabulary selection (should be 1-3 words)
-      const wordCount = text.split(/\s+/).length;
-      if (wordCount > 3) {
-        showTooltip('Please select 1-3 words for vocabulary', range);
-        return;
-      }
       await handleVocabularyHighlight(text, range);
     } else if (action === 'add-sentence') {
       // Validate sentence selection
