@@ -227,12 +227,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return false;
 });
 
-// Extract content when script is injected (wrapped in IIFE to avoid global scope pollution)
-(function initContentScript() {
+// Only extract content when manually injected via icon click
+// Check if this is a manual injection (not from manifest content_scripts)
+if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
   const extractedContent = extractContent();
   if (extractedContent) {
     sendContentToBackground(extractedContent);
   } else {
     showErrorNotification('Could not find article content on this page');
   }
-})();
+}
