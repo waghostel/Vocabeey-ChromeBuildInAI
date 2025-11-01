@@ -8,34 +8,42 @@ Successfully implemented automatic vocabulary consolidation for overlapping high
 
 ### Modified Files
 
-**`src/ui/highlight-manager.ts`** - Added 4 new functions and modified 2 existing functions:
+**`src/ui/highlight-manager.ts`** - Added 5 new functions and modified 2 existing functions:
 
 1. **`detectOverlappingVocabulary(range: Range): string[]`** (NEW)
    - Detects all existing vocabulary highlights within a new selection range
    - Returns array of vocabulary IDs that will be subsumed
    - Uses DOM traversal to find nested highlights
 
-2. **`removeSubsumedVocabulary(vocabularyIds: string[]): Promise<void>`** (NEW)
+2. **`removeDOMHighlight(highlightId: string): void`** (NEW - CRITICAL FIX)
+   - **Helper function to remove DOM highlight elements by ID**
+   - Unwraps highlight spans and replaces with plain text
+   - Preserves nested highlights if they exist
+   - Reusable by both consolidation and deletion flows
+   - **This is the key fix that removes visual highlights from the DOM**
+
+3. **`removeSubsumedVocabulary(vocabularyIds: string[]): Promise<void>`** (NEW)
    - Removes subsumed vocabulary items from chrome.storage.local
+   - **Calls `removeDOMHighlight()` to remove visual highlights** (CRITICAL)
    - Dispatches removal events for UI updates
    - Uses batch storage operations for performance
    - Shows consolidation notification to user
 
-3. **`showConsolidationNotification(count: number, words: string[]): void`** (NEW)
+4. **`showConsolidationNotification(count: number, words: string[]): void`** (NEW)
    - Displays user-friendly toast notification
    - Shows which vocabulary items were consolidated
    - Auto-dismisses after 2 seconds
    - Only shown in vocabulary mode
 
-4. **`handleVocabularyHighlight(text: string, range: Range): Promise<void>`** (MODIFIED)
+5. **`handleVocabularyHighlight(text: string, range: Range): Promise<void>`** (MODIFIED)
    - Added overlap detection before creating new highlight
    - Calls `detectOverlappingVocabulary()` to find subsumed items
-   - Calls `removeSubsumedVocabulary()` to clean up before creating new highlight
+   - Calls `removeSubsumedVocabulary()` to clean up storage AND DOM
    - Ensures one-to-one relationship between DOM highlights and vocabulary cards
 
-5. **`removeHighlight(highlightId: string, type: 'vocabulary' | 'sentence'): Promise<void>`** (MODIFIED)
-   - Enhanced to check for nested highlights before removal
-   - Unwraps outer element while preserving inner highlights
+6. **`removeHighlight(highlightId: string, type: 'vocabulary' | 'sentence'): Promise<void>`** (MODIFIED)
+   - Refactored to use `removeDOMHighlight()` helper function
+   - Simplified code by reusing DOM removal logic
    - Ensures nested highlights remain functional when outer is deleted
    - Prevents orphaned highlights in the DOM
 
@@ -54,13 +62,19 @@ detectOverlappingVocabulary(range)
     ↓
 removeSubsumedVocabulary(["vocab-id-123"])
     → Removes "an" from storage
+    → Calls removeDOMHighlight("vocab-id-123") ✨ NEW!
+        → Finds <span data-highlight-id="vocab-id-123">
+        → Replaces with plain text "an"
     → Dispatches 'vocabulary-removed' event
     → Shows notification: "Consolidated 'an' into larger phrase"
     ↓
 createHighlight() creates "an apple" highlight
-    → DOM naturally nests the highlights
+    → Works with clean text (no nested highlights)
+    → Creates single clean highlight
     ↓
-Result: Only "an apple" vocabulary card exists
+Result:
+    ✅ Only "an apple" vocabulary card exists
+    ✅ Only "an apple" DOM highlight visible (no nesting)
 ```
 
 ### Deletion Flow

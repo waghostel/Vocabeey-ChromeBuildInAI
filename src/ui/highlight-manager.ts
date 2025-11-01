@@ -29,6 +29,104 @@ let highlights: Map<string, Highlight> = new Map();
 let pendingSelection: { text: string; range: Range; context: string } | null =
   null;
 
+// Selection state for click-to-select and delete functionality
+let selectedHighlightId: string | null = null;
+let selectedHighlightType: 'vocabulary' | 'sentence' | null = null;
+let selectedHighlightElement: HTMLElement | null = null;
+
+// ============================================================================
+// Selection Management
+// ============================================================================
+
+/**
+ * Select a highlight (adds visual selected state)
+ */
+function selectHighlight(
+  id: string,
+  type: 'vocabulary' | 'sentence',
+  element: HTMLElement
+): void {
+  // Deselect any previously selected highlight
+  deselectHighlight();
+
+  // Set new selection
+  selectedHighlightId = id;
+  selectedHighlightType = type;
+  selectedHighlightElement = element;
+
+  // Add selected class
+  element.classList.add('selected');
+}
+
+/**
+ * Deselect the currently selected highlight
+ */
+function deselectHighlight(): void {
+  if (selectedHighlightElement) {
+    selectedHighlightElement.classList.remove('selected');
+  }
+
+  selectedHighlightId = null;
+  selectedHighlightType = null;
+  selectedHighlightElement = null;
+}
+
+/**
+ * Get currently selected highlight info
+ */
+function getSelectedHighlight(): {
+  id: string;
+  type: 'vocabulary' | 'sentence';
+  element: HTMLElement;
+} | null {
+  if (
+    selectedHighlightId &&
+    selectedHighlightType &&
+    selectedHighlightElement
+  ) {
+    return {
+      id: selectedHighlightId,
+      type: selectedHighlightType,
+      element: selectedHighlightElement,
+    };
+  }
+  return null;
+}
+
+/**
+ * Delete the currently selected highlight
+ */
+async function deleteSelectedHighlight(): Promise<void> {
+  const selected = getSelectedHighlight();
+  if (!selected) return;
+
+  try {
+    await removeHighlight(selected.id, selected.type);
+    deselectHighlight();
+  } catch (error) {
+    console.error('Error deleting selected highlight:', error);
+  }
+}
+
+/**
+ * Handle keyboard events for highlight management
+ */
+function handleKeyPress(event: KeyboardEvent): void {
+  // Delete or Backspace key - delete selected highlight
+  if (event.key === 'Delete' || event.key === 'Backspace') {
+    const selected = getSelectedHighlight();
+    if (selected) {
+      event.preventDefault(); // Prevent browser back navigation on Backspace
+      void deleteSelectedHighlight();
+    }
+  }
+
+  // Escape key - deselect without deleting
+  if (event.key === 'Escape') {
+    deselectHighlight();
+  }
+}
+
 // ============================================================================
 // Initialization
 // ============================================================================
@@ -54,6 +152,9 @@ export function initializeHighlightManager(
 
   // Setup context menu listener to prevent native menu in None mode
   document.addEventListener('contextmenu', handleContextMenu);
+
+  // Setup keyboard listener for delete functionality
+  document.addEventListener('keydown', handleKeyPress);
 }
 
 /**
@@ -61,6 +162,8 @@ export function initializeHighlightManager(
  */
 export function setHighlightMode(mode: HighlightMode): void {
   currentMode = mode;
+  // Clear selection when mode changes
+  deselectHighlight();
 }
 
 /**
@@ -78,7 +181,9 @@ export function cleanupHighlightManager(): void {
   document.removeEventListener('touchend', handleTextSelection);
   document.removeEventListener('dblclick', handleDoubleClick);
   document.removeEventListener('contextmenu', handleContextMenu);
+  document.removeEventListener('keydown', handleKeyPress);
   highlights.clear();
+  deselectHighlight();
 }
 
 // ============================================================================
@@ -350,6 +455,40 @@ function detectOverlappingVocabulary(range: Range): string[] {
 }
 
 /**
+ * Remove DOM highlight element by ID
+ * Unwraps the element and replaces it with plain text or preserves nested content
+ */
+function removeDOMHighlight(highlightId: string): void {
+  // Find all elements with this highlight ID
+  const highlightElements = document.querySelectorAll(
+    `[data-highlight-id="${highlightId}"]`
+  );
+
+  highlightElements.forEach(el => {
+    // Check if this highlight contains nested highlights
+    const nestedHighlights = el.querySelectorAll('[data-highlight-type]');
+
+    if (nestedHighlights.length > 0) {
+      // Has nested highlights - unwrap while preserving inner content
+      const parent = el.parentNode;
+      if (parent) {
+        // Move all child nodes to the parent
+        while (el.firstChild) {
+          parent.insertBefore(el.firstChild, el);
+        }
+        // Remove the now-empty outer element
+        parent.removeChild(el);
+      }
+    } else {
+      // No nested highlights - replace with text node
+      const text = el.textContent || '';
+      const textNode = document.createTextNode(text);
+      el.parentNode?.replaceChild(textNode, el);
+    }
+  });
+}
+
+/**
  * Remove subsumed vocabulary items from storage and DOM
  */
 async function removeSubsumedVocabulary(
@@ -371,6 +510,9 @@ async function removeSubsumedVocabulary(
         removedWords.push(vocabulary[id].word);
         delete vocabulary[id];
       }
+
+      // Remove DOM highlight elements
+      removeDOMHighlight(id);
 
       // Remove from highlights map
       highlights.delete(id);
@@ -507,25 +649,20 @@ async function handleVocabularyHighlight(
     type: 'vocabulary',
   });
 
-  // Add click listener - mode-aware behavior
+  // Add click listener - select the highlight
   highlightData.highlightElement.addEventListener('click', (e: Event) => {
     e.stopPropagation(); // Prevent event bubbling
-
-    // In vocabulary mode, clicking should NOT pronounce (user is selecting)
-    // Only pronounce if we're NOT in vocabulary mode or if explicitly requested
-    if (currentMode !== 'vocabulary') {
-      void pronounceText(text);
-    }
+    selectHighlight(vocabItem.id, 'vocabulary', highlightData.highlightElement);
   });
 
   // Add hover listener for translation popup with delay
   let hoverTimeout: number | null = null;
 
   highlightData.highlightElement.addEventListener('mouseenter', e => {
-    // Add delay to avoid accidental triggers and cursor overlap
+    // Increased delay to allow hover color to be visible before popup appears
     hoverTimeout = window.setTimeout(() => {
       showTranslationPopup(e.target as HTMLElement, translation);
-    }, 200);
+    }, 500);
   });
 
   highlightData.highlightElement.addEventListener('mouseleave', () => {
@@ -534,6 +671,11 @@ async function handleVocabularyHighlight(
       hoverTimeout = null;
     }
     hideTranslationPopup();
+
+    // Deselect when mouse leaves the highlight
+    if (selectedHighlightId === vocabItem.id) {
+      deselectHighlight();
+    }
   });
 
   // Add context menu listener
@@ -595,14 +737,36 @@ async function handleSentenceHighlight(
     type: 'sentence',
   });
 
-  // Add click listener - mode-aware behavior
+  // Add click listener - select the highlight
   highlightData.highlightElement.addEventListener('click', (e: Event) => {
     e.stopPropagation(); // Prevent event bubbling
+    selectHighlight(
+      sentenceItem.id,
+      'sentence',
+      highlightData.highlightElement
+    );
+  });
 
-    // In sentence mode, clicking should NOT pronounce (user is selecting)
-    // Only pronounce if we're NOT in sentence mode or if explicitly requested
-    if (currentMode !== 'sentence') {
-      void pronounceText(text);
+  // Add hover listener for translation popup with delay
+  let hoverTimeout: number | null = null;
+
+  highlightData.highlightElement.addEventListener('mouseenter', e => {
+    // Increased delay to allow hover color to be visible before popup appears
+    hoverTimeout = window.setTimeout(() => {
+      showTranslationPopup(e.target as HTMLElement, translation);
+    }, 500);
+  });
+
+  highlightData.highlightElement.addEventListener('mouseleave', () => {
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+      hoverTimeout = null;
+    }
+    hideTranslationPopup();
+
+    // Deselect when mouse leaves the highlight
+    if (selectedHighlightId === sentenceItem.id) {
+      deselectHighlight();
     }
   });
 
@@ -757,32 +921,8 @@ export async function removeHighlight(
     await removeSentenceItem(highlightId);
   }
 
-  // Remove from DOM
-  const highlightElements = document.querySelectorAll(
-    `[data-highlight-id="${highlightId}"]`
-  );
-  highlightElements.forEach(el => {
-    // Check if this highlight contains nested highlights
-    const nestedHighlights = el.querySelectorAll('[data-highlight-type]');
-
-    if (nestedHighlights.length > 0) {
-      // Has nested highlights - unwrap the outer element while preserving inner content
-      const parent = el.parentNode;
-      if (parent) {
-        // Move all child nodes to the parent
-        while (el.firstChild) {
-          parent.insertBefore(el.firstChild, el);
-        }
-        // Remove the now-empty outer element
-        parent.removeChild(el);
-      }
-    } else {
-      // No nested highlights - replace with text node as before
-      const text = el.textContent || '';
-      const textNode = document.createTextNode(text);
-      el.parentNode?.replaceChild(textNode, el);
-    }
-  });
+  // Remove from DOM using helper function
+  removeDOMHighlight(highlightId);
 
   // Remove from map
   highlights.delete(highlightId);
@@ -971,15 +1111,16 @@ function showTranslationPopup(element: HTMLElement, translation: string): void {
   const popupRect = popup.getBoundingClientRect();
   const viewportWidth = window.innerWidth;
 
-  const offset = 12; // Distance from the word
+  const offset = 16; // Increased distance to keep highlight visible
 
-  // Always show above the word to avoid cursor overlap
+  // Always show above the word to avoid cursor overlap and keep highlight visible
   // (users typically hover from bottom of word)
   popup.style.top = `${rect.top + window.scrollY - popupRect.height - offset}px`;
 
-  // If popup would go off top of screen, adjust position
+  // If popup would go off top of screen, show below instead
   if (rect.top - popupRect.height - offset < 0) {
-    popup.style.top = `${window.scrollY + 10}px`; // 10px from top of viewport
+    // Position below the highlight
+    popup.style.top = `${rect.bottom + window.scrollY + offset}px`;
   }
 
   // Smart horizontal positioning

@@ -1241,6 +1241,15 @@ body.dark-mode .translation-popup {
   background-color: rgba(255, 235, 59, 0.6);
 }
 
+/* Selected state for vocabulary */
+.highlight-vocabulary.selected {
+  background-color: rgba(255, 235, 59, 0.75);
+  border: 2px solid rgba(255, 193, 7, 1);
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.3);
+  z-index: 10;
+}
+
 /* Sentence highlights */
 .highlight-sentence {
   background-color: rgba(129, 212, 250, 0.3);
@@ -1254,6 +1263,15 @@ body.dark-mode .translation-popup {
 
 .highlight-sentence:hover {
   background-color: rgba(129, 212, 250, 0.5);
+}
+
+/* Selected state for sentence */
+.highlight-sentence.selected {
+  background-color: rgba(129, 212, 250, 0.65);
+  border: 2px solid rgba(33, 150, 243, 1);
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3);
+  z-index: 10;
 }
 
 /* Overlapping highlights - vocabulary inside sentence */
@@ -1270,6 +1288,15 @@ body.dark-mode .translation-popup {
   background-color: rgba(255, 235, 59, 0.7);
 }
 
+/* Selected state for nested vocabulary */
+.highlight-sentence .highlight-vocabulary.selected {
+  background-color: rgba(255, 235, 59, 0.85);
+  border: 2px solid rgba(255, 193, 7, 1);
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.4);
+  z-index: 11;
+}
+
 /* Overlapping highlights - sentence inside vocabulary (less common) */
 .highlight-vocabulary .highlight-sentence {
   /* Maintain sentence appearance when nested in vocabulary */
@@ -1281,6 +1308,15 @@ body.dark-mode .translation-popup {
 
 .highlight-vocabulary .highlight-sentence:hover {
   background-color: rgba(129, 212, 250, 0.6);
+}
+
+/* Selected state for nested sentence */
+.highlight-vocabulary .highlight-sentence.selected {
+  background-color: rgba(129, 212, 250, 0.75);
+  border: 2px solid rgba(33, 150, 243, 1);
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.4);
+  z-index: 11;
 }
 
 /* Translation popup */
