@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamburger Menu Demo - Theme Switcher</title>
+    <style>
+        /* Base Variables */
+        :root {
+            --primary-color: #4a90e2;
+            --primary-hover: #357abd;
+            --secondary-color: #f5f7fa;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --border-color: #e1e8ed;
+            --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --card-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--secondary-color);
+            color: var(--text-primary);
+            padding: 2rem;
+            transition: var(--transition);
+        }
+
+        /* Dark Mode */
+        body.dark-mode {
+            --primary-color: #5dade2;
+            --primary-hover: #4a9fd5;
+            --secondary-color: #1a1a1a;
+            --text-primary: #ecf0f1;
+            --text-secondary: #95a5a6;
+            --border-color: #34495e;
+            --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --card-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .demo-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+        }
+
+        body.dark-mode .demo-container {
+            background: #2c3e50;
+        }
+
+        h1 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .instruction {
+            background: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+        }
+
+        /* Hamburger Button */
+        .hamburger-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+            transition: var(--transition);
+            box-shadow: var(--card-shadow);
+        }
+
+        .hamburger-button:hover {
+            background: var(--secondary-color);
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--card-hover-shadow);
+        }
+
+        .hamburger-button.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .hamburger-button.active svg {
+            stroke: white;
+        }
+
+        .hamburger-button svg {
+            stroke: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        body.dark-mode .hamburger-button {
+            background: #2c3e50;
+            border-color: #34495e;
+        }
+
+        body.dark-mode .hamburger-button:hover {
+            background: #34495e;
+            border-color: var(--primary-color);
+        }
+
+        body.dark-mode .hamburger-button svg {
+            stroke: var(--text-primary);
+        }
+
+        /* Hamburger Menu Dropdown */
+        .hamburger-menu {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            min-width: 280px;
+            animation: slideInUp 0.3s ease-out;
+        }
+
+        body.dark-mode .hamburger-menu {
+            background: #2c3e50;
+            border-color: #34495e;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hamburger-menu.hidden {
+            display: none;
+        }
+
+        /* Menu Section */
+        .menu-section {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .menu-section:last-child {
+            border-bottom: none;
+        }
+
+        .menu-section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 1rem;
+        }
+
+        /* Theme Options */
+        .theme-options {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .theme-option {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: var(--secondary-color);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .theme-option:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--card-shadow);
+        }
+
+        .theme-option.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        .theme-icon {
+            font-size: 1.5rem;
+        }
+
+        .theme-label {
+            font-size: 0.85rem;
+        }
+
+        body.dark-mode .theme-option {
+            background: #34495e;
+            border-color: #4a5f7f;
+        }
+
+        body.dark-mode .theme-option:hover {
+            border-color: var(--primary-color);
+        }
+
+        body.dark-mode .theme-option.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>🍔 Hamburger Menu with Theme Switcher</h1>
+        <p>This demo showcases the hamburger menu with light and dark theme switching functionality.</p>
+        
+        <div class="instruction">
+            <strong>👉 Click the hamburger button in the bottom-right corner to open the settings menu!</strong>
+        </div>
+
+        <h2 style="margin-top: 2rem; color: var(--text-primary);">Features</h2>
+        <ul class="feature-list">
+            <li>✨ Smooth animations and transitions</li>
+            <li>🎨 Light and Dark theme support</li>
+            <li>💾 Theme preference saved to localStorage</li>
+            <li>🎯 Click outside to close menu</li>
+            <li>⌨️ Press ESC to close menu</li>
+            <li>📱 Responsive design</li>
+        </ul>
+
+        <h2 style="margin-top: 2rem; color: var(--text-primary);">Sample Content</h2>
+        <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+            Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+        </p>
+        <p>
+            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. 
+            Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+        </p>
+    </div>
+
+    <script>
+        // Simple hamburger menu implementation for demo
+        const state = {
+            isOpen: false,
+            currentTheme: 'light',
+        };
+
+        let menuElement = null;
+        let hamburgerButton = null;
+
+        function initializeHamburgerMenu() {
+            createHamburgerButton();
+            createMenuDropdown();
+            loadSavedTheme();
+            setupEventListeners();
+        }
+
+        function createHamburgerButton() {
+            hamburgerButton = document.createElement('button');
+            hamburgerButton.className = 'hamburger-button';
+            hamburgerButton.setAttribute('aria-label', 'Settings menu');
+            hamburgerButton.innerHTML = `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            `;
+            document.body.appendChild(hamburgerButton);
+        }
+
+        function createMenuDropdown() {
+            menuElement = document.createElement('div');
+            menuElement.className = 'hamburger-menu hidden';
+            menuElement.innerHTML = `
+                <div class="menu-section">
+                    <h3 class="menu-section-title">Theme</h3>
+                    <div class="theme-options">
+                        <button class="theme-option" data-theme="light">
+                            <span class="theme-icon">☀️</span>
+                            <span class="theme-label">Light</span>
+                        </button>
+                        <button class="theme-option" data-theme="dark">
+                            <span class="theme-icon">🌙</span>
+                            <span class="theme-label">Dark</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(menuElement);
+        }
+
+        function setupEventListeners() {
+            hamburgerButton?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleMenu();
+            });
+
+            document.addEventListener('click', (e) => {
+                const target = e.target;
+                if (state.isOpen && menuElement && !menuElement.contains(target) && !hamburgerButton?.contains(target)) {
+                    closeMenu();
+                }
+            });
+
+            const themeOptions = menuElement?.querySelectorAll('.theme-option');
+            themeOptions?.forEach((option) => {
+                option.addEventListener('click', () => {
+                    const theme = option.dataset.theme;
+                    setTheme(theme);
+                });
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && state.isOpen) {
+                    closeMenu();
+                }
+            });
+        }
+
+        function toggleMenu() {
+            if (state.isOpen) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        }
+
+        function openMenu() {
+            state.isOpen = true;
+            menuElement?.classList.remove('hidden');
+            hamburgerButton?.classList.add('active');
+        }
+
+        function closeMenu() {
+            state.isOpen = false;
+            menuElement?.classList.add('hidden');
+            hamburgerButton?.classList.remove('active');
+        }
+
+        function setTheme(theme) {
+            state.currentTheme = theme;
+
+            if (theme === 'dark') {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+
+            updateThemeSelection(theme);
+            saveTheme(theme);
+            closeMenu();
+        }
+
+        function updateThemeSelection(theme) {
+            const themeOptions = menuElement?.querySelectorAll('.theme-option');
+            themeOptions?.forEach((option) => {
+                const optionTheme = option.dataset.theme;
+                if (optionTheme === theme) {
+                    option.classList.add('active');
+                } else {
+                    option.classList.remove('active');
+                }
+            });
+        }
+
+        function loadSavedTheme() {
+            try {
+                const savedTheme = localStorage.getItem('theme') || 'light';
+                setTheme(savedTheme);
+            } catch (error) {
+                console.error('Error loading theme:', error);
+                setTheme('light');
+            }
+        }
+
+        function saveTheme(theme) {
+            try {
+                localStorage.setItem('theme', theme);
+            } catch (error) {
+                console.error('Error saving theme:', error);
+            }
+        }
+
+        // Initialize on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeHamburgerMenu);
+        } else {
+            initializeHamburgerMenu();
+        }
+    </script>
+</body>
+</html>

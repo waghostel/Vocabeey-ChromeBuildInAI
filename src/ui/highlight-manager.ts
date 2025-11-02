@@ -1488,19 +1488,10 @@ function showTranslationPopup(element: HTMLElement, translation: string): void {
   const popup = document.createElement('div');
   popup.className = 'translation-popup';
   popup.textContent = translation;
+  // Only set positioning styles inline, let CSS handle colors/theme
   popup.style.cssText = `
     position: absolute;
-    background: white;
-    border: 1px solid #e1e8ed;
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 14px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-    max-width: 300px;
-    pointer-events: none;
     opacity: 0;
-    transition: opacity 0.2s ease;
   `;
 
   document.body.appendChild(popup);

@@ -13,6 +13,8 @@ import {
   type HighlightMode,
 } from './highlight-manager';
 
+import { initializeHamburgerMenu } from './components/hamburger-menu';
+
 import type {
   ProcessedArticle,
   ArticlePart,
@@ -145,6 +147,9 @@ const elements = {
 async function initialize(): Promise<void> {
   try {
     showLoading('Loading article...');
+
+    // Initialize hamburger menu
+    initializeHamburgerMenu();
 
     // Initialize memory monitoring
     initializeMemoryMonitoring();

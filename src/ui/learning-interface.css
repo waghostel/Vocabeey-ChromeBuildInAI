@@ -1583,3 +1583,244 @@ body.dark-mode .highlight-sentence.will-delete {
   font-size: 12px;
   opacity: 0.7;
 }
+
+/* ============================================================================
+   Hamburger Menu
+   ============================================================================ */
+
+.hamburger-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  background: white;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  transition: var(--transition);
+  box-shadow: var(--card-shadow);
+}
+
+.hamburger-button:hover {
+  background: var(--secondary-color);
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: var(--card-hover-shadow);
+}
+
+.hamburger-button.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.hamburger-button.active svg {
+  stroke: white;
+}
+
+.hamburger-button svg {
+  stroke: var(--text-primary);
+  transition: var(--transition);
+}
+
+body.dark-mode .hamburger-button {
+  background: #2c3e50;
+  border-color: #34495e;
+}
+
+body.dark-mode .hamburger-button:hover {
+  background: #34495e;
+  border-color: var(--primary-color);
+}
+
+body.dark-mode .hamburger-button svg {
+  stroke: var(--text-primary);
+}
+
+/* Hamburger Menu Dropdown */
+.hamburger-menu {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: white;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 280px;
+  animation: slideInUp 0.3s ease-out;
+}
+
+body.dark-mode .hamburger-menu {
+  background: #2c3e50;
+  border-color: #34495e;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hamburger-menu.hidden {
+  display: none;
+}
+
+/* Menu Section */
+.menu-section {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.menu-section:last-child {
+  border-bottom: none;
+}
+
+.menu-section-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 1rem;
+}
+
+/* Theme Options */
+.theme-options {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.theme-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--secondary-color);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.theme-option:hover {
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow);
+}
+
+.theme-option.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.theme-icon {
+  font-size: 1.5rem;
+}
+
+.theme-label {
+  font-size: 0.85rem;
+}
+
+body.dark-mode .theme-option {
+  background: #34495e;
+  border-color: #4a5f7f;
+}
+
+body.dark-mode .theme-option:hover {
+  border-color: var(--primary-color);
+}
+
+body.dark-mode .theme-option.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+/* Enhanced Dark Mode Variables */
+body.dark-mode {
+  --primary-color: #5dade2;
+  --primary-hover: #4a9fd5;
+  --secondary-color: #1a1a1a;
+  --text-primary: #ecf0f1;
+  --text-secondary: #95a5a6;
+  --border-color: #34495e;
+  --success-color: #2ecc71;
+  --warning-color: #f39c12;
+  --danger-color: #e74c3c;
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --card-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .mode-tabs {
+  background: #2c3e50;
+  border-bottom-color: #34495e;
+}
+
+body.dark-mode .article-header,
+body.dark-mode .article-part-container,
+body.dark-mode .navigation-controls,
+body.dark-mode .learning-mode-header,
+body.dark-mode .vocab-learning-card,
+body.dark-mode .sentence-learning-card {
+  background: #2c3e50;
+}
+
+body.dark-mode .vocab-card,
+body.dark-mode .sentence-card {
+  background: #34495e;
+  border-color: #4a5f7f;
+}
+
+body.dark-mode .language-input,
+body.dark-mode .language-dropdown {
+  background: #34495e;
+  border-color: #4a5f7f;
+  color: var(--text-primary);
+}
+
+body.dark-mode .language-option:hover {
+  background: #2c3e50;
+}
+
+body.dark-mode .context-menu {
+  background: #2c3e50;
+  border-color: #34495e;
+}
+
+body.dark-mode .context-menu-item {
+  color: var(--text-primary);
+}
+
+body.dark-mode .context-menu-item:hover {
+  background: #34495e;
+}
+
+/* Dark mode text color for display options and highlight mode buttons */
+body.dark-mode .display-option {
+  color: var(--text-primary);
+}
+
+body.dark-mode .highlight-mode-btn {
+  color: var(--text-primary);
+}
+
+/* Dark mode hover effect for vocabulary cards */
+body.dark-mode .clickable-text:hover {
+  background: #3d5a73;
+}
