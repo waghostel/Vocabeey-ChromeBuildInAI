@@ -149,6 +149,12 @@ async function initialize(): Promise<void> {
     // Initialize memory monitoring
     initializeMemoryMonitoring();
 
+    // Initialize TTS debug console
+    const { initTTSDebugConsole } = await import(
+      '../utils/tts-debug-console.js'
+    );
+    initTTSDebugConsole();
+
     // Initialize language selector
     await initializeLanguageSelector();
 
@@ -896,7 +902,6 @@ function switchHighlightMode(mode: HighlightMode): void {
 // Text-to-Speech
 // ============================================================================
 
-let currentTTSIndicator: HTMLElement | null = null;
 let currentSpeakingButton: HTMLElement | null = null;
 
 /**
@@ -930,21 +935,34 @@ async function handlePronounceClick(
     button.classList.add('speaking');
     currentSpeakingButton = button;
 
-    // Show TTS indicator
-    showTTSIndicator(text);
+    // Show TTS retry indicator
+    showTTSRetryIndicator(text);
 
     // Speak the text with specified language
     await speak(text, { language });
 
     // Remove speaking indicators when done
+    hideTTSRetryIndicator();
     removeSpeakingIndicators();
   } catch (error: unknown) {
     console.error('TTS error:', error);
 
+    // Hide retry indicator
+    hideTTSRetryIndicator();
+
     // Check if it was cancelled
-    const ttsError = error as { type?: string };
+    const ttsError = error as { type?: string; message?: string };
     if (ttsError.type !== 'cancelled') {
-      showTooltip('Failed to pronounce text');
+      // Show user-friendly error message
+      if (ttsError.message?.includes('after retries')) {
+        showTooltip(
+          'Speech failed after 3 attempts. Check console for details.'
+        );
+      } else if (ttsError.message?.includes('not supported')) {
+        showTooltip('Text-to-speech is not supported in your browser');
+      } else {
+        showTooltip('Speech synthesis failed');
+      }
     }
 
     removeSpeakingIndicators();
@@ -952,48 +970,9 @@ async function handlePronounceClick(
 }
 
 /**
- * Show TTS indicator
- */
-function showTTSIndicator(text: string): void {
-  // Remove existing indicator
-  if (currentTTSIndicator) {
-    currentTTSIndicator.remove();
-  }
-
-  const indicator = document.createElement('div');
-  indicator.className = 'tts-indicator';
-
-  const truncatedText = text.length > 50 ? text.substring(0, 50) + '...' : text;
-
-  indicator.innerHTML = `
-    <span class="tts-indicator-icon">🔊</span>
-    <span>Speaking: "${truncatedText}"</span>
-    <button class="tts-stop-btn">Stop</button>
-  `;
-
-  document.body.appendChild(indicator);
-  currentTTSIndicator = indicator;
-
-  // Add stop button listener
-  const stopBtn = indicator.querySelector('.tts-stop-btn');
-  if (stopBtn) {
-    stopBtn.addEventListener('click', async () => {
-      const { stopSpeaking } = await import('../utils/tts-service.js');
-      stopSpeaking();
-      removeSpeakingIndicators();
-    });
-  }
-}
-
-/**
  * Remove speaking indicators
  */
 function removeSpeakingIndicators(): void {
-  if (currentTTSIndicator) {
-    currentTTSIndicator.remove();
-    currentTTSIndicator = null;
-  }
-
   if (currentSpeakingButton) {
     currentSpeakingButton.classList.remove('speaking');
     currentSpeakingButton = null;
@@ -1027,6 +1006,47 @@ function showTooltip(message: string): void {
     tooltip.style.animation = 'slideOut 0.3s ease-out';
     setTimeout(() => tooltip.remove(), 300);
   }, 3000);
+}
+
+let currentTTSRetryIndicator: HTMLElement | null = null;
+
+/**
+ * Show TTS retry indicator
+ */
+function showTTSRetryIndicator(text: string): void {
+  // Remove existing indicator
+  if (currentTTSRetryIndicator) {
+    currentTTSRetryIndicator.remove();
+  }
+
+  const indicator = document.createElement('div');
+  indicator.className = 'tts-retry-indicator';
+
+  const truncatedText = text.length > 30 ? text.substring(0, 30) + '...' : text;
+
+  indicator.innerHTML = `
+    <div class="tts-retry-content">
+      <span class="tts-retry-icon">🔊</span>
+      <div class="tts-retry-text">
+        <div class="tts-retry-label">Speaking</div>
+        <div class="tts-retry-message">"${truncatedText}"</div>
+      </div>
+      <div class="tts-retry-spinner"></div>
+    </div>
+  `;
+
+  document.body.appendChild(indicator);
+  currentTTSRetryIndicator = indicator;
+}
+
+/**
+ * Hide TTS retry indicator
+ */
+function hideTTSRetryIndicator(): void {
+  if (currentTTSRetryIndicator) {
+    currentTTSRetryIndicator.remove();
+    currentTTSRetryIndicator = null;
+  }
 }
 
 // ============================================================================

@@ -3,6 +3,10 @@
  * Implements Requirements: 3.5, 4.5, 5.5
  */
 
+import { RetryHandler } from './retry-handler';
+import { DEFAULT_TTS_RETRY_CONFIG } from './tts-retry-config';
+import { getTTSDebugger } from './tts-debugger';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -25,6 +29,7 @@ export interface TTSError {
   type: 'not_supported' | 'no_voices' | 'synthesis_failed' | 'cancelled';
   message: string;
   originalError?: Error;
+  retryable?: boolean;
 }
 
 // ============================================================================
@@ -37,6 +42,8 @@ class TTSService {
   // @ts-ignore - Used in event handlers
   private _currentUtterance: SpeechSynthesisUtterance | null = null;
   private isInitialized = false;
+  private retryHandler: RetryHandler;
+  private debugger = getTTSDebugger();
 
   constructor(synthesisProvider?: () => SpeechSynthesis | null) {
     // Allow injection for testing, default to window.speechSynthesis
@@ -49,6 +56,9 @@ class TTSService {
     if (this.synthesis) {
       void this.initializeVoices();
     }
+
+    // Initialize retry handler
+    this.retryHandler = new RetryHandler(DEFAULT_TTS_RETRY_CONFIG);
   }
 
   /**
@@ -182,18 +192,61 @@ class TTSService {
   }
 
   /**
-   * Speak text
+   * Speak text with retry logic
    */
   public async speak(text: string, options: TTSOptions = {}): Promise<void> {
+    const operationId = `tts_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const startTime = Date.now();
+
+    // Execute with retry
+    const result = await this.retryHandler.executeWithRetry(
+      () => this.speakOnce(text, options),
+      `speak(${options.language || 'default'})`
+    );
+
+    // Log attempt
+    this.debugger.logTTSAttempt({
+      timestamp: startTime,
+      operationId,
+      text,
+      language: options.language || 'default',
+      attempts: result.attempts.length,
+      success: result.success,
+      error: result.error?.message,
+      duration: result.totalDuration,
+      rate: options.rate,
+      pitch: options.pitch,
+      volume: options.volume,
+    });
+
+    if (!result.success) {
+      throw result.error || new Error('TTS failed after retries');
+    }
+  }
+
+  /**
+   * Speak text once (single attempt, no retry)
+   */
+  private async speakOnce(
+    text: string,
+    options: TTSOptions = {}
+  ): Promise<void> {
     if (!this.isSupported()) {
       throw this.createError(
         'not_supported',
-        'Text-to-speech is not supported in this browser'
+        'Text-to-speech is not supported in this browser',
+        undefined,
+        false
       );
     }
 
     if (!this.synthesis) {
-      throw this.createError('not_supported', 'Speech synthesis not available');
+      throw this.createError(
+        'not_supported',
+        'Speech synthesis not available',
+        undefined,
+        false
+      );
     }
 
     // Cancel any ongoing speech
@@ -207,7 +260,9 @@ class TTSService {
     if (this.voices.length === 0) {
       throw this.createError(
         'no_voices',
-        'No speech synthesis voices available'
+        'No speech synthesis voices available',
+        undefined,
+        false
       );
     }
 
@@ -246,7 +301,8 @@ class TTSService {
               this.createError(
                 'cancelled',
                 'Speech synthesis was cancelled',
-                event.error as unknown as Error
+                event.error as unknown as Error,
+                false
               )
             );
           } else {
@@ -254,7 +310,8 @@ class TTSService {
               this.createError(
                 'synthesis_failed',
                 `Speech synthesis failed: ${event.error}`,
-                event.error as unknown as Error
+                event.error as unknown as Error,
+                true
               )
             );
           }
@@ -272,7 +329,8 @@ class TTSService {
             this.createError(
               'synthesis_failed',
               'Failed to start speech synthesis',
-              error as Error
+              error as Error,
+              true
             )
           );
         }
@@ -328,12 +386,14 @@ class TTSService {
   private createError(
     type: TTSError['type'],
     message: string,
-    originalError?: Error
+    originalError?: Error,
+    retryable: boolean = false
   ): TTSError {
     return {
       type,
-      message,
+      message: retryable ? `${message} (will retry)` : message,
       originalError,
+      retryable,
     };
   }
 }
