@@ -32,20 +32,29 @@ console.log('Chrome AI available:', 'ai' in window);
 
 ### Global AI Interface
 
-Chrome AI APIs are accessed through the global `window.ai` object:
+Chrome AI APIs are accessed through the global `window.ai` object for most services. However, the `Translator` and `LanguageDetector` APIs are available as global objects.
 
 ```typescript
 // Check if Chrome AI is available
-if (window.ai?.languageDetector) {
-  const capabilities = await window.ai.languageDetector.capabilities();
-  console.log(
-    'Language Detector available:',
-    capabilities.available === 'readily'
-  );
+if (window.ai?.summarizer) {
+  const capabilities = await window.ai.summarizer.capabilities();
+  console.log('Summarizer available:', capabilities.available === 'readily');
+}
+
+// Check for global Translator API
+if (typeof Translator !== 'undefined') {
+  console.log('Translator API is available');
+}
+
+// Check for global LanguageDetector API
+if (typeof LanguageDetector !== 'undefined') {
+  console.log('Language Detector API is available');
 }
 ```
 
 ## Core AI Services
+
+**Note**: While this section details the individual AI service classes, it is highly recommended to use the `AIServiceCoordinator` for most use cases. The coordinator provides a unified interface to all AI services and automatically handles fallback to the Gemini API when necessary.
 
 ### 1. Language Detection
 
@@ -347,11 +356,11 @@ translator.destroy();
 **Batch Translation Process**:
 
 1. Check cache for each request individually
-2. Combine uncached requests with markers: `[0] context: text`
-3. Send combined text to translator API
-4. Split response back using markers and patterns
-5. Cache all new translations
-6. Return complete results array
+2. Combine uncached requests into a single string, separated by newline characters.
+3. Send the combined text to the translator API.
+4. Split the response back into individual translations.
+5. Cache all new translations.
+6. Return the complete results array.
 
 **Context Handling**:
 
@@ -700,103 +709,29 @@ type ErrorType =
 - **`invalid_input`**: Invalid parameters (difficulty out of range, empty text, etc.)
 - **`processing_failed`**: AI processing failed, validation failed, or unknown errors
 
-### Error Handling Patterns
+### Retry Handler
 
-**Basic Error Handling**:
+The `RetryHandler` class provides a robust mechanism for retrying failed operations with exponential backoff. It is used within the `ChromeTranslator` to handle intermittent network issues.
 
-```typescript
-try {
-  const result = await coordinator.translateText('Hello', 'en', 'es');
-} catch (error) {
-  if (error.type === 'api_unavailable') {
-    console.log(
-      'Service unavailable, fallback will be attempted automatically'
-    );
-  } else if (error.retryable) {
-    console.log('Retryable error, consider retry with backoff');
-  } else {
-    console.error('Non-retryable error:', error.message);
-  }
-}
-```
-
-**Comprehensive Error Recovery**:
+**Usage**:
 
 ```typescript
-async function processWithErrorHandling(text: string) {
-  const maxRetries = 3;
-  let attempt = 0;
+import { RetryHandler } from '../utils/retry-handler';
+import { DEFAULT_TRANSLATION_RETRY_CONFIG } from '../utils/retry-config';
 
-  while (attempt < maxRetries) {
-    try {
-      return await coordinator.summarizeContent(text);
-    } catch (error) {
-      attempt++;
+const retryHandler = new RetryHandler(DEFAULT_TRANSLATION_RETRY_CONFIG);
 
-      if (!error.retryable || attempt >= maxRetries) {
-        // Log error details for debugging
-        console.error('Processing failed:', {
-          type: error.type,
-          message: error.message,
-          retryable: error.retryable,
-          attempt,
-          originalError: error.originalError,
-        });
-        throw error;
-      }
-
-      // Exponential backoff
-      const delay = Math.pow(2, attempt) * 1000;
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-}
+const result = await retryHandler.executeWithRetry(
+  () => this.translateTextOnce(text, sourceLanguage, targetLanguage),
+  `translate(${sourceLanguage}->${targetLanguage})`
+);
 ```
 
-**Service-Specific Error Handling**:
+**Features**:
 
-```typescript
-// Language Detection
-try {
-  const language = await detector.detectLanguage(text);
-} catch (error) {
-  if (
-    error.type === 'processing_failed' &&
-    error.message.includes('No language detected')
-  ) {
-    // Handle undetectable language
-    return 'unknown';
-  }
-  throw error;
-}
-
-// Translation
-try {
-  const translation = await translator.translateText(word, 'en', 'es');
-} catch (error) {
-  if (
-    error.type === 'api_unavailable' &&
-    error.message.includes('not available for')
-  ) {
-    // Handle unsupported language pair
-    console.log('Language pair not supported by Chrome AI');
-    // Coordinator will automatically try Gemini API
-  }
-  throw error;
-}
-
-// Vocabulary Analysis
-try {
-  const analyses = await analyzer.analyzeVocabulary(words, context);
-} catch (error) {
-  if (error.type === 'processing_failed') {
-    // Individual word analysis failures are handled internally
-    // This error means complete failure
-    console.log('Vocabulary analysis completely failed');
-  }
-  throw error;
-}
-```
+- Configurable maximum retries, base delay, and maximum delay.
+- Exponential backoff with jitter to prevent thundering herd issues.
+- Logs detailed information about each attempt, including the delay and the outcome.
 
 ### Error Recovery in AI Service Coordinator
 
@@ -820,17 +755,11 @@ When both Chrome AI and Gemini API fail, a compound error is created:
 - Status cache prevents repeated failed attempts
 - Automatic status refresh on retryable errors
 
-**Exponential Backoff**:
-
-- Base delay: 1 second
-- Maximum delay: 30 seconds
-- Applied automatically for retryable errors
-
 ## Caching System
 
 ### Purpose
 
-The caching system optimizes performance and reduces API calls by storing processed results locally using Chrome's storage API.
+The caching system optimizes performance and reduces API calls by storing processed results locally. The `CacheManager` class provides a higher-level caching layer for processed content and articles, complementing the internal caches of the individual AI service classes.
 
 **Implementation**: `src/utils/cache-manager.ts` - `CacheManager` class
 

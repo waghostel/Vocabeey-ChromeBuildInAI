@@ -374,12 +374,13 @@ async function checkSystemCapabilities(): Promise<SystemCapabilities> {
   if ('ai' in self) {
     capabilities.hasChromeAI = true;
     const ai = (self as any).ai;
-    capabilities.hasLanguageDetector = 'languageDetector' in ai;
     capabilities.hasSummarizer = 'summarizer' in ai;
     capabilities.hasRewriter = 'rewriter' in ai;
-    capabilities.hasTranslator = 'translator' in ai;
     capabilities.hasPromptAPI = 'languageModel' in ai;
   }
+
+  capabilities.hasLanguageDetector = typeof LanguageDetector !== 'undefined';
+  capabilities.hasTranslator = typeof Translator !== 'undefined';
 
   return capabilities;
 }

@@ -1398,3 +1398,44 @@ body.dark-mode .highlight-sentence.will-delete {
   background-color: rgba(244, 67, 54, 0.4) !important;
   border-color: rgba(244, 67, 54, 0.9) !important;
 }
+
+/* Retry Indicator */
+.retry-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.retry-spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.retry-text {
+  font-weight: 500;
+}
+
+.retry-attempts {
+  font-size: 12px;
+  opacity: 0.7;
+}

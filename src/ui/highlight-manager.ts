@@ -1333,6 +1333,9 @@ async function translateVocabulary(
   context: string
 ): Promise<string> {
   try {
+    // Show retry indicator
+    showRetryIndicator(text);
+
     // Get user-selected target language
     const { targetLanguage } = await chrome.storage.local.get('targetLanguage');
 
@@ -1347,13 +1350,25 @@ async function translateVocabulary(
       },
     });
 
+    // Hide retry indicator
+    hideRetryIndicator();
+
     if (response.success) {
       return response.data.translation;
     } else {
       console.error('Translation failed:', response.error);
-      return `[Translation unavailable: ${text}]`;
+
+      // Show user-friendly error
+      if (response.error.includes('after retries')) {
+        return `[Translation failed after 3 attempts. Check console for details.]`;
+      } else if (response.error.includes('not available')) {
+        return `[Translation API not available in this context]`;
+      } else {
+        return `[Translation unavailable: ${text}]`;
+      }
     }
   } catch (error) {
+    hideRetryIndicator();
     console.error('Error translating vocabulary:', error);
     return `[Translation error: ${text}]`;
   }
@@ -1820,5 +1835,34 @@ export async function handleSelectionContextMenuAction(
     if (selection) {
       selection.removeAllRanges();
     }
+  }
+}
+
+/**
+ * Show retry indicator
+ */
+function showRetryIndicator(text: string): void {
+  // Remove existing indicator if any
+  hideRetryIndicator();
+
+  const indicator = document.createElement('div');
+  indicator.id = 'translation-retry-indicator';
+  indicator.className = 'retry-indicator';
+  indicator.innerHTML = `
+    <div class="retry-spinner"></div>
+    <div class="retry-text">Translating "${text.substring(0, 20)}${text.length > 20 ? '...' : ''}"</div>
+    <div class="retry-attempts">Attempt 1 of 3</div>
+  `;
+
+  document.body.appendChild(indicator);
+}
+
+/**
+ * Hide retry indicator
+ */
+function hideRetryIndicator(): void {
+  const indicator = document.getElementById('translation-retry-indicator');
+  if (indicator) {
+    indicator.remove();
   }
 }

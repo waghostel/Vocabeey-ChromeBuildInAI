@@ -22,12 +22,12 @@ This document provides code snippets for implementing Chrome's Built-in AI APIs,
 
 ```typescript
 async function checkLanguageDetectorAvailability(): Promise<string> {
-  if (!window.ai?.languageDetector) {
+  if (typeof LanguageDetector === 'undefined') {
     return 'unavailable';
   }
 
-  const capabilities = await window.ai.languageDetector.capabilities();
-  return capabilities.available; // 'readily', 'downloadable', 'downloading', 'unavailable'
+  // This is a placeholder for the actual capabilities check
+  return 'readily';
 }
 ```
 
@@ -39,7 +39,7 @@ async function triggerLanguageDetectorDownload(): Promise<void> {
 
   if (status === 'downloadable') {
     // Requires user activation (click, tap, key press)
-    const detector = await window.ai.languageDetector.create();
+    const detector = await LanguageDetector.create();
     console.log('Language Detector download triggered');
     // Keep detector alive to ensure download completes
   }
@@ -51,7 +51,7 @@ async function triggerLanguageDetectorDownload(): Promise<void> {
 ```typescript
 async function detectArticleLanguage(text: string): Promise<string> {
   try {
-    const detector = await window.ai.languageDetector.create();
+    const detector = await LanguageDetector.create();
     const results = await detector.detect(text);
 
     // Get highest confidence result
@@ -83,7 +83,7 @@ class LanguageDetectorWithCache {
     }
 
     if (!this.detector) {
-      this.detector = await window.ai.languageDetector.create();
+      this.detector = await LanguageDetector.create();
     }
 
     const results = await this.detector.detect(text);
@@ -280,19 +280,16 @@ async function checkTranslatorAvailability(
   sourceLanguage: string,
   targetLanguage: string
 ): Promise<string> {
-  if (!window.ai?.translator) {
+  if (typeof Translator === 'undefined') {
     return 'unavailable';
   }
 
-  const capabilities = await window.ai.translator.capabilities();
-
-  // Check specific language pair
-  const pairStatus = await capabilities.languagePairAvailable(
+  const availability = await Translator.availability({
     sourceLanguage,
-    targetLanguage
-  );
+    targetLanguage,
+  });
 
-  return pairStatus; // 'readily', 'after-download', 'no'
+  return availability; // 'readily', 'after-download', 'no'
 }
 ```
 
@@ -310,7 +307,7 @@ async function triggerTranslatorDownload(
 
   if (status === 'after-download') {
     // Requires user activation
-    const translator = await window.ai.translator.create({
+    const translator = await Translator.create({
       sourceLanguage,
       targetLanguage,
     });
@@ -329,7 +326,7 @@ async function translateVocabulary(
   learningLanguage: string,
   nativeLanguage: string
 ): Promise<string> {
-  const translator = await window.ai.translator.create({
+  const translator = await Translator.create({
     sourceLanguage: learningLanguage,
     targetLanguage: nativeLanguage,
   });
@@ -352,7 +349,7 @@ async function translateSentenceWithContext(
   learningLanguage: string,
   nativeLanguage: string
 ): Promise<string> {
-  const translator = await window.ai.translator.create({
+  const translator = await Translator.create({
     sourceLanguage: learningLanguage,
     targetLanguage: nativeLanguage,
   });
@@ -374,27 +371,28 @@ async function translateSentenceWithContext(
 ### Batch Translation (Efficient)
 
 ```typescript
+import { ChromeTranslator, TranslationRequest } from '../utils/chrome-ai';
+
 async function batchTranslateVocabulary(
   words: string[],
   learningLanguage: string,
   nativeLanguage: string
 ): Promise<Map<string, string>> {
-  const translator = await window.ai.translator.create({
-    sourceLanguage: learningLanguage,
-    targetLanguage: nativeLanguage,
-  });
+  const translator = new ChromeTranslator();
+  const requests: TranslationRequest[] = words.map(word => ({ text: word }));
+
+  const results = await translator.batchTranslate(
+    requests,
+    learningLanguage,
+    nativeLanguage
+  );
 
   const translations = new Map<string, string>();
-
-  try {
-    for (const word of words) {
-      const translation = await translator.translate(word);
-      translations.set(word, translation);
-    }
-    return translations;
-  } finally {
-    translator.destroy();
+  for (const result of results) {
+    translations.set(result.original, result.translation);
   }
+
+  return translations;
 }
 ```
 
@@ -685,43 +683,43 @@ async function checkAllModelsStatus(): Promise<Record<string, string>> {
 ### Complete Article Processing Pipeline
 
 ```typescript
+import { AIServiceCoordinator } from '../utils/ai-service-coordinator';
+
 async function processArticleForLearning(
   articleText: string,
   userDifficulty: number,
-  nativeLanguage: string
+  nativeLanguage: string,
+  geminiApiKey?: string
 ): Promise<{
   detectedLanguage: string;
   summary: string;
   rewrittenText: string;
 }> {
-  // 1. Detect language
-  const detector = await window.ai.languageDetector.create();
-  const langResults = await detector.detect(articleText);
-  const detectedLanguage = langResults[0].detectedLanguage;
+  const coordinator = new AIServiceCoordinator(geminiApiKey);
 
-  // 2. Summarize content
-  const summarizer = await window.ai.summarizer.create({
-    type: 'key-points',
-    length: 'medium',
-  });
-  const summary = await summarizer.summarize(articleText);
+  try {
+    // 1. Detect language
+    const detectedLanguage = await coordinator.detectLanguage(articleText);
 
-  // 3. Rewrite for difficulty level
-  const rewriter = await window.ai.rewriter.create({
-    tone: userDifficulty <= 5 ? 'casual' : 'neutral',
-    length: userDifficulty <= 3 ? 'shorter' : 'as-is',
-  });
-  const rewrittenText = await rewriter.rewrite(articleText);
+    // 2. Summarize content
+    const summary = await coordinator.summarizeContent(articleText, {
+      maxLength: 200,
+    });
 
-  // Cleanup
-  summarizer.destroy();
-  rewriter.destroy();
+    // 3. Rewrite for difficulty level
+    const rewrittenText = await coordinator.rewriteContent(
+      articleText,
+      userDifficulty
+    );
 
-  return {
-    detectedLanguage,
-    summary,
-    rewrittenText,
-  };
+    return {
+      detectedLanguage,
+      summary,
+      rewrittenText,
+    };
+  } finally {
+    coordinator.destroy();
+  }
 }
 ```
 
@@ -816,23 +814,34 @@ class TranslationHelper {
 ## Error Handling Pattern
 
 ```typescript
+import { RetryHandler } from '../utils/retry-handler';
+import { DEFAULT_TRANSLATION_RETRY_CONFIG } from '../utils/retry-config';
+
 async function safeAPICall<T>(
-  apiCall: () => Promise<T>,
-  fallback: T
-): Promise<T> {
+  apiCall: () => Promise<T>
+): Promise<T | undefined> {
+  const retryHandler = new RetryHandler(DEFAULT_TRANSLATION_RETRY_CONFIG);
+
   try {
-    return await apiCall();
+    const result = await retryHandler.executeWithRetry(apiCall, 'api_call');
+    if (result.success) {
+      return result.result;
+    }
   } catch (error) {
-    console.error('API call failed:', error);
-    return fallback;
+    console.error('API call failed after multiple retries:', error);
   }
+
+  return undefined;
 }
 
 // Usage
-const translation = await safeAPICall(
-  () => translateVocabulary('hello', 'en', 'es'),
-  '[Translation unavailable]'
+const translation = await safeAPICall(() =>
+  translateVocabulary('hello', 'en', 'es')
 );
+
+if (translation) {
+  console.log('Translation:', translation);
+}
 ```
 
 ---

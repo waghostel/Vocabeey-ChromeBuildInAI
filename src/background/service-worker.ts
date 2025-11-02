@@ -18,6 +18,7 @@ import type { ExtractedContent, ProcessedArticle } from '../types';
 import { globalErrorHandler } from '../utils/error-handler';
 import { processArticle } from '../utils/article-processor';
 import { GeminiAPIClient } from '../utils/gemini-api';
+import { getTranslationDebugger } from '../utils/translation-debugger';
 
 interface SystemCapabilities {
   hasChromeAI: boolean;
@@ -471,6 +472,54 @@ chrome.runtime.onMessage.addListener(
           );
         return true;
 
+      case 'DEBUG_ENABLE_TRANSLATION':
+        handleDebugEnableTranslation()
+          .then(() => sendResponse({ success: true }))
+          .catch(error =>
+            sendResponse({ success: false, error: error.message })
+          );
+        return true;
+
+      case 'DEBUG_DISABLE_TRANSLATION':
+        handleDebugDisableTranslation()
+          .then(() => sendResponse({ success: true }))
+          .catch(error =>
+            sendResponse({ success: false, error: error.message })
+          );
+        return true;
+
+      case 'DEBUG_GET_TRANSLATION_STATS':
+        handleDebugGetTranslationStats()
+          .then(stats => sendResponse({ success: true, data: stats }))
+          .catch(error =>
+            sendResponse({ success: false, error: error.message })
+          );
+        return true;
+
+      case 'DEBUG_GET_TRANSLATION_LOG':
+        handleDebugGetTranslationLog()
+          .then(log => sendResponse({ success: true, data: log }))
+          .catch(error =>
+            sendResponse({ success: false, error: error.message })
+          );
+        return true;
+
+      case 'DEBUG_EXPORT_TRANSLATION_LOG':
+        handleDebugExportTranslationLog()
+          .then(exported => sendResponse({ success: true, data: exported }))
+          .catch(error =>
+            sendResponse({ success: false, error: error.message })
+          );
+        return true;
+
+      case 'DEBUG_CLEAR_TRANSLATION_LOG':
+        handleDebugClearTranslationLog()
+          .then(() => sendResponse({ success: true }))
+          .catch(error =>
+            sendResponse({ success: false, error: error.message })
+          );
+        return true;
+
       default:
         return false;
     }
@@ -554,6 +603,54 @@ async function handleTranslateText(payload: {
       error instanceof Error ? error.message : 'Unknown error';
     throw new Error(errorMessage);
   }
+}
+
+/**
+ * Handle debug enable translation request
+ */
+async function handleDebugEnableTranslation(): Promise<void> {
+  const translationDebugger = getTranslationDebugger();
+  await translationDebugger.enableDebugMode();
+}
+
+/**
+ * Handle debug disable translation request
+ */
+async function handleDebugDisableTranslation(): Promise<void> {
+  const translationDebugger = getTranslationDebugger();
+  await translationDebugger.disableDebugMode();
+}
+
+/**
+ * Handle debug get translation stats request
+ */
+async function handleDebugGetTranslationStats(): Promise<any> {
+  const translationDebugger = getTranslationDebugger();
+  return translationDebugger.getDebugStats();
+}
+
+/**
+ * Handle debug get translation log request
+ */
+async function handleDebugGetTranslationLog(): Promise<any> {
+  const translationDebugger = getTranslationDebugger();
+  return translationDebugger.getDebugLog();
+}
+
+/**
+ * Handle debug export translation log request
+ */
+async function handleDebugExportTranslationLog(): Promise<string> {
+  const translationDebugger = getTranslationDebugger();
+  return translationDebugger.exportDebugLog();
+}
+
+/**
+ * Handle debug clear translation log request
+ */
+async function handleDebugClearTranslationLog(): Promise<void> {
+  const translationDebugger = getTranslationDebugger();
+  await translationDebugger.clearDebugLog();
 }
 
 /**

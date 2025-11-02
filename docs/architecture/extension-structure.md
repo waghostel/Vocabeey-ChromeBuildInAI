@@ -17,8 +17,6 @@ The Language Learning Chrome Extension is built using Chrome Extension Manifest 
 
   "permissions": ["activeTab", "scripting", "storage", "offscreen"],
 
-  "host_permissions": ["https://r.jina.ai/*"],
-
   "background": {
     "service_worker": "background/service-worker.js"
   },
@@ -49,6 +47,8 @@ The Language Learning Chrome Extension is built using Chrome Extension Manifest 
 }
 ```
 
+**Note on `content_scripts`**: While the `matches` property is set to `"<all_urls>"`, the extension uses on-demand injection via `chrome.scripting.executeScript` and does not automatically inject the content script on every page load. This approach provides better performance and user control.
+
 ### Permission Justification
 
 | Permission  | Purpose                    | Usage                                      |
@@ -57,10 +57,6 @@ The Language Learning Chrome Extension is built using Chrome Extension Manifest 
 | `scripting` | Inject content scripts     | Execute content extraction on demand       |
 | `storage`   | Local data persistence     | Store user settings, vocabulary, articles  |
 | `offscreen` | Heavy AI processing        | Chrome AI API calls without timeout limits |
-
-### Host Permissions
-
-- `https://r.jina.ai/*`: Jina Reader API for content extraction fallback
 
 ## Extension Components
 

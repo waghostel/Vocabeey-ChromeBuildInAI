@@ -9,6 +9,9 @@ import type {
   SummaryOptions,
   VocabularyAnalysis,
 } from '../types';
+import { RetryHandler } from './retry-handler';
+import { DEFAULT_TRANSLATION_RETRY_CONFIG } from './retry-config';
+import { getTranslationDebugger } from './translation-debugger';
 
 // ============================================================================
 // Chrome AI API Type Definitions
@@ -697,66 +700,158 @@ export class ChromeTranslator {
   private translationCache: Map<string, string> = new Map();
   private readonly maxCacheSize = 500;
   private readonly maxBatchSize = 20;
+  private retryHandler: RetryHandler;
+  private debugger = getTranslationDebugger();
+
+  constructor() {
+    this.retryHandler = new RetryHandler(DEFAULT_TRANSLATION_RETRY_CONFIG);
+  }
 
   /**
-   * Translate text from source to target language
+   * Translate text from source to target language with retry and debugging
    */
   async translateText(
     text: string,
     sourceLanguage: string,
     targetLanguage: string,
-    _context?: string
+    context?: string
+  ): Promise<string> {
+    const operationId = `trans_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const startTime = Date.now();
+
+    // Check cache first
+    const cacheKey = this.getCacheKey(text, sourceLanguage, targetLanguage);
+    const cached = this.translationCache.get(cacheKey);
+
+    if (cached) {
+      // Log cache hit
+      this.debugger.logTranslation({
+        timestamp: startTime,
+        operationId,
+        text,
+        sourceLanguage,
+        targetLanguage,
+        context: context || 'none',
+        attempts: 0,
+        success: true,
+        result: cached,
+        duration: Date.now() - startTime,
+        cacheHit: true,
+        sessionReused: false,
+      });
+
+      return cached;
+    }
+
+    // Execute translation with retry
+    const result = await this.retryHandler.executeWithRetry(
+      () => this.translateTextOnce(text, sourceLanguage, targetLanguage),
+      `translate(${sourceLanguage}->${targetLanguage})`
+    );
+
+    // Log translation attempt
+    this.debugger.logTranslation({
+      timestamp: startTime,
+      operationId,
+      text,
+      sourceLanguage,
+      targetLanguage,
+      context: context || 'none',
+      attempts: result.attempts.length,
+      success: result.success,
+      result: result.result,
+      error: result.error?.message,
+      duration: result.totalDuration,
+      cacheHit: false,
+      apiAvailability: await this.checkAvailability(
+        sourceLanguage,
+        targetLanguage
+      ),
+      sessionReused: this.activeSessions.has(
+        `${sourceLanguage}-${targetLanguage}`
+      ),
+    });
+
+    if (result.success && result.result) {
+      // Cache successful translation
+      this.cacheTranslation(cacheKey, result.result);
+      return result.result;
+    }
+
+    // All retries failed
+    throw result.error || new Error('Translation failed after retries');
+  }
+
+  /**
+   * Single translation attempt (no retry)
+   */
+  private async translateTextOnce(
+    text: string,
+    sourceLanguage: string,
+    targetLanguage: string
+  ): Promise<string> {
+    // Check if global Translator API is available
+    if (typeof Translator === 'undefined') {
+      const error = new Error(
+        'Translator API not available in this context (offscreen document limitation)'
+      );
+      error.name = 'api_unavailable'; // Non-retryable
+      throw error;
+    }
+
+    // Check if language pair is available
+    const availability = await Translator.availability({
+      sourceLanguage,
+      targetLanguage,
+    });
+
+    if (availability === 'no') {
+      const error = new Error(
+        `Translation not available for ${sourceLanguage} to ${targetLanguage}`
+      );
+      error.name = 'language_pair_unavailable'; // Non-retryable
+      throw error;
+    }
+
+    // Handle model download
+    if (availability === 'after-download') {
+      console.log('[TRANSLATOR] Model download required');
+      // This might take time, but it's not an error
+    }
+
+    // Get or create translator session
+    const translator = await this.getTranslator(sourceLanguage, targetLanguage);
+
+    // Translate
+    const translation = await translator.translate(text);
+
+    if (!translation || translation.trim().length === 0) {
+      throw new Error('Empty translation result');
+    }
+
+    return translation;
+  }
+
+  /**
+   * Check API availability for debugging
+   */
+  private async checkAvailability(
+    sourceLanguage: string,
+    targetLanguage: string
   ): Promise<string> {
     try {
-      // Check cache first
-      const cacheKey = this.getCacheKey(text, sourceLanguage, targetLanguage);
-      const cached = this.translationCache.get(cacheKey);
-      if (cached) {
-        return cached;
-      }
-
-      // Check if global Translator API is available
       if (typeof Translator === 'undefined') {
-        throw this.createError(
-          'api_unavailable',
-          'Translator API not available in this context'
-        );
+        return 'api_unavailable';
       }
 
-      // Check if language pair is available
       const availability = await Translator.availability({
         sourceLanguage,
         targetLanguage,
       });
 
-      if (availability === 'no') {
-        throw this.createError(
-          'api_unavailable',
-          `Translation not available for ${sourceLanguage} to ${targetLanguage}`
-        );
-      }
-
-      // Get or create translator session for this language pair
-      const translator = await this.getTranslator(
-        sourceLanguage,
-        targetLanguage
-      );
-
-      // Translate (without context for now - context handling can be improved)
-      const translation = await translator.translate(text);
-
-      // Cache the result
-      this.cacheTranslation(cacheKey, translation);
-
-      return translation;
-    } catch (error) {
-      if (this.isAIError(error)) {
-        throw error;
-      }
-      throw this.createError(
-        'processing_failed',
-        `Translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      return availability;
+    } catch {
+      return 'check_failed';
     }
   }
 
