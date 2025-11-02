@@ -665,35 +665,46 @@ function renderSentenceLearningMode(): void {
   state.sentenceItems.forEach(sentence => {
     const card = document.querySelector(
       `[data-sentence-learning-id="${sentence.id}"]`
-    );
+    ) as HTMLElement;
     if (card) {
-      // Original language button
-      const pronounceBtn = card.querySelector(
-        '.sentence-pronounce-btn'
+      // Add click listener to the sentence content (original language)
+      const contentElement = card.querySelector(
+        '.sentence-learning-content'
       ) as HTMLElement;
-      if (pronounceBtn) {
-        pronounceBtn.addEventListener('click', () =>
-          handlePronounceClick(
-            pronounceBtn,
+      if (contentElement) {
+        contentElement.addEventListener('click', e => {
+          e.stopPropagation();
+          void handlePronounceClick(
+            contentElement,
             sentence.content,
             state.currentArticle?.originalLanguage
-          )
-        );
+          );
+        });
       }
 
-      // Translation language button
-      const pronounceBtnTranslation = card.querySelector(
-        '.sentence-pronounce-btn-translation'
+      // Add click listener to the translation (target language)
+      const translationElement = card.querySelector(
+        '.sentence-learning-translation'
       ) as HTMLElement;
-      if (pronounceBtnTranslation) {
-        pronounceBtnTranslation.addEventListener('click', () =>
-          handlePronounceClick(
-            pronounceBtnTranslation,
+      if (translationElement) {
+        translationElement.addEventListener('click', e => {
+          e.stopPropagation();
+          void handlePronounceClick(
+            translationElement,
             sentence.translation,
             state.targetLanguage
-          )
-        );
+          );
+        });
       }
+
+      // Fallback: clicking on card (but not on content or translation) pronounces the sentence
+      card.addEventListener('click', () => {
+        void handlePronounceClick(
+          card,
+          sentence.content,
+          state.currentArticle?.originalLanguage
+        );
+      });
     }
   });
 }
@@ -704,18 +715,8 @@ function renderSentenceLearningMode(): void {
 function createSentenceLearningCardHTML(sentence: SentenceItem): string {
   return `
     <div class="sentence-learning-card" data-sentence-learning-id="${sentence.id}">
-      <div class="sentence-learning-content">${escapeHtml(sentence.content)}</div>
-      <div class="sentence-learning-translation">${escapeHtml(sentence.translation)}</div>
-      <div class="sentence-learning-actions">
-        <button class="sentence-action-btn sentence-pronounce-btn" data-lang="original">
-          <span>🔊</span>
-          Pronounce Original
-        </button>
-        <button class="sentence-action-btn sentence-pronounce-btn-translation" data-lang="translation">
-          <span>🔊</span>
-          Pronounce Translation
-        </button>
-      </div>
+      <div class="sentence-learning-content clickable-text" title="Click to pronounce">${escapeHtml(sentence.content)}</div>
+      <div class="sentence-learning-translation clickable-text" title="Click to pronounce translation">${escapeHtml(sentence.translation)}</div>
     </div>
   `;
 }
