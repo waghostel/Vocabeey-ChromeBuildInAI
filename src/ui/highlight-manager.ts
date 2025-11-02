@@ -41,6 +41,11 @@ let highlightsToDelete: Array<{
   element: HTMLElement;
 }> = [];
 
+// Translation popup state for tracking and cleanup
+let currentPopupElement: HTMLElement | null = null;
+let currentPopupHighlightElement: HTMLElement | null = null;
+let popupCheckInterval: number | null = null;
+
 // ============================================================================
 // Selection Management
 // ============================================================================
@@ -454,6 +459,42 @@ function handleKeyPress(event: KeyboardEvent): void {
   }
 }
 
+/**
+ * Handle global mouse movement to detect when mouse leaves highlight area
+ * This prevents stuck translation popups
+ */
+function handleGlobalMouseMove(event: MouseEvent): void {
+  // Only check if we have an active popup
+  if (!currentPopupElement || !currentPopupHighlightElement) {
+    return;
+  }
+
+  // Get the element currently under the mouse cursor
+  const elementUnderMouse = document.elementFromPoint(
+    event.clientX,
+    event.clientY
+  );
+
+  if (!elementUnderMouse) {
+    // Mouse is outside the document, hide popup
+    hideTranslationPopup();
+    return;
+  }
+
+  // Check if the mouse is over the highlight element or any of its children
+  const isOverHighlight =
+    elementUnderMouse === currentPopupHighlightElement ||
+    currentPopupHighlightElement.contains(elementUnderMouse);
+
+  // Check if the mouse is over any highlight element (for nested highlights)
+  const isOverAnyHighlight = elementUnderMouse.closest('[data-highlight-type]');
+
+  // If mouse is not over the original highlight or any highlight, hide the popup
+  if (!isOverHighlight && !isOverAnyHighlight) {
+    hideTranslationPopup();
+  }
+}
+
 // ============================================================================
 // Initialization
 // ============================================================================
@@ -482,6 +523,9 @@ export function initializeHighlightManager(
 
   // Setup keyboard listener for delete functionality
   document.addEventListener('keydown', handleKeyPress);
+
+  // Setup global mousemove listener to handle stuck popups
+  document.addEventListener('mousemove', handleGlobalMouseMove);
 }
 
 /**
@@ -511,9 +555,17 @@ export function cleanupHighlightManager(): void {
   document.removeEventListener('dblclick', handleDoubleClick);
   document.removeEventListener('contextmenu', handleContextMenu);
   document.removeEventListener('keydown', handleKeyPress);
+  document.removeEventListener('mousemove', handleGlobalMouseMove);
   highlights.clear();
   deselectHighlight();
   clearBulkDeletePreview();
+  hideTranslationPopup();
+
+  // Clear popup check interval if running
+  if (popupCheckInterval) {
+    clearInterval(popupCheckInterval);
+    popupCheckInterval = null;
+  }
 }
 
 // ============================================================================
@@ -1441,6 +1493,10 @@ function showTranslationPopup(element: HTMLElement, translation: string): void {
 
   document.body.appendChild(popup);
 
+  // Track the popup and its associated highlight element
+  currentPopupElement = popup;
+  currentPopupHighlightElement = element;
+
   // Get dimensions after adding to DOM
   const rect = element.getBoundingClientRect();
   const popupRect = popup.getBoundingClientRect();
@@ -1488,6 +1544,10 @@ function hideTranslationPopup(): void {
   if (popup) {
     popup.remove();
   }
+
+  // Clear tracked state
+  currentPopupElement = null;
+  currentPopupHighlightElement = null;
 }
 
 /**
