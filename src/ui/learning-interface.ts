@@ -903,6 +903,7 @@ function switchHighlightMode(mode: HighlightMode): void {
 // ============================================================================
 
 let currentSpeakingButton: HTMLElement | null = null;
+let userCancelledTTS = false;
 
 /**
  * Handle pronounce button click with visual feedback
@@ -944,6 +945,7 @@ async function handlePronounceClick(
     // Remove speaking indicators when done
     hideTTSRetryIndicator();
     removeSpeakingIndicators();
+    userCancelledTTS = false; // Reset flag on success
   } catch (error: unknown) {
     console.error('TTS error:', error);
 
@@ -952,7 +954,8 @@ async function handlePronounceClick(
 
     // Check if it was cancelled
     const ttsError = error as { type?: string; message?: string };
-    if (ttsError.type !== 'cancelled') {
+    // Only show error if not cancelled OR not user-initiated
+    if (ttsError.type !== 'cancelled' && !userCancelledTTS) {
       // Show user-friendly error message
       if (ttsError.message?.includes('after retries')) {
         showTooltip(
@@ -966,6 +969,7 @@ async function handlePronounceClick(
     }
 
     removeSpeakingIndicators();
+    userCancelledTTS = false; // Reset flag
   }
 }
 
@@ -1031,12 +1035,24 @@ function showTTSRetryIndicator(text: string): void {
         <div class="tts-retry-label">Speaking</div>
         <div class="tts-retry-message">"${truncatedText}"</div>
       </div>
-      <div class="tts-retry-spinner"></div>
+      <button class="tts-cancel-btn">Cancel</button>
     </div>
   `;
 
   document.body.appendChild(indicator);
   currentTTSRetryIndicator = indicator;
+
+  // Add event listener to cancel button
+  const cancelBtn = indicator.querySelector('.tts-cancel-btn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', async () => {
+      userCancelledTTS = true; // Set flag before stopping
+      const { stopSpeaking } = await import('../utils/tts-service.js');
+      stopSpeaking();
+      hideTTSRetryIndicator();
+      removeSpeakingIndicators();
+    });
+  }
 }
 
 /**
