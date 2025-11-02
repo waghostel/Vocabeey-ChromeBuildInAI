@@ -982,7 +982,7 @@ body.dark-mode .translation-popup {
 .tts-retry-indicator {
   position: fixed;
   bottom: 20px;
-  left: 20px;
+  right: 20px;
   background: rgba(76, 175, 80, 0.95);
   color: white;
   padding: 16px 20px;
@@ -1457,21 +1457,98 @@ body.dark-mode .highlight-sentence.will-delete {
   border-color: rgba(244, 67, 54, 0.9) !important;
 }
 
-/* Retry Indicator */
-.retry-indicator {
+/* Retry Button (shown only on translation failure) */
+.retry-button {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(231, 76, 60, 0.95);
   color: white;
   padding: 16px 20px;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   z-index: 10000;
+  animation: slideIn 0.3s ease-out;
+  max-width: 400px;
+}
+
+.retry-button-content {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.retry-button-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.retry-button-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.retry-button-title {
   font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.retry-button-message {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.retry-button-action {
+  background: white;
+  color: #e74c3c;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.retry-button-action:hover {
+  background: #f8f9fa;
+  transform: scale(1.05);
+}
+
+.retry-button-action:active {
+  transform: scale(0.95);
+}
+
+.retry-button-close {
+  background: transparent;
+  color: white;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.retry-button-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Legacy retry indicator styles (kept for backward compatibility) */
+.retry-indicator {
+  display: none; /* Hidden by default */
 }
 
 .retry-spinner {

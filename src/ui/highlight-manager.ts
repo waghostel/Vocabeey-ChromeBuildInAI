@@ -1333,8 +1333,7 @@ async function translateVocabulary(
   context: string
 ): Promise<string> {
   try {
-    // Show retry indicator
-    showRetryIndicator(text);
+    // Translation happens silently in background (no popup)
 
     // Get user-selected target language
     const { targetLanguage } = await chrome.storage.local.get('targetLanguage');
@@ -1350,17 +1349,15 @@ async function translateVocabulary(
       },
     });
 
-    // Hide retry indicator
-    hideRetryIndicator();
-
     if (response.success) {
       return response.data.translation;
     } else {
       console.error('Translation failed:', response.error);
 
-      // Show user-friendly error
+      // Show retry button only on failure after 3 attempts
       if (response.error.includes('after retries')) {
-        return `[Translation failed after 3 attempts. Check console for details.]`;
+        showRetryButton(text, context);
+        return `[Translation failed. Click retry button to try again.]`;
       } else if (response.error.includes('not available')) {
         return `[Translation API not available in this context]`;
       } else {
@@ -1368,9 +1365,9 @@ async function translateVocabulary(
       }
     }
   } catch (error) {
-    hideRetryIndicator();
     console.error('Error translating vocabulary:', error);
-    return `[Translation error: ${text}]`;
+    showRetryButton(text, context);
+    return `[Translation error. Click retry button to try again.]`;
   }
 }
 
@@ -1839,30 +1836,64 @@ export async function handleSelectionContextMenuAction(
 }
 
 /**
- * Show retry indicator
+ * Show retry button on translation failure
  */
-function showRetryIndicator(text: string): void {
-  // Remove existing indicator if any
-  hideRetryIndicator();
+function showRetryButton(text: string, context: string): void {
+  // Remove existing retry button if any
+  hideRetryButton();
 
-  const indicator = document.createElement('div');
-  indicator.id = 'translation-retry-indicator';
-  indicator.className = 'retry-indicator';
-  indicator.innerHTML = `
-    <div class="retry-spinner"></div>
-    <div class="retry-text">Translating "${text.substring(0, 20)}${text.length > 20 ? '...' : ''}"</div>
-    <div class="retry-attempts">Attempt 1 of 3</div>
+  const retryButton = document.createElement('div');
+  retryButton.id = 'translation-retry-button';
+  retryButton.className = 'retry-button';
+
+  const truncatedText = text.length > 30 ? text.substring(0, 30) + '...' : text;
+
+  retryButton.innerHTML = `
+    <div class="retry-button-content">
+      <span class="retry-button-icon">⚠️</span>
+      <div class="retry-button-text">
+        <div class="retry-button-title">Translation Failed</div>
+        <div class="retry-button-message">"${truncatedText}"</div>
+      </div>
+      <button class="retry-button-action">Retry</button>
+      <button class="retry-button-close">×</button>
+    </div>
   `;
 
-  document.body.appendChild(indicator);
+  document.body.appendChild(retryButton);
+
+  // Add event listeners
+  const retryBtn = retryButton.querySelector('.retry-button-action');
+  const closeBtn = retryButton.querySelector('.retry-button-close');
+
+  if (retryBtn) {
+    retryBtn.addEventListener('click', async () => {
+      hideRetryButton();
+      // Retry translation
+      const translation = await translateVocabulary(text, context);
+      console.log('Retry translation result:', translation);
+      // Note: The vocabulary card will need to be manually refreshed to show new translation
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      hideRetryButton();
+    });
+  }
+
+  // Auto-dismiss after 10 seconds
+  setTimeout(() => {
+    hideRetryButton();
+  }, 10000);
 }
 
 /**
- * Hide retry indicator
+ * Hide retry button
  */
-function hideRetryIndicator(): void {
-  const indicator = document.getElementById('translation-retry-indicator');
-  if (indicator) {
-    indicator.remove();
+function hideRetryButton(): void {
+  const retryButton = document.getElementById('translation-retry-button');
+  if (retryButton) {
+    retryButton.remove();
   }
 }
