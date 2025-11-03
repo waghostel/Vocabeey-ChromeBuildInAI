@@ -931,11 +931,21 @@ async function handlePronounceClick(
 
     const ttsService = getTTSService();
 
-    // If already speaking, stop
+    // If already speaking, determine if we should stop or switch
     if (ttsService.isSpeaking()) {
-      stopSpeaking();
-      removeSpeakingIndicators();
-      return;
+      // Check if clicking the same button (stop) or different button (switch)
+      if (currentSpeakingButton === button) {
+        // Same button: stop speaking
+        stopSpeaking();
+        removeSpeakingIndicators();
+        return;
+      } else {
+        // Different button: interrupt current speech and switch to new word
+        userCancelledTTS = true; // Mark as user-initiated interruption
+        stopSpeaking();
+        removeSpeakingIndicators();
+        // Continue to speak the new word (don't return)
+      }
     }
 
     // Add speaking class to button
