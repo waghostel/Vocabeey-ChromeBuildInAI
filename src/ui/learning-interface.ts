@@ -219,6 +219,11 @@ async function loadArticle(article: ProcessedArticle): Promise<void> {
   state.currentArticle = article;
   state.currentPartIndex = 0;
 
+  // Store article language in local storage for translation to access
+  await chrome.storage.local.set({
+    currentArticleLanguage: article.originalLanguage,
+  });
+
   // Render article header
   renderArticleHeader(article);
 
@@ -1646,6 +1651,7 @@ async function retranslateAllVocabulary(): Promise<void> {
             context: vocab.context,
             type: 'vocabulary',
             targetLanguage: state.targetLanguage,
+            sourceLanguage: state.currentArticle?.originalLanguage,
           },
         });
 

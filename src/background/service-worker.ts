@@ -654,20 +654,48 @@ async function handleTranslateText(payload: {
   context?: string;
   type?: 'vocabulary' | 'sentence';
   targetLanguage?: string;
+  sourceLanguage?: string;
 }): Promise<string> {
   try {
     console.log('TRANSLATE_TEXT request:', payload);
 
-    // Get user settings for language preferences
-    const { settings, targetLanguage: userSelectedLanguage } =
-      await chrome.storage.local.get(['settings', 'targetLanguage']);
-    const sourceLanguage = settings?.learningLanguage || 'es';
+    // Get user settings and current article language
+    const {
+      settings,
+      targetLanguage: userSelectedLanguage,
+      currentArticleLanguage,
+    } = await chrome.storage.local.get([
+      'settings',
+      'targetLanguage',
+      'currentArticleLanguage',
+    ]);
+
+    // Determine source language with priority:
+    // 1. Explicit sourceLanguage in payload (highest priority)
+    // 2. Current article's detected language from session storage
+    // 3. User's learningLanguage setting (fallback for backward compatibility)
+    const sourceLanguage =
+      payload.sourceLanguage ||
+      currentArticleLanguage ||
+      settings?.learningLanguage ||
+      'es';
+
     // Use user-selected target language, fallback to settings, then default to 'en'
     const targetLanguage =
       payload.targetLanguage ||
       userSelectedLanguage ||
       settings?.nativeLanguage ||
       'en';
+
+    console.log('Translation language pair:', {
+      source: sourceLanguage,
+      target: targetLanguage,
+      sourceFrom: payload.sourceLanguage
+        ? 'payload'
+        : currentArticleLanguage
+          ? 'article'
+          : 'settings',
+    });
 
     // Route translation to offscreen document where Chrome AI APIs are available
     try {
@@ -837,10 +865,16 @@ async function openLearningInterface(
       [`article_${tab.id}`]: article,
     });
 
+    // Store the article's detected language globally for translation
+    await chrome.storage.local.set({
+      currentArticleLanguage: article.originalLanguage,
+    });
+
     console.log(`Article stored for tab ${tab.id}:`, {
       id: article.id,
       title: article.title,
       parts: article.parts.length,
+      language: article.originalLanguage,
     });
 
     return tab.id;
