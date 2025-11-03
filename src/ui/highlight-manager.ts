@@ -1074,6 +1074,7 @@ async function handleVocabularyHighlight(
   // Add context menu listener
   highlightData.highlightElement.addEventListener('contextmenu', e => {
     e.preventDefault();
+    e.stopPropagation();
     showContextMenu(highlightData.highlightElement, vocabItem.id, 'vocabulary');
   });
 
@@ -1169,6 +1170,7 @@ async function handleSentenceHighlight(
   // Add context menu listener
   highlightData.highlightElement.addEventListener('contextmenu', e => {
     e.preventDefault();
+    e.stopPropagation();
     showContextMenu(
       highlightData.highlightElement,
       sentenceItem.id,
@@ -1817,6 +1819,9 @@ function showSelectionContextMenu(
   if (!contextMenu) return;
 
   // Show appropriate menu items for selection
+  const copyBtn = contextMenu.querySelector(
+    '[data-action="copy"]'
+  ) as HTMLElement;
   const removeBtn = contextMenu.querySelector(
     '[data-action="remove"]'
   ) as HTMLElement;
@@ -1836,6 +1841,7 @@ function showSelectionContextMenu(
     '[data-action="pronounce"]'
   ) as HTMLElement;
 
+  if (copyBtn) copyBtn.style.display = 'none';
   if (removeBtn) removeBtn.style.display = 'none';
   if (addVocabBtn) addVocabBtn.style.display = 'block';
   if (addSentenceBtn) addSentenceBtn.style.display = 'block';
@@ -1903,6 +1909,9 @@ export function showContextMenu(
   if (!contextMenu) return;
 
   // Show appropriate menu items for existing highlights
+  const copyBtn = contextMenu.querySelector(
+    '[data-action="copy"]'
+  ) as HTMLElement;
   const removeBtn = contextMenu.querySelector(
     '[data-action="remove"]'
   ) as HTMLElement;
@@ -1922,6 +1931,7 @@ export function showContextMenu(
     '[data-action="pronounce"]'
   ) as HTMLElement;
 
+  if (copyBtn) copyBtn.style.display = 'none';
   if (removeBtn) removeBtn.style.display = 'block';
   if (addVocabBtn) addVocabBtn.style.display = 'none';
   if (addSentenceBtn) addSentenceBtn.style.display = 'none';
@@ -2339,6 +2349,7 @@ function updateHighlightType(
     // Add new context menu listener
     newElement.addEventListener('contextmenu', e => {
       e.preventDefault();
+      e.stopPropagation();
       showContextMenu(newElement, newId, newType);
     });
 

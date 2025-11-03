@@ -397,6 +397,21 @@ function addCopyButtonsToParagraphs(): void {
 
     // Add right-click context menu handler
     paragraph.addEventListener('contextmenu', e => {
+      const target = e.target as HTMLElement;
+
+      // Check if click is on a highlight element
+      const isHighlight =
+        target.classList.contains('highlight-vocabulary') ||
+        target.classList.contains('highlight-sentence') ||
+        target.closest('.highlight-vocabulary') ||
+        target.closest('.highlight-sentence');
+
+      // If clicking on a highlight, let the highlight handler take over
+      if (isHighlight) {
+        return; // Don't prevent default, let highlight handler handle it
+      }
+
+      // Only show paragraph menu if clicking on plain text
       e.preventDefault();
       showParagraphContextMenu(paragraph, e as MouseEvent);
     });
