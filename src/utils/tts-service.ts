@@ -44,6 +44,7 @@ class TTSService {
   private isInitialized = false;
   private retryHandler: RetryHandler;
   private debugger = getTTSDebugger();
+  private isCancelling = false; // Track intentional cancellations
 
   constructor(synthesisProvider?: () => SpeechSynthesis | null) {
     // Allow injection for testing, default to window.speechSynthesis
@@ -249,8 +250,14 @@ class TTSService {
       );
     }
 
-    // Cancel any ongoing speech
+    // Cancel any ongoing speech (mark as intentional)
+    this.isCancelling = true;
     this.stop();
+
+    // Small delay to ensure cancellation completes
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    this.isCancelling = false;
 
     // Wait for voices to load
     if (!this.isInitialized) {
@@ -268,10 +275,20 @@ class TTSService {
 
     return new Promise((resolve, reject) => {
       const utterance = new SpeechSynthesisUtterance(text);
+      let isResolved = false;
 
       // Set voice
       const voice = this.selectVoice(options.language);
       void voice.then(selectedVoice => {
+        // Check if we were cancelled while waiting for voice
+        if (this.isCancelling) {
+          if (!isResolved) {
+            isResolved = true;
+            resolve();
+          }
+          return;
+        }
+
         if (selectedVoice) {
           utterance.voice = selectedVoice;
         }
@@ -289,14 +306,28 @@ class TTSService {
         // Event handlers
         utterance.onend = () => {
           this._currentUtterance = null;
-          resolve();
+          if (!isResolved) {
+            isResolved = true;
+            resolve();
+          }
         };
 
         utterance.onerror = event => {
           this._currentUtterance = null;
 
+          if (isResolved) return;
+
           // Check if it was cancelled
           if (event.error === 'canceled' || event.error === 'interrupted') {
+            // If this is an intentional cancellation (user clicked new word), resolve silently
+            if (this.isCancelling) {
+              isResolved = true;
+              resolve();
+              return;
+            }
+
+            // Otherwise, treat as a cancellation error
+            isResolved = true;
             reject(
               this.createError(
                 'cancelled',
@@ -306,6 +337,7 @@ class TTSService {
               )
             );
           } else {
+            isResolved = true;
             reject(
               this.createError(
                 'synthesis_failed',
@@ -320,19 +352,31 @@ class TTSService {
         // Store current utterance
         this._currentUtterance = utterance;
 
+        // Check again if we were cancelled before speaking
+        if (this.isCancelling) {
+          if (!isResolved) {
+            isResolved = true;
+            resolve();
+          }
+          return;
+        }
+
         // Speak
         try {
           this.synthesis!.speak(utterance);
         } catch (error) {
           this._currentUtterance = null;
-          reject(
-            this.createError(
-              'synthesis_failed',
-              'Failed to start speech synthesis',
-              error as Error,
-              true
-            )
-          );
+          if (!isResolved) {
+            isResolved = true;
+            reject(
+              this.createError(
+                'synthesis_failed',
+                'Failed to start speech synthesis',
+                error as Error,
+                true
+              )
+            );
+          }
         }
       });
     });
@@ -343,7 +387,12 @@ class TTSService {
    */
   public stop(): void {
     if (this.synthesis) {
-      this.synthesis.cancel();
+      try {
+        this.synthesis.cancel();
+      } catch (error) {
+        // Silently ignore cancellation errors
+        // This can happen if there's nothing to cancel
+      }
       this._currentUtterance = null;
     }
   }
