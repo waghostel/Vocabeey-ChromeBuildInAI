@@ -10,6 +10,8 @@ import {
   setHighlightMode,
   cleanupHighlightManager,
   showContextMenu,
+  pauseHighlightManager,
+  resumeHighlightManager,
   type HighlightMode,
 } from './highlight-manager';
 
@@ -502,20 +504,717 @@ function updateContextMenuItems(
     const action = (item as HTMLElement).dataset.action;
 
     if (contextType === 'paragraph') {
-      // For paragraphs, show only "Copy"
-      if (action === 'copy') {
+      // For paragraphs, show only "Copy" and "Edit"
+      if (action === 'copy' || action === 'edit') {
         (item as HTMLElement).style.display = 'block';
       } else {
         (item as HTMLElement).style.display = 'none';
       }
     } else {
-      // For other contexts, hide "Copy" and show relevant items
-      if (action === 'copy') {
+      // For vocabulary/sentence highlights and selections, hide "Copy" and "Edit"
+      if (action === 'copy' || action === 'edit') {
         (item as HTMLElement).style.display = 'none';
       } else {
         // Reset to default display for other items
         (item as HTMLElement).style.display = 'block';
       }
+    }
+  });
+}
+
+// ============================================================================
+// Paragraph Edit Mode
+// ============================================================================
+
+// Edit mode state
+let editingParagraph: HTMLElement | null = null;
+let originalParagraphText: string = '';
+let removedHighlights: Array<{
+  id: string;
+  type: 'vocabulary' | 'sentence';
+  data: VocabularyItem | SentenceItem;
+}> = [];
+let editModeSelectionRange: Range | null = null;
+
+/**
+ * Handle paragraph edit action
+ */
+async function handleParagraphEdit(paragraph: HTMLElement): Promise<void> {
+  // Check if paragraph has highlights
+  const highlights = paragraph.querySelectorAll('[data-highlight-type]');
+  const vocabCount = paragraph.querySelectorAll(
+    '[data-highlight-type="vocabulary"]'
+  ).length;
+  const sentenceCount = paragraph.querySelectorAll(
+    '[data-highlight-type="sentence"]'
+  ).length;
+
+  if (highlights.length > 0) {
+    // Show confirmation dialog
+    await showEditConfirmationDialog(paragraph, vocabCount, sentenceCount);
+  } else {
+    // No highlights, directly enable edit mode
+    await enableEditMode(paragraph);
+  }
+}
+
+/**
+ * Show edit confirmation dialog
+ */
+async function showEditConfirmationDialog(
+  paragraph: HTMLElement,
+  vocabCount: number,
+  sentenceCount: number
+): Promise<void> {
+  const dialog = document.querySelector(
+    '.edit-confirmation-dialog'
+  ) as HTMLElement;
+  if (!dialog) return;
+
+  const highlightCountSpan = dialog.querySelector(
+    '.highlight-count'
+  ) as HTMLElement;
+  const confirmBtn = dialog.querySelector(
+    '.dialog-btn-confirm'
+  ) as HTMLButtonElement;
+  const cancelBtn = dialog.querySelector(
+    '.dialog-btn-cancel'
+  ) as HTMLButtonElement;
+
+  // Build highlight count message
+  const parts: string[] = [];
+  if (vocabCount > 0) {
+    parts.push(`${vocabCount} vocabulary item${vocabCount > 1 ? 's' : ''}`);
+  }
+  if (sentenceCount > 0) {
+    parts.push(`${sentenceCount} sentence${sentenceCount > 1 ? 's' : ''}`);
+  }
+  highlightCountSpan.textContent = parts.join(' and ');
+
+  // Show dialog
+  dialog.classList.remove('hidden');
+
+  // Wait for user action
+  return new Promise<void>(resolve => {
+    const handleConfirm = () => {
+      dialog.classList.add('hidden');
+      confirmBtn.removeEventListener('click', handleConfirm);
+      cancelBtn.removeEventListener('click', handleCancel);
+      void enableEditMode(paragraph);
+      resolve();
+    };
+
+    const handleCancel = () => {
+      dialog.classList.add('hidden');
+      confirmBtn.removeEventListener('click', handleConfirm);
+      cancelBtn.removeEventListener('click', handleCancel);
+      resolve();
+    };
+
+    confirmBtn.addEventListener('click', handleConfirm);
+    cancelBtn.addEventListener('click', handleCancel);
+
+    // Handle Escape key
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleCancel();
+        document.removeEventListener('keydown', handleEscape);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+  });
+}
+
+/**
+ * Enable edit mode for a paragraph
+ */
+async function enableEditMode(paragraph: HTMLElement): Promise<void> {
+  // Store original state
+  editingParagraph = paragraph;
+  originalParagraphText = paragraph.textContent || '';
+
+  // Remove and store highlights
+  await removeHighlightsFromParagraph(paragraph);
+
+  // Make paragraph editable
+  paragraph.contentEditable = 'true';
+  paragraph.classList.add('editing');
+
+  // Hide copy button
+  const copyBtn = paragraph.querySelector('.paragraph-copy-btn') as HTMLElement;
+  if (copyBtn) {
+    copyBtn.style.display = 'none';
+  }
+
+  // Focus paragraph
+  paragraph.focus();
+
+  // Show edit toolbar
+  showEditToolbar(paragraph);
+
+  // Setup keyboard handlers
+  setupEditModeKeyboardHandlers(paragraph);
+
+  // Setup context menu handler for edit mode
+  paragraph.addEventListener('contextmenu', handleEditModeContextMenu);
+  (paragraph as any)._editContextMenuHandler = handleEditModeContextMenu;
+
+  // Setup click outside handler to hide context menu
+  const handleClickOutside = (e: MouseEvent) => {
+    const menu = document.querySelector('.edit-context-menu') as HTMLElement;
+    if (menu && !menu.contains(e.target as Node)) {
+      hideEditContextMenu();
+    }
+  };
+  document.addEventListener('click', handleClickOutside);
+  (paragraph as any)._editClickOutsideHandler = handleClickOutside;
+
+  // Setup input handler to hide context menu when typing
+  const handleInput = () => {
+    hideEditContextMenu();
+  };
+  paragraph.addEventListener('input', handleInput);
+  (paragraph as any)._editInputHandler = handleInput;
+
+  // Disable navigation and mode switching
+  disableUIControls();
+
+  // Pause highlight manager to prevent highlighting during edit
+  pauseHighlightManager();
+}
+
+/**
+ * Remove highlights from paragraph and store them
+ */
+async function removeHighlightsFromParagraph(
+  paragraph: HTMLElement
+): Promise<void> {
+  removedHighlights = [];
+
+  // Find all highlights in this paragraph
+  const highlights = paragraph.querySelectorAll('[data-highlight-type]');
+
+  // Get storage data once
+  const vocabData = await chrome.storage.local.get('vocabulary');
+  const sentenceData = await chrome.storage.local.get('sentences');
+  const vocabulary: Record<string, VocabularyItem> = vocabData.vocabulary || {};
+  const sentences: Record<string, SentenceItem> = sentenceData.sentences || {};
+
+  // Collect highlights to remove
+  highlights.forEach(highlightEl => {
+    const id = highlightEl.getAttribute('data-highlight-id');
+    const type = highlightEl.getAttribute('data-highlight-type') as
+      | 'vocabulary'
+      | 'sentence';
+
+    if (!id || !type) return;
+
+    // Store the data before removing
+    if (type === 'vocabulary' && vocabulary[id]) {
+      removedHighlights.push({
+        id,
+        type,
+        data: vocabulary[id],
+      });
+    } else if (type === 'sentence' && sentences[id]) {
+      removedHighlights.push({
+        id,
+        type,
+        data: sentences[id],
+      });
+    }
+
+    // Remove highlight from DOM (unwrap)
+    const parent = highlightEl.parentNode;
+    if (parent) {
+      while (highlightEl.firstChild) {
+        parent.insertBefore(highlightEl.firstChild, highlightEl);
+      }
+      parent.removeChild(highlightEl);
+    }
+  });
+
+  // Remove from storage
+  await removeHighlightsFromStorage(removedHighlights);
+}
+
+/**
+ * Remove highlights from storage
+ */
+async function removeHighlightsFromStorage(
+  highlights: Array<{
+    id: string;
+    type: 'vocabulary' | 'sentence';
+    data: VocabularyItem | SentenceItem;
+  }>
+): Promise<void> {
+  try {
+    // Remove vocabulary items
+    const vocabIds = highlights
+      .filter(h => h.type === 'vocabulary')
+      .map(h => h.id);
+    if (vocabIds.length > 0) {
+      const data = await chrome.storage.local.get('vocabulary');
+      const vocabulary: Record<string, VocabularyItem> = data.vocabulary || {};
+      vocabIds.forEach(id => delete vocabulary[id]);
+      await chrome.storage.local.set({ vocabulary });
+
+      // Update state
+      state.vocabularyItems = state.vocabularyItems.filter(
+        v => !vocabIds.includes(v.id)
+      );
+    }
+
+    // Remove sentence items
+    const sentenceIds = highlights
+      .filter(h => h.type === 'sentence')
+      .map(h => h.id);
+    if (sentenceIds.length > 0) {
+      const data = await chrome.storage.local.get('sentences');
+      const sentences: Record<string, SentenceItem> = data.sentences || {};
+      sentenceIds.forEach(id => delete sentences[id]);
+      await chrome.storage.local.set({ sentences });
+
+      // Update state
+      state.sentenceItems = state.sentenceItems.filter(
+        s => !sentenceIds.includes(s.id)
+      );
+    }
+
+    // Re-render cards
+    if (state.currentArticle) {
+      const part = state.currentArticle.parts[state.currentPartIndex];
+      if (part) {
+        renderPartVocabularyCards(part);
+        renderPartSentenceCards(part);
+      }
+    }
+  } catch (error) {
+    console.error('Error removing highlights from storage:', error);
+  }
+}
+
+/**
+ * Show edit toolbar
+ */
+function showEditToolbar(paragraph: HTMLElement): void {
+  const toolbar = document.querySelector('.edit-toolbar') as HTMLElement;
+  if (!toolbar) return;
+
+  // Position toolbar below paragraph
+  const rect = paragraph.getBoundingClientRect();
+  toolbar.style.left = `${rect.left}px`;
+  toolbar.style.top = `${rect.bottom + window.scrollY + 8}px`;
+
+  // Show toolbar
+  toolbar.classList.remove('hidden');
+
+  // Setup button handlers
+  const saveBtn = toolbar.querySelector('.edit-btn-save') as HTMLButtonElement;
+  const cancelBtn = toolbar.querySelector(
+    '.edit-btn-cancel'
+  ) as HTMLButtonElement;
+
+  saveBtn.onclick = () => void saveEdit();
+  cancelBtn.onclick = () => void cancelEdit();
+}
+
+/**
+ * Setup keyboard handlers for edit mode
+ */
+function setupEditModeKeyboardHandlers(paragraph: HTMLElement): void {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      void saveEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      // Hide edit context menu if visible
+      hideEditContextMenu();
+      void cancelEdit();
+    }
+  };
+
+  paragraph.addEventListener('keydown', handleKeyDown);
+  (paragraph as any)._editKeyHandler = handleKeyDown;
+}
+
+/**
+ * Handle context menu in edit mode
+ */
+function handleEditModeContextMenu(event: MouseEvent): void {
+  // Only handle if we're in edit mode
+  if (!editingParagraph) return;
+
+  const target = event.target as HTMLElement;
+
+  // Only handle if clicking within the editing paragraph
+  if (target !== editingParagraph && !editingParagraph.contains(target)) {
+    return;
+  }
+
+  // Get current selection
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) {
+    // No selection - allow browser default context menu
+    return;
+  }
+
+  const selectedText = selection.toString().trim();
+  if (!selectedText) {
+    // Empty selection - allow browser default
+    return;
+  }
+
+  // We have a valid selection - prevent default and show custom menu
+  event.preventDefault();
+
+  // Store the selection range (clone it to preserve)
+  const range = selection.getRangeAt(0);
+  editModeSelectionRange = range.cloneRange();
+
+  // Show edit context menu at cursor position
+  showEditContextMenu(event.pageX, event.pageY);
+}
+
+/**
+ * Show edit context menu at specified position
+ */
+function showEditContextMenu(x: number, y: number): void {
+  const menu = document.querySelector('.edit-context-menu') as HTMLElement;
+  if (!menu) return;
+
+  // Position menu at cursor
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+
+  // Check if menu goes off-screen and adjust
+  menu.classList.remove('hidden');
+
+  // Get menu dimensions after showing
+  const menuRect = menu.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  // Adjust horizontal position if off-screen
+  if (menuRect.right > viewportWidth) {
+    menu.style.left = `${x - menuRect.width}px`;
+  }
+
+  // Adjust vertical position if off-screen
+  if (menuRect.bottom > viewportHeight) {
+    menu.style.top = `${y - menuRect.height}px`;
+  }
+}
+
+/**
+ * Hide edit context menu
+ */
+function hideEditContextMenu(): void {
+  const menu = document.querySelector('.edit-context-menu') as HTMLElement;
+  if (menu) {
+    menu.classList.add('hidden');
+  }
+  editModeSelectionRange = null;
+}
+
+/**
+ * Handle copy selection action in edit mode
+ */
+async function handleCopySelection(): Promise<void> {
+  if (!editModeSelectionRange) return;
+
+  try {
+    // Get text from stored range
+    const text = editModeSelectionRange.toString();
+
+    // Copy to clipboard
+    await navigator.clipboard.writeText(text);
+
+    // Show success message
+    showTooltip('Text copied!');
+
+    // Hide menu
+    hideEditContextMenu();
+
+    // Optionally restore selection for better UX
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(editModeSelectionRange);
+    }
+  } catch (error) {
+    console.error('Failed to copy text:', error);
+    showTooltip('Failed to copy text');
+  }
+}
+
+/**
+ * Handle delete selection action in edit mode
+ */
+function handleDeleteSelection(): void {
+  if (!editModeSelectionRange || !editingParagraph) return;
+
+  try {
+    // Delete content from range
+    editModeSelectionRange.deleteContents();
+
+    // Collapse range to start position
+    editModeSelectionRange.collapse(true);
+
+    // Update selection
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(editModeSelectionRange);
+    }
+
+    // Hide menu
+    hideEditContextMenu();
+
+    // Focus back on paragraph
+    editingParagraph.focus();
+  } catch (error) {
+    console.error('Failed to delete text:', error);
+    showTooltip('Failed to delete text');
+  }
+}
+
+/**
+ * Save paragraph edit
+ */
+async function saveEdit(): Promise<void> {
+  if (!editingParagraph || !state.currentArticle) return;
+
+  try {
+    // Get edited text
+    const editedText = editingParagraph.textContent?.trim() || '';
+
+    // Validate
+    if (!editedText) {
+      showTooltip('Paragraph cannot be empty');
+      return;
+    }
+
+    if (editedText.length > 10000) {
+      showTooltip('Paragraph is too long (max 10,000 characters)');
+      return;
+    }
+
+    // Update article part in session storage
+    const part = state.currentArticle.parts[state.currentPartIndex];
+    if (part) {
+      // Find paragraph index
+      const paragraphs = part.content.split('\n\n');
+      const allParagraphs = elements.articlePartContent.querySelectorAll('p');
+      const paragraphIndex = Array.from(allParagraphs).indexOf(
+        editingParagraph as HTMLParagraphElement
+      );
+
+      if (paragraphIndex >= 0 && paragraphIndex < paragraphs.length) {
+        paragraphs[paragraphIndex] = editedText;
+        part.content = paragraphs.join('\n\n');
+
+        // Update in session storage
+        const tabId = await getCurrentTabId();
+        await chrome.storage.session.set({
+          [`article_${tabId}`]: state.currentArticle,
+        });
+      }
+    }
+
+    // Exit edit mode
+    exitEditMode();
+
+    // Show success message
+    showTooltip('Paragraph updated');
+
+    // Clear removed highlights (they're permanently deleted)
+    removedHighlights = [];
+  } catch (error) {
+    console.error('Error saving paragraph edit:', error);
+    showTooltip('Failed to save changes');
+  }
+}
+
+/**
+ * Cancel paragraph edit
+ */
+async function cancelEdit(): Promise<void> {
+  if (!editingParagraph) return;
+
+  // Restore original text
+  editingParagraph.textContent = originalParagraphText;
+
+  // Restore highlights
+  await restoreHighlights();
+
+  // Exit edit mode
+  exitEditMode();
+
+  // Show cancelled message
+  showTooltip('Edit cancelled');
+}
+
+/**
+ * Restore highlights after cancelling edit
+ */
+async function restoreHighlights(): Promise<void> {
+  if (removedHighlights.length === 0) return;
+
+  try {
+    // Restore to storage
+    const vocabToRestore = removedHighlights.filter(
+      h => h.type === 'vocabulary'
+    );
+    const sentencesToRestore = removedHighlights.filter(
+      h => h.type === 'sentence'
+    );
+
+    if (vocabToRestore.length > 0) {
+      const data = await chrome.storage.local.get('vocabulary');
+      const vocabulary: Record<string, VocabularyItem> = data.vocabulary || {};
+      vocabToRestore.forEach(h => {
+        vocabulary[h.id] = h.data as VocabularyItem;
+      });
+      await chrome.storage.local.set({ vocabulary });
+
+      // Update state
+      state.vocabularyItems.push(
+        ...vocabToRestore.map(h => h.data as VocabularyItem)
+      );
+    }
+
+    if (sentencesToRestore.length > 0) {
+      const data = await chrome.storage.local.get('sentences');
+      const sentences: Record<string, SentenceItem> = data.sentences || {};
+      sentencesToRestore.forEach(h => {
+        sentences[h.id] = h.data as SentenceItem;
+      });
+      await chrome.storage.local.set({ sentences });
+
+      // Update state
+      state.sentenceItems.push(
+        ...sentencesToRestore.map(h => h.data as SentenceItem)
+      );
+    }
+
+    // Re-render the paragraph to restore highlights
+    if (state.currentArticle) {
+      renderArticlePart(state.currentPartIndex);
+    }
+
+    // Clear removed highlights
+    removedHighlights = [];
+  } catch (error) {
+    console.error('Error restoring highlights:', error);
+  }
+}
+
+/**
+ * Exit edit mode
+ */
+function exitEditMode(): void {
+  if (!editingParagraph) return;
+
+  // Remove contenteditable
+  editingParagraph.contentEditable = 'false';
+  editingParagraph.classList.remove('editing');
+
+  // Show copy button
+  const copyBtn = editingParagraph.querySelector(
+    '.paragraph-copy-btn'
+  ) as HTMLElement;
+  if (copyBtn) {
+    copyBtn.style.display = '';
+  }
+
+  // Remove keyboard handler
+  const keyHandler = (editingParagraph as any)._editKeyHandler;
+  if (keyHandler) {
+    editingParagraph.removeEventListener('keydown', keyHandler);
+    delete (editingParagraph as any)._editKeyHandler;
+  }
+
+  // Remove context menu handler
+  const contextMenuHandler = (editingParagraph as any)._editContextMenuHandler;
+  if (contextMenuHandler) {
+    editingParagraph.removeEventListener('contextmenu', contextMenuHandler);
+    delete (editingParagraph as any)._editContextMenuHandler;
+  }
+
+  // Remove click outside handler
+  const clickOutsideHandler = (editingParagraph as any)
+    ._editClickOutsideHandler;
+  if (clickOutsideHandler) {
+    document.removeEventListener('click', clickOutsideHandler);
+    delete (editingParagraph as any)._editClickOutsideHandler;
+  }
+
+  // Remove input handler
+  const inputHandler = (editingParagraph as any)._editInputHandler;
+  if (inputHandler) {
+    editingParagraph.removeEventListener('input', inputHandler);
+    delete (editingParagraph as any)._editInputHandler;
+  }
+
+  // Hide edit context menu
+  hideEditContextMenu();
+
+  // Hide toolbar
+  const toolbar = document.querySelector('.edit-toolbar') as HTMLElement;
+  if (toolbar) {
+    toolbar.classList.add('hidden');
+  }
+
+  // Re-enable UI controls
+  enableUIControls();
+
+  // Resume highlight manager to re-enable highlighting
+  resumeHighlightManager();
+
+  // Clear state
+  editingParagraph = null;
+  originalParagraphText = '';
+  editModeSelectionRange = null;
+}
+
+/**
+ * Disable UI controls during edit mode
+ */
+function disableUIControls(): void {
+  elements.prevButton.disabled = true;
+  elements.nextButton.disabled = true;
+  elements.tabButtons.forEach(btn => (btn.disabled = true));
+
+  // Disable highlight mode buttons
+  const highlightModeButtons = document.querySelectorAll('.highlight-mode-btn');
+  highlightModeButtons.forEach(btn => {
+    (btn as HTMLButtonElement).disabled = true;
+    (btn as HTMLElement).title =
+      'Highlight modes are disabled while editing a paragraph';
+  });
+}
+
+/**
+ * Enable UI controls after edit mode
+ */
+function enableUIControls(): void {
+  updateNavigation(); // This will set correct disabled states
+  elements.tabButtons.forEach(btn => (btn.disabled = false));
+
+  // Re-enable highlight mode buttons and restore original tooltips
+  const highlightModeButtons = document.querySelectorAll('.highlight-mode-btn');
+  highlightModeButtons.forEach(btn => {
+    (btn as HTMLButtonElement).disabled = false;
+    const mode = (btn as HTMLElement).dataset.highlightMode;
+    // Restore original tooltips
+    if (mode === 'vocabulary') {
+      (btn as HTMLElement).title = 'Switch to Vocabulary mode (Press 1)';
+    } else if (mode === 'sentence') {
+      (btn as HTMLElement).title = 'Switch to Sentence mode (Press 2)';
+    } else if (mode === 'none') {
+      (btn as HTMLElement).title = 'Disable highlighting (Press 0, 3, or Esc)';
     }
   });
 }
@@ -1033,22 +1732,43 @@ function setupEventListeners(): void {
       void handleContextMenuAction(e);
     });
   });
+
+  // Edit context menu actions
+  const editContextMenuItems = document.querySelectorAll(
+    '.edit-context-menu .context-menu-item'
+  );
+  editContextMenuItems.forEach(item => {
+    item.addEventListener('click', e => {
+      e.stopPropagation();
+      const action = (item as HTMLElement).dataset.action;
+      if (action === 'copy-selection') {
+        void handleCopySelection();
+      } else if (action === 'delete-selection') {
+        handleDeleteSelection();
+      }
+    });
+  });
 }
 
 /**
  * Handle keyboard shortcuts
  */
 function handleKeyboardShortcuts(event: KeyboardEvent): void {
-  // Ignore if typing in input
+  // Ignore if typing in input or contenteditable
   if (
     event.target instanceof HTMLInputElement ||
-    event.target instanceof HTMLTextAreaElement
+    event.target instanceof HTMLTextAreaElement ||
+    (event.target as HTMLElement).contentEditable === 'true'
   ) {
     return;
   }
 
+  // Ignore navigation and mode shortcuts if in edit mode
+  const isEditMode = editingParagraph !== null;
+
   switch (event.key) {
     case 'ArrowLeft':
+      if (isEditMode) return; // Ignore during edit mode
       event.preventDefault();
       if (state.currentPartIndex > 0) {
         renderArticlePart(state.currentPartIndex - 1);
@@ -1056,6 +1776,7 @@ function handleKeyboardShortcuts(event: KeyboardEvent): void {
       break;
 
     case 'ArrowRight':
+      if (isEditMode) return; // Ignore during edit mode
       event.preventDefault();
       if (
         state.currentArticle &&
@@ -1066,37 +1787,44 @@ function handleKeyboardShortcuts(event: KeyboardEvent): void {
       break;
 
     case 'v':
+      if (isEditMode) return; // Ignore during edit mode
       event.preventDefault();
       switchMode('vocabulary');
       break;
 
     case 's':
+      if (isEditMode) return; // Ignore during edit mode
       event.preventDefault();
       switchMode('sentences');
       break;
 
     case 'r':
+      if (isEditMode) return; // Ignore during edit mode
       event.preventDefault();
       switchMode('reading');
       break;
 
     case 'Escape':
+      if (isEditMode) return; // Let edit mode handler handle Escape
       event.preventDefault();
       switchHighlightMode('none');
       break;
 
     case '1':
+      if (isEditMode) return; // Ignore during edit mode
       event.preventDefault();
       switchHighlightMode('vocabulary');
       break;
 
     case '2':
+      if (isEditMode) return; // Ignore during edit mode
       event.preventDefault();
       switchHighlightMode('sentence');
       break;
 
     case '0':
     case '3':
+      if (isEditMode) return; // Ignore during edit mode
       event.preventDefault();
       switchHighlightMode('none');
       break;
@@ -1452,6 +2180,11 @@ async function handleContextMenuAction(event: Event): Promise<void> {
           console.error('Failed to copy paragraph:', error);
           showTooltip('Failed to copy paragraph');
         }
+      }
+    } else if (action === 'edit') {
+      const paragraph = (contextMenu as any)._paragraphElement as HTMLElement;
+      if (paragraph) {
+        await handleParagraphEdit(paragraph);
       }
     }
     contextMenu.classList.add('hidden');

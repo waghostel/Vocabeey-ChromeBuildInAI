@@ -402,6 +402,22 @@ body.dark-mode .language-badge.medium-confidence {
   border-color: var(--primary-color);
 }
 
+.highlight-mode-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.highlight-mode-btn:disabled:hover {
+  border-color: var(--border-color);
+  background: white;
+}
+
+.highlight-mode-btn.active:disabled {
+  background: var(--primary-color);
+  opacity: 0.5;
+}
+
 /* ============================================================================
    Article Part Container
    ============================================================================ */
@@ -991,6 +1007,202 @@ body.dark-mode .translation-popup {
 
 .context-menu-item:hover {
   background: var(--secondary-color);
+}
+
+/* ============================================================================
+   Edit Confirmation Dialog
+   ============================================================================ */
+
+.edit-confirmation-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-confirmation-dialog.hidden {
+  display: none;
+}
+
+.dialog-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.dialog-content {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 450px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.dialog-content h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+.dialog-message {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.dialog-message .highlight-count {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.dialog-note {
+  margin: 0 0 1.5rem 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.dialog-btn {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.dialog-btn-cancel {
+  background: var(--secondary-color);
+  color: var(--text-primary);
+}
+
+.dialog-btn-cancel:hover {
+  background: #d0d0d0;
+}
+
+.dialog-btn-confirm {
+  background: var(--primary-color);
+  color: white;
+}
+
+.dialog-btn-confirm:hover {
+  background: #2980b9;
+}
+
+/* ============================================================================
+   Edit Toolbar
+   ============================================================================ */
+
+.edit-toolbar {
+  position: absolute;
+  display: flex;
+  gap: 0.5rem;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.5rem;
+  box-shadow: var(--card-hover-shadow);
+  z-index: 100;
+}
+
+.edit-toolbar.hidden {
+  display: none;
+}
+
+.edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.edit-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.edit-btn-save {
+  background: var(--primary-color);
+  color: white;
+}
+
+.edit-btn-save:hover {
+  background: #2980b9;
+}
+
+.edit-btn-cancel {
+  background: var(--secondary-color);
+  color: var(--text-primary);
+}
+
+.edit-btn-cancel:hover {
+  background: #d0d0d0;
+}
+
+/* ============================================================================
+   Edit Mode Context Menu
+   ============================================================================ */
+
+.edit-context-menu {
+  position: absolute;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--card-hover-shadow);
+  padding: 0.5rem 0;
+  z-index: 1001;
+  min-width: 120px;
+}
+
+.edit-context-menu.hidden {
+  display: none;
+}
+
+/* ============================================================================
+   Paragraph Edit Mode
+   ============================================================================ */
+
+.article-part-content p.editing {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 4px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  padding: 1rem;
+  min-height: 3rem;
+}
+
+.article-part-content p.editing:focus {
+  outline: 2px solid var(--primary-color);
+  background: white;
+}
+
+.article-part-content p[contenteditable='true'] {
+  cursor: text;
 }
 
 /* ============================================================================
@@ -1991,6 +2203,57 @@ body.dark-mode .context-menu-item:hover {
   background: #34495e;
 }
 
+body.dark-mode .dialog-content {
+  background: #2c3e50;
+  border-color: #34495e;
+}
+
+body.dark-mode .dialog-content h3 {
+  color: var(--text-primary);
+}
+
+body.dark-mode .dialog-btn-cancel {
+  background: #34495e;
+  color: var(--text-primary);
+}
+
+body.dark-mode .dialog-btn-cancel:hover {
+  background: #3d5a6b;
+}
+
+body.dark-mode .edit-toolbar {
+  background: #2c3e50;
+  border-color: #34495e;
+}
+
+body.dark-mode .edit-context-menu {
+  background: #2c3e50;
+  border-color: #34495e;
+}
+
+body.dark-mode .edit-btn-cancel {
+  background: #34495e;
+  color: var(--text-primary);
+}
+
+body.dark-mode .edit-btn-cancel:hover {
+  background: #3d5a6b;
+}
+
+body.dark-mode .edit-context-menu {
+  background: #2c3e50;
+  border-color: #34495e;
+}
+
+body.dark-mode .article-part-content p.editing {
+  background: #34495e;
+  outline-color: var(--primary-color);
+}
+
+body.dark-mode .article-part-content p.editing:focus {
+  background: #2c3e50;
+}
+
 /* Dark mode text color for display options and highlight mode buttons */
 body.dark-mode .display-option {
   color: var(--text-primary);
@@ -1998,6 +2261,15 @@ body.dark-mode .display-option {
 
 body.dark-mode .highlight-mode-btn {
   color: var(--text-primary);
+}
+
+body.dark-mode .highlight-mode-btn:disabled {
+  opacity: 0.5;
+}
+
+body.dark-mode .highlight-mode-btn:disabled:hover {
+  background: #2c3e50;
+  border-color: #34495e;
 }
 
 /* Dark mode hover effect for vocabulary cards */

@@ -569,6 +569,30 @@ export function cleanupHighlightManager(): void {
   }
 }
 
+/**
+ * Pause highlight manager (disable event listeners during edit mode)
+ */
+export function pauseHighlightManager(): void {
+  document.removeEventListener('mouseup', handleTextSelection);
+  document.removeEventListener('touchend', handleTextSelection);
+  document.removeEventListener('dblclick', handleDoubleClick);
+  document.removeEventListener('contextmenu', handleContextMenu);
+  document.removeEventListener('keydown', handleKeyPress);
+  document.removeEventListener('mousemove', handleGlobalMouseMove);
+}
+
+/**
+ * Resume highlight manager (re-enable event listeners after edit mode)
+ */
+export function resumeHighlightManager(): void {
+  document.addEventListener('mouseup', handleTextSelection);
+  document.addEventListener('touchend', handleTextSelection);
+  document.addEventListener('dblclick', handleDoubleClick);
+  document.addEventListener('contextmenu', handleContextMenu);
+  document.addEventListener('keydown', handleKeyPress);
+  document.addEventListener('mousemove', handleGlobalMouseMove);
+}
+
 // ============================================================================
 // Text Selection and Highlighting
 // ============================================================================
@@ -1822,6 +1846,9 @@ function showSelectionContextMenu(
   const copyBtn = contextMenu.querySelector(
     '[data-action="copy"]'
   ) as HTMLElement;
+  const editBtn = contextMenu.querySelector(
+    '[data-action="edit"]'
+  ) as HTMLElement;
   const removeBtn = contextMenu.querySelector(
     '[data-action="remove"]'
   ) as HTMLElement;
@@ -1842,6 +1869,7 @@ function showSelectionContextMenu(
   ) as HTMLElement;
 
   if (copyBtn) copyBtn.style.display = 'none';
+  if (editBtn) editBtn.style.display = 'none';
   if (removeBtn) removeBtn.style.display = 'none';
   if (addVocabBtn) addVocabBtn.style.display = 'block';
   if (addSentenceBtn) addSentenceBtn.style.display = 'block';
@@ -1912,6 +1940,9 @@ export function showContextMenu(
   const copyBtn = contextMenu.querySelector(
     '[data-action="copy"]'
   ) as HTMLElement;
+  const editBtn = contextMenu.querySelector(
+    '[data-action="edit"]'
+  ) as HTMLElement;
   const removeBtn = contextMenu.querySelector(
     '[data-action="remove"]'
   ) as HTMLElement;
@@ -1932,6 +1963,7 @@ export function showContextMenu(
   ) as HTMLElement;
 
   if (copyBtn) copyBtn.style.display = 'none';
+  if (editBtn) editBtn.style.display = 'none';
   if (removeBtn) removeBtn.style.display = 'block';
   if (addVocabBtn) addVocabBtn.style.display = 'none';
   if (addSentenceBtn) addSentenceBtn.style.display = 'none';

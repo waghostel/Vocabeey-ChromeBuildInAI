@@ -186,6 +186,7 @@
     <!-- Context Menu (for right-click on highlights) -->
     <div class="context-menu hidden">
       <button class="context-menu-item" data-action="copy">Copy</button>
+      <button class="context-menu-item" data-action="edit">Edit</button>
       <button class="context-menu-item" data-action="remove">Remove</button>
       <button class="context-menu-item" data-action="pronounce">
         Pronounce
@@ -201,6 +202,55 @@
       </button>
       <button class="context-menu-item" data-action="add-sentence">
         Add as Sentence
+      </button>
+    </div>
+
+    <!-- Edit Confirmation Dialog -->
+    <div class="edit-confirmation-dialog hidden">
+      <div class="dialog-overlay"></div>
+      <div class="dialog-content">
+        <h3>Edit Paragraph</h3>
+        <p class="dialog-message">
+          This paragraph contains <span class="highlight-count"></span>. Editing
+          will remove all highlights from this paragraph.
+        </p>
+        <p class="dialog-note">
+          You can re-highlight words and sentences after editing.
+        </p>
+        <div class="dialog-actions">
+          <button class="dialog-btn dialog-btn-cancel">Cancel</button>
+          <button class="dialog-btn dialog-btn-confirm">Edit Anyway</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Toolbar -->
+    <div class="edit-toolbar hidden">
+      <button class="edit-btn edit-btn-save" title="Save changes (Enter)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path
+            d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"
+          />
+        </svg>
+        Save
+      </button>
+      <button class="edit-btn edit-btn-cancel" title="Cancel editing (Esc)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path
+            d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"
+          />
+        </svg>
+        Cancel
+      </button>
+    </div>
+
+    <!-- Edit Mode Context Menu -->
+    <div class="edit-context-menu hidden">
+      <button class="context-menu-item" data-action="copy-selection">
+        Copy
+      </button>
+      <button class="context-menu-item" data-action="delete-selection">
+        Delete
       </button>
     </div>
 
