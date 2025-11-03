@@ -2303,3 +2303,123 @@ body.dark-mode .highlight-mode-btn:disabled:hover {
 body.dark-mode .clickable-text:hover {
   background: #3d5a73;
 }
+
+/* ============================================================================
+   Highlight Styles - Click-to-Pronounce
+   ============================================================================ */
+
+/* Base highlight styles */
+.highlight-vocabulary,
+.highlight-sentence {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  padding: 2px 0;
+}
+
+/* Vocabulary highlights - yellow background */
+.highlight-vocabulary {
+  background-color: rgba(255, 235, 59, 0.4);
+  border-bottom: 2px solid rgba(255, 193, 7, 0.6);
+}
+
+.highlight-vocabulary:hover {
+  background-color: rgba(255, 235, 59, 0.6);
+  border-bottom-color: rgba(255, 193, 7, 0.8);
+}
+
+/* Sentence highlights - blue background */
+.highlight-sentence {
+  background-color: rgba(33, 150, 243, 0.2);
+  border-bottom: 2px solid rgba(33, 150, 243, 0.4);
+}
+
+.highlight-sentence:hover {
+  background-color: rgba(33, 150, 243, 0.3);
+  border-bottom-color: rgba(33, 150, 243, 0.6);
+}
+
+/* Speaking state - blue blinking animation */
+.highlight-vocabulary.speaking,
+.highlight-sentence.speaking {
+  animation: speaking-pulse 0.8s ease-in-out infinite;
+  background-color: rgba(33, 150, 243, 0.5) !important;
+  border-bottom-color: rgba(33, 150, 243, 0.8) !important;
+}
+
+@keyframes speaking-pulse {
+  0%,
+  100% {
+    background-color: rgba(33, 150, 243, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    background-color: rgba(33, 150, 243, 0.7);
+    transform: scale(1.02);
+  }
+}
+
+/* Speaker icon on hover */
+.highlight-vocabulary:hover::after,
+.highlight-sentence:hover::after {
+  content: '🔊';
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75em;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Dark mode adjustments */
+body.dark-mode .highlight-vocabulary {
+  background-color: rgba(255, 235, 59, 0.25);
+  border-bottom-color: rgba(255, 193, 7, 0.4);
+}
+
+body.dark-mode .highlight-vocabulary:hover {
+  background-color: rgba(255, 235, 59, 0.35);
+  border-bottom-color: rgba(255, 193, 7, 0.6);
+}
+
+body.dark-mode .highlight-sentence {
+  background-color: rgba(33, 150, 243, 0.15);
+  border-bottom-color: rgba(33, 150, 243, 0.3);
+}
+
+body.dark-mode .highlight-sentence:hover {
+  background-color: rgba(33, 150, 243, 0.25);
+  border-bottom-color: rgba(33, 150, 243, 0.5);
+}
+
+body.dark-mode .highlight-vocabulary.speaking,
+body.dark-mode .highlight-sentence.speaking {
+  background-color: rgba(33, 150, 243, 0.4) !important;
+  border-bottom-color: rgba(33, 150, 243, 0.7) !important;
+}
+
+/* Selected state (for deletion) */
+.highlight-vocabulary.selected,
+.highlight-sentence.selected {
+  background-color: rgba(231, 76, 60, 0.3);
+  border-bottom-color: rgba(231, 76, 60, 0.6);
+}
+
+/* Will-delete state (bulk delete preview) */
+.highlight-vocabulary.will-delete,
+.highlight-sentence.will-delete {
+  animation: will-delete-pulse 1s ease-in-out infinite;
+  background-color: rgba(231, 76, 60, 0.4) !important;
+  border-bottom-color: rgba(231, 76, 60, 0.7) !important;
+}
+
+@keyframes will-delete-pulse {
+  0%,
+  100% {
+    background-color: rgba(231, 76, 60, 0.4);
+  }
+  50% {
+    background-color: rgba(231, 76, 60, 0.6);
+  }
+}

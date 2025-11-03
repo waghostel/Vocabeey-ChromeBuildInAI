@@ -16,6 +16,7 @@ import {
 } from './highlight-manager';
 
 import { initializeHamburgerMenu } from './components/hamburger-menu';
+import { pronounceText } from './tts-handler';
 
 import type {
   ProcessedArticle,
@@ -315,7 +316,8 @@ function renderArticlePart(partIndex: number): void {
   initializeHighlightManager(
     state.currentArticle.id,
     part.id,
-    state.highlightMode
+    state.highlightMode,
+    state.currentArticle.originalLanguage
   );
 
   // Update navigation
@@ -1963,164 +1965,16 @@ function switchHighlightMode(mode: HighlightMode): void {
 // Text-to-Speech
 // ============================================================================
 
-let currentSpeakingButton: HTMLElement | null = null;
-let isTTSActive = false; // Track TTS active state independently
-let currentTTSAbortController: AbortController | null = null; // Control current TTS execution
-
 /**
  * Handle pronounce button click with visual feedback
- * Uses abort controller to handle rapid switching between words
+ * Delegates to shared TTS handler
  */
 async function handlePronounceClick(
   button: HTMLElement,
   text: string,
   language?: string
 ): Promise<void> {
-  console.log('TTS: handlePronounceClick called for:', text.substring(0, 30));
-
-  // Check if clicking the same button (cancel action)
-  if (isTTSActive && currentSpeakingButton === button) {
-    console.log('TTS: Same button clicked, cancelling...');
-    // Cancel current TTS
-    if (currentTTSAbortController) {
-      currentTTSAbortController.abort();
-    }
-    isTTSActive = false;
-    removeSpeakingIndicators();
-    hideTTSRetryIndicator();
-    return;
-  }
-
-  // If switching words, abort the current TTS execution
-  if (currentTTSAbortController) {
-    console.log('TTS: Aborting previous TTS execution...');
-    currentTTSAbortController.abort();
-  }
-
-  // Create new abort controller for this execution
-  const abortController = new AbortController();
-  currentTTSAbortController = abortController;
-
-  try {
-    const { speak, stopSpeaking, isTTSSupported } = await import(
-      '../utils/tts-service.js'
-    );
-
-    // Check if aborted before proceeding
-    if (abortController.signal.aborted) {
-      console.log('TTS: Aborted before TTS check');
-      return;
-    }
-
-    if (!isTTSSupported()) {
-      showTooltip('Text-to-speech is not supported in your browser');
-      return;
-    }
-
-    // Stop any ongoing speech immediately
-    stopSpeaking();
-
-    // Check if aborted after stopping
-    if (abortController.signal.aborted) {
-      console.log('TTS: Aborted after stopping previous speech');
-      return;
-    }
-
-    // Remove speaking indicator from old button BEFORE adding to new button
-    // This prevents orphaned blue backgrounds when rapidly switching
-    removeSpeakingIndicators();
-
-    // Set TTS as active and update UI immediately
-    isTTSActive = true;
-    button.classList.add('speaking');
-    currentSpeakingButton = button;
-
-    // Show or update indicator immediately (this is synchronous)
-    showTTSRetryIndicator(text);
-
-    console.log('TTS: Starting speech for:', text.substring(0, 30));
-
-    // Speak the text with specified language
-    await speak(text, { language });
-
-    // Check if this execution was aborted during speech
-    if (abortController.signal.aborted) {
-      console.log('TTS: Aborted during speech');
-      return;
-    }
-
-    // TTS completed successfully - clean up only if this is still the current execution
-    if (currentTTSAbortController === abortController) {
-      console.log('TTS: Speech completed successfully');
-      isTTSActive = false;
-      hideTTSRetryIndicator();
-      removeSpeakingIndicators();
-      currentTTSAbortController = null;
-    }
-  } catch (error: unknown) {
-    // Check if this execution was aborted
-    if (abortController.signal.aborted) {
-      console.log('TTS: Execution was aborted, ignoring error');
-      return;
-    }
-
-    console.error('TTS error:', error);
-
-    // Check if it was cancelled
-    const ttsError = error as { type?: string; message?: string };
-    const wasCancelled = ttsError.type === 'cancelled';
-
-    // Only clean up if this is still the current execution
-    if (currentTTSAbortController === abortController) {
-      if (!wasCancelled) {
-        // Real error - clean up everything
-        isTTSActive = false;
-        hideTTSRetryIndicator();
-        removeSpeakingIndicators();
-        currentTTSAbortController = null;
-
-        // Show user-friendly error message
-        if (ttsError.message?.includes('after retries')) {
-          showTooltip(
-            'Speech failed after 3 attempts. Check console for details.'
-          );
-        } else if (ttsError.message?.includes('not supported')) {
-          showTooltip('Text-to-speech is not supported in your browser');
-        } else {
-          showTooltip('Speech synthesis failed');
-        }
-      } else {
-        // Cancelled - might be switching to another word, don't clean up
-        console.log('TTS: Speech was cancelled');
-      }
-    }
-  }
-}
-
-/**
- * Remove speaking indicators
- * Includes defensive cleanup to remove orphaned .speaking classes
- */
-function removeSpeakingIndicators(): void {
-  // Remove from tracked button
-  if (currentSpeakingButton) {
-    currentSpeakingButton.classList.remove('speaking');
-    currentSpeakingButton = null;
-  }
-
-  // Defensive: remove .speaking class from any orphaned elements
-  // This handles edge cases where rapid clicking might leave orphaned classes
-  const speakingElements = document.querySelectorAll('.speaking');
-  if (speakingElements.length > 0) {
-    console.log(
-      'TTS: Cleaning up',
-      speakingElements.length,
-      'orphaned .speaking classes'
-    );
-    speakingElements.forEach(el => {
-      el.classList.remove('speaking');
-    });
-  }
+  await pronounceText(button, text, language);
 }
 
 /**
@@ -2150,119 +2004,6 @@ function showTooltip(message: string): void {
     tooltip.style.animation = 'slideOut 0.3s ease-out';
     setTimeout(() => tooltip.remove(), 300);
   }, 3000);
-}
-
-let currentTTSRetryIndicator: HTMLElement | null = null;
-
-/**
- * Update TTS retry indicator content without recreating DOM element
- */
-function updateTTSRetryIndicator(text: string): void {
-  if (!currentTTSRetryIndicator) {
-    console.warn(
-      'TTS: Indicator reference exists but element not found, recreating...'
-    );
-    currentTTSRetryIndicator = null;
-    showTTSRetryIndicator(text);
-    return;
-  }
-
-  // Verify indicator is still in DOM
-  if (!document.body.contains(currentTTSRetryIndicator)) {
-    console.warn('TTS: Indicator not in DOM, recreating...');
-    currentTTSRetryIndicator = null;
-    showTTSRetryIndicator(text);
-    return;
-  }
-
-  const truncatedText = text.length > 30 ? text.substring(0, 30) + '...' : text;
-
-  // Update only the text content, preserving the DOM structure and event listeners
-  const messageElement =
-    currentTTSRetryIndicator.querySelector('.tts-retry-message');
-  if (messageElement) {
-    messageElement.textContent = `"${truncatedText}"`;
-    console.log('TTS: Updated indicator text to:', truncatedText);
-  } else {
-    console.warn('TTS: Message element not found, recreating indicator...');
-    currentTTSRetryIndicator.remove();
-    currentTTSRetryIndicator = null;
-    showTTSRetryIndicator(text);
-  }
-}
-
-/**
- * Show TTS retry indicator (creates new or updates existing)
- */
-function showTTSRetryIndicator(text: string): void {
-  console.log(
-    'TTS: showTTSRetryIndicator called with text:',
-    text.substring(0, 30)
-  );
-
-  // If indicator already exists, just update its content
-  if (currentTTSRetryIndicator) {
-    console.log('TTS: Indicator exists, updating...');
-    updateTTSRetryIndicator(text);
-    return;
-  }
-
-  console.log('TTS: Creating new indicator...');
-
-  // Create new indicator
-  const indicator = document.createElement('div');
-  indicator.className = 'tts-retry-indicator';
-
-  const truncatedText = text.length > 30 ? text.substring(0, 30) + '...' : text;
-
-  indicator.innerHTML = `
-    <div class="tts-retry-content">
-      <span class="tts-retry-icon">🔊</span>
-      <div class="tts-retry-text">
-        <div class="tts-retry-label">Speaking</div>
-        <div class="tts-retry-message">"${truncatedText}"</div>
-      </div>
-      <button class="tts-cancel-btn">Cancel</button>
-    </div>
-  `;
-
-  document.body.appendChild(indicator);
-  currentTTSRetryIndicator = indicator;
-
-  console.log('TTS: Indicator created and added to DOM');
-
-  // Add event listener to cancel button
-  const cancelBtn = indicator.querySelector('.tts-cancel-btn');
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', async () => {
-      console.log('TTS: Cancel button clicked');
-
-      // Abort current TTS execution
-      if (currentTTSAbortController) {
-        currentTTSAbortController.abort();
-        currentTTSAbortController = null;
-      }
-
-      // Stop TTS and clean up
-      isTTSActive = false;
-      const { stopSpeaking } = await import('../utils/tts-service.js');
-      stopSpeaking();
-      hideTTSRetryIndicator();
-      removeSpeakingIndicators();
-    });
-  }
-}
-
-/**
- * Hide TTS retry indicator
- */
-function hideTTSRetryIndicator(): void {
-  console.log('TTS: hideTTSRetryIndicator called');
-  if (currentTTSRetryIndicator) {
-    currentTTSRetryIndicator.remove();
-    currentTTSRetryIndicator = null;
-    console.log('TTS: Indicator removed from DOM');
-  }
 }
 
 // ============================================================================

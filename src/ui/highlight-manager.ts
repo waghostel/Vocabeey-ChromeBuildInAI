@@ -4,6 +4,7 @@
  */
 
 import type { VocabularyItem, SentenceItem, Highlight } from '../types';
+import { pronounceText } from './tts-handler';
 
 // ============================================================================
 // Types
@@ -25,6 +26,7 @@ interface HighlightData {
 let currentMode: HighlightMode = 'none';
 let currentArticleId: string | null = null;
 let currentPartId: string | null = null;
+let currentArticleLanguage: string | null = null;
 let highlights: Map<string, Highlight> = new Map();
 let pendingSelection: { text: string; range: Range; context: string } | null =
   null;
@@ -506,11 +508,13 @@ function handleGlobalMouseMove(event: MouseEvent): void {
 export function initializeHighlightManager(
   articleId: string,
   partId: string,
-  mode: HighlightMode = 'vocabulary'
+  mode: HighlightMode = 'vocabulary',
+  articleLanguage?: string
 ): void {
   currentArticleId = articleId;
   currentPartId = partId;
   currentMode = mode;
+  currentArticleLanguage = articleLanguage || null;
 
   // Setup selection listener
   document.addEventListener('mouseup', handleTextSelection);
@@ -1066,10 +1070,14 @@ async function handleVocabularyHighlight(
     type: 'vocabulary',
   });
 
-  // Add click listener - select the highlight
+  // Add click listener - pronounce the word
   highlightData.highlightElement.addEventListener('click', (e: Event) => {
     e.stopPropagation(); // Prevent event bubbling
-    selectHighlight(vocabItem.id, 'vocabulary', highlightData.highlightElement);
+    void pronounceText(
+      highlightData.highlightElement,
+      vocabItem.word,
+      currentArticleLanguage || undefined
+    );
   });
 
   // Add hover listener for translation popup with delay
@@ -1158,13 +1166,13 @@ async function handleSentenceHighlight(
     type: 'sentence',
   });
 
-  // Add click listener - select the highlight
+  // Add click listener - pronounce the sentence
   highlightData.highlightElement.addEventListener('click', (e: Event) => {
     e.stopPropagation(); // Prevent event bubbling
-    selectHighlight(
-      sentenceItem.id,
-      'sentence',
-      highlightData.highlightElement
+    void pronounceText(
+      highlightData.highlightElement,
+      sentenceItem.content,
+      currentArticleLanguage || undefined
     );
   });
 
@@ -2046,48 +2054,6 @@ export function showContextMenu(
 }
 
 /**
- * Pronounce text using Web Speech API
- */
-async function pronounceText(text: string): Promise<void> {
-  try {
-    const { speak, isTTSSupported } = await import('../utils/tts-service.js');
-
-    if (!isTTSSupported()) {
-      console.warn('Text-to-speech is not supported in this browser');
-      return;
-    }
-
-    // Get language from article metadata
-    const language = await getArticleLanguage();
-
-    await speak(text, { language });
-  } catch (error) {
-    console.error('TTS error:', error);
-  }
-}
-
-/**
- * Get the language of the current article
- */
-async function getArticleLanguage(): Promise<string | undefined> {
-  if (!currentArticleId) return undefined;
-
-  try {
-    // Get article from session storage
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    const tabId = tabs[0]?.id;
-    if (!tabId) return undefined;
-
-    const data = await chrome.storage.session.get(`article_${tabId}`);
-    const article = data[`article_${tabId}`];
-    return article?.originalLanguage;
-  } catch (error) {
-    console.error('Error getting article language:', error);
-    return undefined;
-  }
-}
-
-/**
  * Generate unique ID
  */
 function generateId(): string {
@@ -2127,7 +2093,13 @@ export async function handleSelectionContextMenuAction(
       }
       await handleSentenceHighlight(text, range);
     } else if (action === 'pronounce') {
-      await pronounceText(text);
+      // Create a temporary element for TTS feedback
+      const tempElement = document.createElement('span');
+      await pronounceText(
+        tempElement,
+        text,
+        currentArticleLanguage || undefined
+      );
     }
   } catch (error) {
     console.error('Error handling selection action:', error);
