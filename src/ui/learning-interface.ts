@@ -263,27 +263,23 @@ function renderLanguageBadge(
   // Set language code
   elements.languageCode.textContent = languageCode.toUpperCase();
 
-  // Determine confidence level and emoji
+  // Determine confidence level
   let confidenceClass: string;
-  let confidenceEmoji: string;
   let confidenceText: string;
 
   if (confidence >= 0.8) {
     confidenceClass = 'high-confidence';
-    confidenceEmoji = '✅';
     confidenceText = 'High confidence';
   } else if (confidence >= 0.5) {
     confidenceClass = 'medium-confidence';
-    confidenceEmoji = '⚠️';
     confidenceText = 'Medium confidence';
   } else {
     confidenceClass = 'low-confidence';
-    confidenceEmoji = '❓';
     confidenceText = 'Low confidence';
   }
 
-  // Set confidence indicator
-  elements.confidenceIndicator.textContent = confidenceEmoji;
+  // Hide confidence indicator (no emoji)
+  elements.confidenceIndicator.textContent = '';
 
   // Update badge class
   elements.languageBadge.className = `language-badge ${confidenceClass}`;
@@ -1599,20 +1595,6 @@ function showLanguageChangeConfirmation(languageName: string): void {
         <button class="btn-dismiss">Not now</button>
       </div>
     </div>
-  `;
-
-  confirmation.style.cssText = `
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    background: white;
-    border: 2px solid var(--primary-color);
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    z-index: 10000;
-    max-width: 400px;
-    animation: slideIn 0.3s ease-out;
   `;
 
   document.body.appendChild(confirmation);

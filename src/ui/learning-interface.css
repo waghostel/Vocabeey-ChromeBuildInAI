@@ -143,6 +143,8 @@ body.dark-mode {
   flex-wrap: wrap;
   font-size: 0.9rem;
   color: var(--text-secondary);
+  justify-content: flex-start;
+  align-items: center;
 }
 
 .article-url {
@@ -156,6 +158,7 @@ body.dark-mode {
 .language-badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   padding: 0.4rem 0.9rem;
   border-radius: 20px;
@@ -194,11 +197,16 @@ body.dark-mode {
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .confidence-indicator {
   font-size: 1.1rem;
   line-height: 1;
+  display: none;
 }
 
 /* Dark mode adjustments */
@@ -1262,7 +1270,23 @@ body.dark-mode .translation-popup {
    ============================================================================ */
 
 .language-change-confirmation {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: white;
+  border: 2px solid var(--primary-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 10000;
+  max-width: 400px;
   animation: slideInRight 0.3s ease-out;
+}
+
+body.dark-mode .language-change-confirmation {
+  background: #2c3e50;
+  border-color: var(--primary-color);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .language-change-confirmation .confirmation-content {
