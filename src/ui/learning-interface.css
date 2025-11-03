@@ -8,6 +8,14 @@
   box-sizing: border-box;
 }
 
+/* Emoji alignment fix - ensures emojis are vertically centered with text */
+.tab-icon,
+.card-action-btn,
+.pronounce-btn,
+.pronounce-btn-translation {
+  vertical-align: middle;
+}
+
 :root {
   --primary-color: #4a90e2;
   --primary-hover: #357abd;
@@ -89,12 +97,13 @@ body.dark-mode {
 
 .tab-icon {
   font-size: 1.2rem;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 1.2rem;
   height: 1.2rem;
   line-height: 1;
+  vertical-align: middle;
 }
 
 /* ============================================================================
@@ -547,6 +556,11 @@ body.dark-mode .paragraph-copy-btn svg {
   padding: 0.25rem;
   opacity: 0.6;
   transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 1;
 }
 
 .card-action-btn:hover {
@@ -573,6 +587,11 @@ body.dark-mode .paragraph-copy-btn svg {
   transition: var(--transition);
   padding: 0.25rem;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 1;
 }
 
 .pronounce-btn-translation:hover {

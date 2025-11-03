@@ -780,6 +780,32 @@ export class ChromeTranslator {
     const operationId = `trans_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const startTime = Date.now();
 
+    // Check if source and target languages are the same
+    if (sourceLanguage === targetLanguage) {
+      console.log(
+        `[ChromeTranslator] Same language detected (${sourceLanguage} -> ${targetLanguage}), returning original text`
+      );
+
+      // Log for debugging purposes
+      this.debugger.logTranslation({
+        timestamp: startTime,
+        operationId,
+        text,
+        sourceLanguage,
+        targetLanguage,
+        context: context || 'none',
+        attempts: 0,
+        success: true,
+        result: text,
+        duration: Date.now() - startTime,
+        cacheHit: false,
+        sessionReused: false,
+        sameLanguage: true,
+      });
+
+      return text;
+    }
+
     // Check cache first
     const cacheKey = this.getCacheKey(text, sourceLanguage, targetLanguage);
     const cached = this.translationCache.get(cacheKey);
@@ -926,6 +952,15 @@ export class ChromeTranslator {
     onChunk: (chunk: string) => void
   ): Promise<string> {
     try {
+      // Check if source and target languages are the same
+      if (sourceLanguage === targetLanguage) {
+        console.log(
+          `[ChromeTranslator] Same language detected in streaming translate (${sourceLanguage} -> ${targetLanguage}), returning original text`
+        );
+        onChunk(text);
+        return text;
+      }
+
       const translator = await this.getTranslator(
         sourceLanguage,
         targetLanguage
@@ -970,6 +1005,18 @@ export class ChromeTranslator {
           'invalid_input',
           `Batch size exceeds maximum of ${this.maxBatchSize}`
         );
+      }
+
+      // Check if source and target languages are the same
+      if (sourceLanguage === targetLanguage) {
+        console.log(
+          `[ChromeTranslator] Same language detected in batch translate (${sourceLanguage} -> ${targetLanguage}), returning original texts`
+        );
+        return requests.map(req => ({
+          original: req.text,
+          translation: req.text,
+          context: req.context,
+        }));
       }
 
       // Check cache for each request

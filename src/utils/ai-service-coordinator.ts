@@ -123,6 +123,14 @@ export class AIServiceCoordinator implements AIProcessor, AIServiceManager {
    * Translate text with fallback
    */
   async translateText(text: string, from: string, to: string): Promise<string> {
+    // Check if source and target languages are the same
+    if (from === to) {
+      console.log(
+        `[AIServiceCoordinator] Same language detected (${from} -> ${to}), returning original text`
+      );
+      return text;
+    }
+
     return this.processWithFallback('translation', { text, from, to });
   }
 

@@ -273,6 +273,14 @@ ${text}`;
    */
   async translateText(text: string, from: string, to: string): Promise<string> {
     try {
+      // Check if source and target languages are the same
+      if (from === to) {
+        console.log(
+          `[GeminiAPI] Same language detected (${from} -> ${to}), returning original text`
+        );
+        return text;
+      }
+
       await this.rateLimiter.waitForSlot();
 
       const prompt = `Translate the following text from ${from} to ${to}. Provide ONLY the translation, no explanations.

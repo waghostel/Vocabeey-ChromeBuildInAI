@@ -13,6 +13,7 @@ export interface TranslationDebugInfo {
   cacheHit: boolean;
   apiAvailability?: string;
   sessionReused: boolean;
+  sameLanguage?: boolean;
 }
 
 export class TranslationDebugger {

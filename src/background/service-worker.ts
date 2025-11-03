@@ -697,6 +697,14 @@ async function handleTranslateText(payload: {
           : 'settings',
     });
 
+    // Check if source and target languages are the same
+    if (sourceLanguage === targetLanguage) {
+      console.log(
+        'Same language detected - skipping translation and returning original text'
+      );
+      return payload.text;
+    }
+
     // Route translation to offscreen document where Chrome AI APIs are available
     try {
       // Execute translation task in offscreen document
