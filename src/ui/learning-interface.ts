@@ -398,8 +398,8 @@ function addCopyButtonsToParagraphs(): void {
     });
 
     // Add right-click context menu handler
-    paragraph.addEventListener('contextmenu', e => {
-      const target = e.target as HTMLElement;
+    const contextMenuHandler = (e: Event) => {
+      const target = (e as MouseEvent).target as HTMLElement;
 
       // Check if click is on a highlight element
       const isHighlight =
@@ -416,7 +416,13 @@ function addCopyButtonsToParagraphs(): void {
       // Only show paragraph menu if clicking on plain text
       e.preventDefault();
       showParagraphContextMenu(paragraph, e as MouseEvent);
-    });
+    };
+
+    // Store reference to handler for later removal during edit mode
+    (paragraph as any)._paragraphContextMenuHandler = contextMenuHandler;
+
+    // Add listener
+    paragraph.addEventListener('contextmenu', contextMenuHandler);
 
     // Append to paragraph
     paragraph.appendChild(copyBtn);
@@ -644,6 +650,13 @@ async function enableEditMode(paragraph: HTMLElement): Promise<void> {
   const copyBtn = paragraph.querySelector('.paragraph-copy-btn') as HTMLElement;
   if (copyBtn) {
     copyBtn.style.display = 'none';
+  }
+
+  // Remove paragraph context menu handler to disable it during edit mode
+  const paragraphContextMenuHandler = (paragraph as any)
+    ._paragraphContextMenuHandler;
+  if (paragraphContextMenuHandler) {
+    paragraph.removeEventListener('contextmenu', paragraphContextMenuHandler);
   }
 
   // Focus paragraph
@@ -1129,6 +1142,16 @@ function exitEditMode(): void {
     copyBtn.style.display = '';
   }
 
+  // Restore paragraph context menu handler
+  const paragraphContextMenuHandler = (editingParagraph as any)
+    ._paragraphContextMenuHandler;
+  if (paragraphContextMenuHandler) {
+    editingParagraph.addEventListener(
+      'contextmenu',
+      paragraphContextMenuHandler
+    );
+  }
+
   // Remove keyboard handler
   const keyHandler = (editingParagraph as any)._editKeyHandler;
   if (keyHandler) {
@@ -1136,10 +1159,11 @@ function exitEditMode(): void {
     delete (editingParagraph as any)._editKeyHandler;
   }
 
-  // Remove context menu handler
-  const contextMenuHandler = (editingParagraph as any)._editContextMenuHandler;
-  if (contextMenuHandler) {
-    editingParagraph.removeEventListener('contextmenu', contextMenuHandler);
+  // Remove edit mode context menu handler
+  const editContextMenuHandler = (editingParagraph as any)
+    ._editContextMenuHandler;
+  if (editContextMenuHandler) {
+    editingParagraph.removeEventListener('contextmenu', editContextMenuHandler);
     delete (editingParagraph as any)._editContextMenuHandler;
   }
 
