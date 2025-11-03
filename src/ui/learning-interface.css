@@ -429,7 +429,7 @@ body.dark-mode {
 
 .card-action-btn:hover {
   opacity: 1;
-  transform: scale(1.1);
+  transform: scale(1.05);
 }
 
 .card-translation {
@@ -719,7 +719,7 @@ body.dark-mode {
 .sentence-learning-content.speaking {
   background: var(--primary-color);
   color: white;
-  animation: pulse 1s infinite;
+  /* No animation - only color change to avoid disturbing reading */
 }
 
 .sentence-learning-translation {
@@ -743,7 +743,7 @@ body.dark-mode {
 .sentence-learning-translation.speaking {
   background: var(--primary-color);
   color: white;
-  animation: pulse 1s infinite;
+  /* No animation - only color change to avoid disturbing reading */
 }
 
 /* ============================================================================
@@ -1296,7 +1296,7 @@ body.dark-mode .translation-popup {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.1);
+    transform: scale(1.02);
   }
 }
 

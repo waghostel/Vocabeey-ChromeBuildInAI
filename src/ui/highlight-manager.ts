@@ -1234,9 +1234,150 @@ function createHighlight(
 }
 
 /**
- * Get context around selection
+ * Configuration for context extraction
  */
-function getContext(range: Range, maxLength: number): string {
+const CONTEXT_CONFIG = {
+  maxWordsLeft: 200, // Maximum words to include on the left side
+  maxWordsRight: 200, // Maximum words to include on the right side
+  stopAtSentenceBoundary: true, // Stop at sentence-ending punctuation
+};
+
+/**
+ * Check if character is a sentence-ending punctuation
+ * Supports multiple languages: Latin, CJK, Devanagari, Arabic
+ */
+function isSentenceEndPunctuation(char: string): boolean {
+  // Latin: . ! ?
+  // CJK (Chinese/Japanese): 。！？
+  // Devanagari (Hindi): । ॥
+  // Arabic: . ؟ !
+  return /[.!?。！？।॥؟]/.test(char);
+}
+
+/**
+ * Split text into words (handles multiple languages)
+ * For CJK languages, each character is treated as a word
+ */
+function splitIntoWords(text: string): string[] {
+  // Check if text contains CJK characters
+  const hasCJK = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff]/.test(text);
+
+  if (hasCJK) {
+    // For CJK text, split into characters
+    return text.split('');
+  } else {
+    // For other languages, split by whitespace and filter empty strings
+    return text.split(/\s+/).filter(word => word.length > 0);
+  }
+}
+
+/**
+ * Find context boundary moving backward (left) from position
+ * Counts words and stops at sentence boundary or word limit
+ */
+function findContextBoundaryLeft(
+  text: string,
+  startPos: number,
+  maxWords: number
+): number {
+  // Get text from start to startPos
+  const textBefore = text.substring(0, startPos);
+
+  // Find the last sentence boundary before startPos
+  let lastSentenceBoundary = -1;
+  for (let i = textBefore.length - 1; i >= 0; i--) {
+    if (isSentenceEndPunctuation(textBefore[i])) {
+      // Check if this is followed by whitespace (to avoid abbreviations)
+      if (i + 1 < textBefore.length && /\s/.test(textBefore[i + 1])) {
+        lastSentenceBoundary = i + 1; // Position after punctuation
+        break;
+      }
+    }
+  }
+
+  // If we found a sentence boundary and config says to stop there
+  if (CONTEXT_CONFIG.stopAtSentenceBoundary && lastSentenceBoundary !== -1) {
+    // Count words from sentence boundary to startPos
+    const textSegment = textBefore.substring(lastSentenceBoundary, startPos);
+    const words = splitIntoWords(textSegment);
+
+    if (words.length <= maxWords) {
+      // Sentence is within word limit, use sentence boundary
+      return lastSentenceBoundary;
+    }
+  }
+
+  // No sentence boundary or too many words, count back maxWords
+  const words = splitIntoWords(textBefore);
+  if (words.length <= maxWords) {
+    // All text before is within limit
+    return 0;
+  }
+
+  // Take last maxWords words
+  const wordsToInclude = words.slice(-maxWords);
+  const contextText = wordsToInclude.join(' ');
+
+  // Find where this context starts in the original text
+  const contextStart = textBefore.lastIndexOf(contextText);
+  return contextStart !== -1 ? contextStart : 0;
+}
+
+/**
+ * Find context boundary moving forward (right) from position
+ * Counts words and stops at sentence boundary or word limit
+ */
+function findContextBoundaryRight(
+  text: string,
+  startPos: number,
+  maxWords: number
+): number {
+  // Get text from startPos to end
+  const textAfter = text.substring(startPos);
+
+  // Find the first sentence boundary after startPos
+  let firstSentenceBoundary = -1;
+  for (let i = 0; i < textAfter.length; i++) {
+    if (isSentenceEndPunctuation(textAfter[i])) {
+      firstSentenceBoundary = i + 1; // Position after punctuation
+      break;
+    }
+  }
+
+  // If we found a sentence boundary and config says to stop there
+  if (CONTEXT_CONFIG.stopAtSentenceBoundary && firstSentenceBoundary !== -1) {
+    // Count words from startPos to sentence boundary
+    const textSegment = textAfter.substring(0, firstSentenceBoundary);
+    const words = splitIntoWords(textSegment);
+
+    if (words.length <= maxWords) {
+      // Sentence is within word limit, use sentence boundary
+      return startPos + firstSentenceBoundary;
+    }
+  }
+
+  // No sentence boundary or too many words, count forward maxWords
+  const words = splitIntoWords(textAfter);
+  if (words.length <= maxWords) {
+    // All text after is within limit
+    return text.length;
+  }
+
+  // Take first maxWords words
+  const wordsToInclude = words.slice(0, maxWords);
+  const contextText = wordsToInclude.join(' ');
+
+  // Find where this context ends in the original text
+  const contextEnd = text.indexOf(contextText, startPos) + contextText.length;
+  return contextEnd !== -1 ? contextEnd : text.length;
+}
+
+/**
+ * Get context around selection with word-based boundary detection
+ * Extends up to maxWordsLeft/maxWordsRight words, stopping at sentence boundaries
+ * Note: maxLength parameter is kept for backward compatibility but not used
+ */
+function getContext(range: Range, _maxLength: number): string {
   const container = range.commonAncestorContainer;
   const parent =
     container.nodeType === Node.TEXT_NODE
@@ -1248,17 +1389,34 @@ function getContext(range: Range, maxLength: number): string {
   const fullText = parent.textContent || '';
   const selectedText = range.toString();
   const startIndex = fullText.indexOf(selectedText);
+  const endIndex = startIndex + selectedText.length;
 
-  if (startIndex === -1) return fullText.substring(0, maxLength);
+  if (startIndex === -1) return '';
 
-  // Get context before and after
-  const contextStart = Math.max(0, startIndex - maxLength / 2);
-  const contextEnd = Math.min(
-    fullText.length,
-    startIndex + selectedText.length + maxLength / 2
+  // Find context boundaries using word-based counting
+  const contextStart = findContextBoundaryLeft(
+    fullText,
+    startIndex,
+    CONTEXT_CONFIG.maxWordsLeft
   );
 
-  return fullText.substring(contextStart, contextEnd);
+  const contextEnd = findContextBoundaryRight(
+    fullText,
+    endIndex,
+    CONTEXT_CONFIG.maxWordsRight
+  );
+
+  // Extract and trim the context
+  let context = fullText.substring(contextStart, contextEnd).trim();
+
+  // Remove leading/trailing punctuation that might be artifacts (but not sentence-ending punctuation)
+  context = context.replace(/^[,;:]\s*/, '');
+
+  // Don't remove trailing sentence punctuation as it's intentional
+  // Only remove trailing commas, semicolons, colons
+  context = context.replace(/\s*[,;:]$/, '');
+
+  return context;
 }
 
 /**
