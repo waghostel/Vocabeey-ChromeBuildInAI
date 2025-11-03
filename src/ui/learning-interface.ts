@@ -1238,6 +1238,38 @@ async function handleContextMenuAction(event: Event): Promise<void> {
         }
       }
     }
+  } else if (action === 'change-to-sentence') {
+    // Convert vocabulary to sentence
+    const { convertVocabularyToSentence } = await import(
+      './highlight-manager.js'
+    );
+    await convertVocabularyToSentence(itemId);
+
+    // Reload vocabulary and sentences to reflect changes
+    if (state.currentArticle) {
+      await loadVocabularyAndSentences(state.currentArticle.id);
+      const part = state.currentArticle.parts[state.currentPartIndex];
+      if (part) {
+        renderPartVocabularyCards(part);
+        renderPartSentenceCards(part);
+      }
+    }
+  } else if (action === 'change-to-vocabulary') {
+    // Convert sentence to vocabulary
+    const { convertSentenceToVocabulary } = await import(
+      './highlight-manager.js'
+    );
+    await convertSentenceToVocabulary(itemId);
+
+    // Reload vocabulary and sentences to reflect changes
+    if (state.currentArticle) {
+      await loadVocabularyAndSentences(state.currentArticle.id);
+      const part = state.currentArticle.parts[state.currentPartIndex];
+      if (part) {
+        renderPartVocabularyCards(part);
+        renderPartSentenceCards(part);
+      }
+    }
   } else if (action === 'pronounce') {
     // Get the highlight element and pronounce its text
     const highlightElement = document.querySelector(

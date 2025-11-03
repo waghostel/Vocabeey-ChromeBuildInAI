@@ -1732,6 +1732,12 @@ function showSelectionContextMenu(
   const addSentenceBtn = contextMenu.querySelector(
     '[data-action="add-sentence"]'
   ) as HTMLElement;
+  const changeToSentenceBtn = contextMenu.querySelector(
+    '[data-action="change-to-sentence"]'
+  ) as HTMLElement;
+  const changeToVocabBtn = contextMenu.querySelector(
+    '[data-action="change-to-vocabulary"]'
+  ) as HTMLElement;
   const pronounceBtn = contextMenu.querySelector(
     '[data-action="pronounce"]'
   ) as HTMLElement;
@@ -1739,6 +1745,8 @@ function showSelectionContextMenu(
   if (removeBtn) removeBtn.style.display = 'none';
   if (addVocabBtn) addVocabBtn.style.display = 'block';
   if (addSentenceBtn) addSentenceBtn.style.display = 'block';
+  if (changeToSentenceBtn) changeToSentenceBtn.style.display = 'none';
+  if (changeToVocabBtn) changeToVocabBtn.style.display = 'none';
   if (pronounceBtn) pronounceBtn.style.display = 'block';
 
   contextMenu.classList.remove('hidden');
@@ -1810,6 +1818,12 @@ export function showContextMenu(
   const addSentenceBtn = contextMenu.querySelector(
     '[data-action="add-sentence"]'
   ) as HTMLElement;
+  const changeToSentenceBtn = contextMenu.querySelector(
+    '[data-action="change-to-sentence"]'
+  ) as HTMLElement;
+  const changeToVocabBtn = contextMenu.querySelector(
+    '[data-action="change-to-vocabulary"]'
+  ) as HTMLElement;
   const pronounceBtn = contextMenu.querySelector(
     '[data-action="pronounce"]'
   ) as HTMLElement;
@@ -1818,6 +1832,15 @@ export function showContextMenu(
   if (addVocabBtn) addVocabBtn.style.display = 'none';
   if (addSentenceBtn) addSentenceBtn.style.display = 'none';
   if (pronounceBtn) pronounceBtn.style.display = 'block';
+
+  // Show conversion options based on type
+  if (type === 'vocabulary') {
+    if (changeToSentenceBtn) changeToSentenceBtn.style.display = 'block';
+    if (changeToVocabBtn) changeToVocabBtn.style.display = 'none';
+  } else if (type === 'sentence') {
+    if (changeToSentenceBtn) changeToSentenceBtn.style.display = 'none';
+    if (changeToVocabBtn) changeToVocabBtn.style.display = 'block';
+  }
 
   contextMenu.classList.remove('hidden');
 
@@ -2045,4 +2068,192 @@ function hideRetryButton(): void {
   if (retryButton) {
     retryButton.remove();
   }
+}
+
+// ============================================================================
+// Conversion Functions
+// ============================================================================
+
+/**
+ * Convert a vocabulary item to a sentence item
+ */
+export async function convertVocabularyToSentence(
+  vocabularyId: string
+): Promise<void> {
+  try {
+    // Get vocabulary item from storage
+    const data = await chrome.storage.local.get('vocabulary');
+    const vocabulary: Record<string, VocabularyItem> = data.vocabulary || {};
+    const vocabItem = vocabulary[vocabularyId];
+
+    if (!vocabItem) {
+      console.error('Vocabulary item not found:', vocabularyId);
+      return;
+    }
+
+    // Create new sentence item
+    const sentenceItem: SentenceItem = {
+      id: generateId(),
+      content: vocabItem.word,
+      translation: vocabItem.translation,
+      articleId: vocabItem.articleId,
+      partId: vocabItem.partId,
+      createdAt: new Date(),
+    };
+
+    // Get sentences from storage
+    const sentenceData = await chrome.storage.local.get('sentences');
+    const sentences: Record<string, SentenceItem> =
+      sentenceData.sentences || {};
+
+    // Add new sentence
+    sentences[sentenceItem.id] = sentenceItem;
+
+    // Remove vocabulary item
+    delete vocabulary[vocabularyId];
+
+    // Update storage
+    await chrome.storage.local.set({ vocabulary, sentences });
+
+    // Update DOM highlights
+    updateHighlightType(
+      vocabularyId,
+      'vocabulary',
+      sentenceItem.id,
+      'sentence'
+    );
+
+    // Update highlights map
+    highlights.delete(vocabularyId);
+    highlights.set(sentenceItem.id, {
+      id: sentenceItem.id,
+      text: sentenceItem.content,
+      startOffset: 0,
+      endOffset: sentenceItem.content.length,
+      type: 'sentence',
+    });
+
+    // Dispatch events for UI updates
+    dispatchHighlightEvent('vocabulary-removed', { id: vocabularyId });
+    dispatchHighlightEvent('sentence-added', sentenceItem);
+
+    console.log('Converted vocabulary to sentence:', vocabItem.word);
+  } catch (error) {
+    console.error('Error converting vocabulary to sentence:', error);
+  }
+}
+
+/**
+ * Convert a sentence item to a vocabulary item
+ */
+export async function convertSentenceToVocabulary(
+  sentenceId: string
+): Promise<void> {
+  try {
+    // Get sentence item from storage
+    const data = await chrome.storage.local.get('sentences');
+    const sentences: Record<string, SentenceItem> = data.sentences || {};
+    const sentenceItem = sentences[sentenceId];
+
+    if (!sentenceItem) {
+      console.error('Sentence item not found:', sentenceId);
+      return;
+    }
+
+    // Create new vocabulary item
+    const vocabItem: VocabularyItem = {
+      id: generateId(),
+      word: sentenceItem.content,
+      translation: sentenceItem.translation,
+      context: sentenceItem.content,
+      exampleSentences: [],
+      articleId: sentenceItem.articleId,
+      partId: sentenceItem.partId,
+      createdAt: new Date(),
+      lastReviewed: new Date(),
+      reviewCount: 0,
+      difficulty: 5,
+    };
+
+    // Get vocabulary from storage
+    const vocabData = await chrome.storage.local.get('vocabulary');
+    const vocabulary: Record<string, VocabularyItem> =
+      vocabData.vocabulary || {};
+
+    // Add new vocabulary
+    vocabulary[vocabItem.id] = vocabItem;
+
+    // Remove sentence item
+    delete sentences[sentenceId];
+
+    // Update storage
+    await chrome.storage.local.set({ vocabulary, sentences });
+
+    // Update DOM highlights
+    updateHighlightType(sentenceId, 'sentence', vocabItem.id, 'vocabulary');
+
+    // Update highlights map
+    highlights.delete(sentenceId);
+    highlights.set(vocabItem.id, {
+      id: vocabItem.id,
+      text: vocabItem.word,
+      startOffset: 0,
+      endOffset: vocabItem.word.length,
+      type: 'vocabulary',
+    });
+
+    // Dispatch events for UI updates
+    dispatchHighlightEvent('sentence-removed', { id: sentenceId });
+    dispatchHighlightEvent('vocabulary-added', vocabItem);
+
+    console.log('Converted sentence to vocabulary:', sentenceItem.content);
+  } catch (error) {
+    console.error('Error converting sentence to vocabulary:', error);
+  }
+}
+
+/**
+ * Update highlight type in DOM
+ */
+function updateHighlightType(
+  oldId: string,
+  oldType: 'vocabulary' | 'sentence',
+  newId: string,
+  newType: 'vocabulary' | 'sentence'
+): void {
+  // Find all elements with the old highlight ID
+  const highlightElements = document.querySelectorAll(
+    `[data-highlight-id="${oldId}"]`
+  );
+
+  highlightElements.forEach(element => {
+    const el = element as HTMLElement;
+
+    // Update data attributes
+    el.setAttribute('data-highlight-id', newId);
+    el.setAttribute('data-highlight-type', newType);
+
+    // Update CSS classes
+    el.classList.remove(`highlight-${oldType}`);
+    el.classList.add(`highlight-${newType}`);
+
+    // Re-attach event listeners for the new type
+    // Remove old listeners by cloning the element
+    const newElement = el.cloneNode(true) as HTMLElement;
+    el.parentNode?.replaceChild(newElement, el);
+
+    // Add new context menu listener
+    newElement.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      showContextMenu(newElement, newId, newType);
+    });
+
+    // Add click listener for selection in None mode
+    newElement.addEventListener('click', e => {
+      if (currentMode === 'none') {
+        e.stopPropagation();
+        selectHighlight(newId, newType, newElement);
+      }
+    });
+  });
 }

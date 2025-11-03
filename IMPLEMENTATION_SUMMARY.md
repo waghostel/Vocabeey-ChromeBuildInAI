@@ -1,114 +1,147 @@
-# Context Menu for None Mode - Implementation Summary
+# Context Menu Conversion Feature - Implementation Summary
 
 ## Overview
 
-Successfully implemented context menu functionality for "None" mode in the language learning extension. Users can now select text in None mode and get a context menu with options to add the selection as vocabulary or sentence.
+Added "Change to Sentence" and "Change to Vocabulary" options to the context menu that appears when right-clicking on highlighted vocabulary or sentence items in the reading interface.
 
 ## Changes Made
 
-### 1. HTML Updates (`src/ui/learning-interface.html`)
+### 1. HTML Structure (`src/ui/learning-interface.html`)
 
-- Added new context menu items:
-  - "Add as Vocabulary" - for adding selected text as vocabulary
-  - "Add as Sentence" - for adding selected text as sentence
-  - "Pronounce" - for text-to-speech of selected text
-- These items are shown/hidden dynamically based on context
+- Added two new context menu items:
+  - `<button class="context-menu-item" data-action="change-to-sentence">Change to Sentence</button>`
+  - `<button class="context-menu-item" data-action="change-to-vocabulary">Change to Vocabulary</button>`
 
-### 2. Highlight Manager (`src/ui/highlight-manager.ts`)
+### 2. Context Menu Display Logic (`src/ui/highlight-manager.ts`)
 
-#### New State Variable
+#### Updated `showContextMenu()` function:
 
-- `pendingSelection`: Stores the selected text, range, and context when user selects text in None mode
+- Added references to the new menu items
+- Implemented conditional display logic:
+  - When right-clicking on **vocabulary**: shows "Remove", "Pronounce", and "Change to Sentence"
+  - When right-clicking on **sentence**: shows "Remove", "Pronounce", and "Change to Vocabulary"
+  - Hides the inappropriate conversion option for each type
 
-#### Modified Functions
+#### Updated `showSelectionContextMenu()` function:
 
-- **`handleTextSelection()`**: Now handles None mode by calling `handleNoneModeSelection()` instead of returning early
+- Added references to the new menu items
+- Ensures conversion options are hidden when showing menu for new text selections (None mode)
 
-#### New Functions
+#### Added Conversion Functions:
 
-- **`handleNoneModeSelection()`**: Captures text selection in None mode and shows context menu
-- **`showSelectionContextMenu()`**: Displays context menu with "Add as Vocabulary", "Add as Sentence", and "Pronounce" options
-- **`handleSelectionContextMenuAction()`**: Processes user's choice from context menu (exported for use in learning-interface.ts)
+**`convertVocabularyToSentence(vocabularyId: string)`**
 
-#### Updated Functions
+- Retrieves vocabulary item from storage
+- Creates new sentence item with:
+  - Same text (word as content)
+  - Same translation
+  - Same articleId and partId
+  - New unique ID
+- Removes vocabulary item from storage
+- Updates DOM highlight attributes (changes type from vocabulary to sentence)
+- Updates internal highlights map
+- Dispatches events for UI updates
 
-- **`showContextMenu()`**: Now dynamically shows/hides menu items based on whether it's for an existing highlight or a new selection
+**`convertSentenceToVocabulary(sentenceId: string)`**
 
-### 3. Learning Interface (`src/ui/learning-interface.ts`)
+- Retrieves sentence item from storage
+- Creates new vocabulary item with:
+  - Sentence content as word
+  - Same translation
+  - Context set to sentence content
+  - Empty exampleSentences array
+  - Same articleId and partId
+  - New unique ID
+  - Default values (difficulty: 5, reviewCount: 0)
+- Removes sentence item from storage
+- Updates DOM highlight attributes (changes type from sentence to vocabulary)
+- Updates internal highlights map
+- Dispatches events for UI updates
 
-#### Modified Functions
+**`updateHighlightType(oldId, oldType, newId, newType)`**
 
-- **`handleContextMenuAction()`**: Enhanced to handle both:
-  - Selection context menu (None mode) - routes to `handleSelectionContextMenuAction()`
-  - Existing highlight context menu - handles remove and pronounce actions
+- Finds all DOM elements with the old highlight ID
+- Updates data attributes (data-highlight-id, data-highlight-type)
+- Updates CSS classes (removes old type class, adds new type class)
+- Re-attaches event listeners for the new type:
+  - Context menu listener
+  - Click listener for None mode selection
+
+### 3. Action Handler (`src/ui/learning-interface.ts`)
+
+#### Updated `handleContextMenuAction()` function:
+
+- Added handlers for 'change-to-sentence' and 'change-to-vocabulary' actions
+- Imports conversion functions from highlight-manager
+- Calls appropriate conversion function based on action
+- Reloads vocabulary and sentences from storage after conversion
+- Re-renders both vocabulary and sentence card sections to reflect changes
 
 ## How It Works
 
-### User Flow in None Mode:
+### User Flow:
 
-1. User switches to "None" mode (no automatic highlighting)
-2. User selects text in the article
-3. Context menu appears at cursor position with options:
-   - **Add as Vocabulary**: Validates (1-3 words), creates vocabulary highlight
-   - **Add as Sentence**: Validates (min 10 chars), creates sentence highlight
-   - **Pronounce**: Speaks the selected text using TTS
-4. After action, selection is cleared and menu disappears
+1. User right-clicks on a highlighted vocabulary word or sentence in the article
+2. Context menu appears with appropriate options:
+   - For vocabulary: "Remove", "Change to Sentence", "Pronounce"
+   - For sentence: "Remove", "Change to Vocabulary", "Pronounce"
+3. User clicks on conversion option
+4. System converts the item:
+   - Updates storage (removes old item, adds new item)
+   - Updates DOM highlights (changes type and ID)
+   - Updates internal state
+   - Triggers UI re-render
+5. User sees the item moved to the appropriate section (vocabulary cards ↔ sentence cards)
 
-### User Flow for Existing Highlights:
+### Technical Details:
 
-1. User right-clicks on existing vocabulary/sentence highlight
-2. Context menu shows:
-   - **Remove**: Deletes the highlight and associated data
-   - **Pronounce**: Speaks the highlighted text
+- **Storage**: Uses Chrome's local storage API for persistence
+- **DOM Updates**: Modifies highlight element attributes and classes in-place
+- **Event System**: Uses custom events for UI synchronization
+- **ID Management**: Generates new unique IDs for converted items
+- **Translation Preservation**: Keeps existing translations to avoid re-translation overhead
 
 ## Benefits
 
-1. **Non-intrusive**: Users can read without accidental highlighting
-2. **Intentional**: Users explicitly choose what to highlight
-3. **Flexible**: Can add vocabulary or sentences from same selection
-4. **Consistent**: Uses same context menu pattern as existing highlights
-5. **Smart positioning**: Menu avoids viewport edges
-
-## Technical Details
-
-- Context menu positioning uses smart boundary detection
-- Selection range is cloned and preserved for later use
-- Menu items are dynamically shown/hidden based on context type
-- Proper cleanup of pending selection after action
-- Validation for vocabulary (1-3 words) and sentences (min 10 chars)
+1. **Flexibility**: Users can reclassify items if they initially chose the wrong type
+2. **No Data Loss**: Preserves translations and metadata during conversion
+3. **Seamless UX**: Updates happen instantly with visual feedback
+4. **Consistent State**: Ensures storage, DOM, and UI state remain synchronized
 
 ## Testing Recommendations
 
-1. Test text selection in None mode
-2. Verify context menu appears at correct position
-3. Test "Add as Vocabulary" with 1, 2, 3, and 4+ words
-4. Test "Add as Sentence" with short and long text
-5. Test "Pronounce" functionality
-6. Test context menu on existing highlights (Remove, Pronounce)
-7. Test menu positioning near viewport edges
-8. Test on mobile/touch devices
+1. Convert vocabulary to sentence and verify:
+   - Item appears in sentence cards section
+   - Item removed from vocabulary cards section
+   - DOM highlight changes color/style
+   - Storage updated correctly
+
+2. Convert sentence to vocabulary and verify:
+   - Item appears in vocabulary cards section
+   - Item removed from sentence cards section
+   - DOM highlight changes color/style
+   - Storage updated correctly
+
+3. Test edge cases:
+   - Very long vocabulary words
+   - Very short sentences
+   - Items with special characters
+   - Multiple conversions in sequence
+   - Conversion with overlapping highlights
+
+4. Test UI updates:
+   - Card sections re-render correctly
+   - Learning mode displays updated items
+   - Navigation between article parts maintains state
+
+## Files Modified
+
+1. `src/ui/learning-interface.html` - Added menu items
+2. `src/ui/highlight-manager.ts` - Added conversion logic and menu display updates
+3. `src/ui/learning-interface.ts` - Added action handlers
 
 ## Build Status
 
-✅ Build successful - no TypeScript errors
-✅ No linting issues
-✅ All diagnostics passed
-
-## Fix Applied: Native Context Menu Blocking Issue
-
-### Problem
-
-The browser's native context menu (Copy, Search Google, etc.) was appearing and blocking the custom context menu.
-
-### Solution
-
-- Added `contextmenu` event listener to intercept right-clicks
-- Calls `preventDefault()` to block native menu
-- Shows custom menu only on right-click (not on text selection)
-- Works for both None mode and existing highlights
-
-### Result
-
-✅ Only custom context menu appears
-✅ No native menu interference
-✅ Clean, professional user experience
+✅ TypeScript compilation successful
+✅ No diagnostic errors
+✅ Build completed successfully
