@@ -388,8 +388,9 @@ function handleNoneModeTextSelection(_event: MouseEvent | TouchEvent): void {
     return;
   }
 
-  const selectedText = selection.toString().trim();
-  if (!selectedText) {
+  const selectedText = selection.toString();
+  // Check if selection is empty (only whitespace) without modifying the text
+  if (!selectedText.trim()) {
     if (highlightsToDelete.length > 0) {
       clearBulkDeletePreview();
     }
@@ -587,8 +588,9 @@ function handleContextMenu(event: MouseEvent): void {
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed) return;
 
-  const selectedText = selection.toString().trim();
-  if (!selectedText) return;
+  const selectedText = selection.toString();
+  // Check if selection is empty (only whitespace) without modifying the text
+  if (!selectedText.trim()) return;
 
   // In None mode, prevent native context menu and show custom menu
   if (currentMode === 'none') {
@@ -743,8 +745,9 @@ async function handleTextSelection(
     return;
   }
 
-  const selectedText = selection.toString().trim();
-  if (!selectedText) {
+  const selectedText = selection.toString();
+  // Check if selection is empty (only whitespace) without modifying the text
+  if (!selectedText.trim()) {
     if (currentMode === 'none' && highlightsToDelete.length > 0) {
       clearBulkDeletePreview();
     }
@@ -986,6 +989,9 @@ async function handleVocabularyHighlight(
 ): Promise<void> {
   if (!currentArticleId || !currentPartId) return;
 
+  // Trim text for storage and translation, but preserve original for display
+  const trimmedText = text.trim();
+
   // Detect overlapping vocabulary highlights
   const overlappingIds = detectOverlappingVocabulary(range);
 
@@ -997,16 +1003,16 @@ async function handleVocabularyHighlight(
   // Get context (surrounding text)
   const context = getContext(range, 50);
 
-  // Create highlight
-  const highlightData = createHighlight(text, range, 'vocabulary');
+  // Create highlight with original text (preserves whitespace in DOM)
+  const highlightData = createHighlight(trimmedText, range, 'vocabulary');
 
-  // Translate the vocabulary
-  const translation = await translateVocabulary(text, context);
+  // Translate the vocabulary using trimmed text
+  const translation = await translateVocabulary(trimmedText, context);
 
-  // Create vocabulary item
+  // Create vocabulary item with trimmed text
   const vocabItem: VocabularyItem = {
     id: generateId(),
-    word: text,
+    word: trimmedText,
     translation: translation,
     context: context,
     exampleSentences: [],
@@ -1084,22 +1090,25 @@ async function handleSentenceHighlight(
 ): Promise<void> {
   if (!currentArticleId || !currentPartId) return;
 
+  // Trim text for storage and translation, but preserve original for display
+  const trimmedText = text.trim();
+
   // Validate sentence selection
-  if (text.length < 10) {
+  if (trimmedText.length < 10) {
     showTooltip('Please select a complete sentence', range);
     return;
   }
 
-  // Create highlight
-  const highlightData = createHighlight(text, range, 'sentence');
+  // Create highlight with trimmed text (preserves whitespace in DOM)
+  const highlightData = createHighlight(trimmedText, range, 'sentence');
 
-  // Translate the sentence
-  const translation = await translateSentence(text);
+  // Translate the sentence using trimmed text
+  const translation = await translateSentence(trimmedText);
 
-  // Create sentence item
+  // Create sentence item with trimmed text
   const sentenceItem: SentenceItem = {
     id: generateId(),
-    content: text,
+    content: trimmedText,
     translation: translation,
     articleId: currentArticleId,
     partId: currentPartId,
@@ -1185,41 +1194,126 @@ function createHighlight(
   // Get context before modifying DOM
   const context = getContext(range, 100);
 
-  // Check for trailing whitespace before extracting
-  const rangeText = range.toString();
-  const hasTrailingSpace = rangeText !== rangeText.trimEnd();
-  const trailingWhitespace = hasTrailingSpace
-    ? rangeText.slice(rangeText.trimEnd().length)
-    : '';
+  // Clone the range to preserve the original
+  const workingRange = range.cloneRange();
 
-  // Extract the contents of the range (may include existing highlights)
-  const fragment = range.extractContents();
+  // Get the text from the range to detect whitespace
+  const rangeText = workingRange.toString();
+  const trimmedText = rangeText.trim();
 
-  // Create new highlight span
+  // Calculate leading and trailing whitespace lengths
+  const leadingWhitespaceLength =
+    rangeText.length - rangeText.trimStart().length;
+  const trailingWhitespaceLength =
+    rangeText.length - rangeText.trimEnd().length;
+
+  // Adjust range boundaries to exclude leading whitespace
+  if (leadingWhitespaceLength > 0) {
+    const startContainer = workingRange.startContainer;
+    const startOffset = workingRange.startOffset;
+
+    if (startContainer.nodeType === Node.TEXT_NODE) {
+      // Move start position forward by the leading whitespace length
+      workingRange.setStart(
+        startContainer,
+        startOffset + leadingWhitespaceLength
+      );
+    } else {
+      // For element nodes, we need to find the text node and adjust
+      const walker = document.createTreeWalker(
+        startContainer,
+        NodeFilter.SHOW_TEXT,
+        null
+      );
+      let textNode = walker.nextNode();
+      if (textNode) {
+        workingRange.setStart(textNode, leadingWhitespaceLength);
+      }
+    }
+  }
+
+  // Adjust range boundaries to exclude trailing whitespace
+  if (trailingWhitespaceLength > 0) {
+    const endContainer = workingRange.endContainer;
+    const endOffset = workingRange.endOffset;
+
+    if (endContainer.nodeType === Node.TEXT_NODE) {
+      // Move end position backward by the trailing whitespace length
+      workingRange.setEnd(endContainer, endOffset - trailingWhitespaceLength);
+    } else {
+      // For element nodes, we need to find the text node and adjust
+      const walker = document.createTreeWalker(
+        endContainer,
+        NodeFilter.SHOW_TEXT,
+        null
+      );
+      let textNode = walker.nextNode();
+      if (textNode) {
+        const textContent = textNode.textContent || '';
+        workingRange.setEnd(
+          textNode,
+          textContent.length - trailingWhitespaceLength
+        );
+      }
+    }
+  }
+
+  // Create new highlight span before extracting to minimize reflow
   const highlight = document.createElement('span');
   highlight.className = highlightClass;
   highlight.setAttribute('data-highlight-type', type);
   highlight.setAttribute('data-highlight-text', text);
 
-  // Check if fragment contains existing highlights
-  const existingHighlights = fragment.querySelectorAll('[data-highlight-type]');
-
-  if (existingHighlights.length > 0) {
-    // Preserve existing highlights by wrapping them
-    highlight.appendChild(fragment);
-  } else {
-    // No existing highlights, just set text content
-    highlight.textContent = text;
-  }
-
-  // Insert the new highlight
+  // Batch DOM operations to prevent visual flicker
   try {
-    range.insertNode(highlight);
+    // Store the parent element to minimize reflows
+    const startContainer = workingRange.startContainer;
+    const parentElement = (
+      startContainer.nodeType === Node.TEXT_NODE
+        ? startContainer.parentElement
+        : startContainer
+    ) as HTMLElement;
 
-    // Restore trailing whitespace if it was present
-    if (trailingWhitespace) {
-      const whitespaceNode = document.createTextNode(trailingWhitespace);
-      highlight.parentNode?.insertBefore(whitespaceNode, highlight.nextSibling);
+    if (parentElement && parentElement.style) {
+      // Use CSS to hide the visual update during DOM manipulation
+      const originalVisibility = parentElement.style.visibility;
+      parentElement.style.visibility = 'hidden';
+
+      // Extract only the trimmed content (whitespace remains in DOM)
+      const fragment = workingRange.extractContents();
+
+      // Check if fragment contains existing highlights
+      const existingHighlights = fragment.querySelectorAll(
+        '[data-highlight-type]'
+      );
+
+      if (existingHighlights.length > 0) {
+        // Preserve existing highlights by wrapping them
+        highlight.appendChild(fragment);
+      } else {
+        // No existing highlights, just set text content
+        highlight.textContent = trimmedText;
+      }
+
+      // Insert the new highlight at the adjusted position
+      workingRange.insertNode(highlight);
+
+      // Restore visibility immediately (single reflow)
+      parentElement.style.visibility = originalVisibility;
+    } else {
+      // Fallback without visibility management
+      const fragment = workingRange.extractContents();
+      const existingHighlights = fragment.querySelectorAll(
+        '[data-highlight-type]'
+      );
+
+      if (existingHighlights.length > 0) {
+        highlight.appendChild(fragment);
+      } else {
+        highlight.textContent = trimmedText;
+      }
+
+      workingRange.insertNode(highlight);
     }
   } catch (error) {
     console.error('Error creating highlight:', error);
@@ -1228,7 +1322,7 @@ function createHighlight(
   return {
     text,
     context,
-    range,
+    range: workingRange,
     highlightElement: highlight,
   };
 }
