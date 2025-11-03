@@ -8,6 +8,7 @@
 
 ## Low
 
+[ ] Copy the vocabulary, Sentence and Copy ALL
 [ ] Create a sentence for each vocabularary
 [ ] Popup message when user doesn't have Chrome build-in AI tool installation
 [ ] Dark theme

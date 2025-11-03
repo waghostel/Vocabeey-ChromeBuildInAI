@@ -136,6 +136,30 @@ body.dark-mode {
   }
 }
 
+@keyframes blue-blink-bar {
+  0%,
+  100% {
+    background-color: rgba(74, 144, 226, 0.85);
+    box-shadow: 0 0 0 rgba(74, 144, 226, 0.4);
+  }
+  50% {
+    background-color: rgba(74, 144, 226, 1);
+    box-shadow: 0 0 12px rgba(74, 144, 226, 0.6);
+  }
+}
+
+@keyframes blue-blink-bar-dark {
+  0%,
+  100% {
+    background-color: rgba(93, 173, 226, 0.75);
+    box-shadow: 0 0 0 rgba(93, 173, 226, 0.3);
+  }
+  50% {
+    background-color: rgba(93, 173, 226, 0.95);
+    box-shadow: 0 0 12px rgba(93, 173, 226, 0.5);
+  }
+}
+
 /* ============================================================================
    Article Header
    ============================================================================ */
@@ -594,6 +618,28 @@ body.dark-mode .paragraph-copy-btn svg {
   gap: 0.5rem;
 }
 
+/* Reading mode card text speaking states */
+.card-word-text.speaking {
+  animation: blue-blink-bar 2s ease-in-out infinite;
+  background-color: rgba(74, 144, 226, 0.85);
+  color: white;
+  border-radius: 4px;
+}
+
+.card-translation-text.speaking {
+  animation: blue-blink-bar 2s ease-in-out infinite;
+  background-color: rgba(74, 144, 226, 0.85);
+  color: white;
+  border-radius: 4px;
+}
+
+.card-sentence-text.speaking {
+  animation: blue-blink-bar 2s ease-in-out infinite;
+  background-color: rgba(74, 144, 226, 0.85);
+  color: white;
+  border-radius: 4px;
+}
+
 .pronounce-btn-translation {
   background: none;
   border: none;
@@ -799,19 +845,20 @@ body.dark-mode .paragraph-copy-btn svg {
   border-radius: 6px;
 }
 
-.clickable-text:hover {
+.clickable-text:hover:not(.speaking) {
   background: var(--secondary-color);
   transform: scale(1.05);
 }
 
-.clickable-text:active {
+.clickable-text:active:not(.speaking) {
   transform: scale(0.98);
 }
 
 .clickable-text.speaking {
-  background: var(--primary-color);
+  animation: blue-blink-bar 2s ease-in-out infinite;
+  background-color: rgba(74, 144, 226, 0.85);
   color: white;
-  animation: pulse 1s infinite;
+  border-radius: 6px;
 }
 
 .vocab-learning-translation.hidden-lang {
@@ -865,18 +912,18 @@ body.dark-mode .paragraph-copy-btn svg {
   border-radius: 6px;
 }
 
-.sentence-learning-content:hover {
+.sentence-learning-content:hover:not(.speaking) {
   background: rgba(74, 144, 226, 0.1);
 }
 
-.sentence-learning-content:active {
+.sentence-learning-content:active:not(.speaking) {
   transform: scale(0.98);
 }
 
 .sentence-learning-content.speaking {
-  background: var(--primary-color);
+  animation: blue-blink-bar 2s ease-in-out infinite;
+  background-color: rgba(74, 144, 226, 0.85);
   color: white;
-  /* No animation - only color change to avoid disturbing reading */
 }
 
 .sentence-learning-translation {
@@ -889,18 +936,18 @@ body.dark-mode .paragraph-copy-btn svg {
   border-radius: 6px;
 }
 
-.sentence-learning-translation:hover {
+.sentence-learning-translation:hover:not(.speaking) {
   background: rgba(74, 144, 226, 0.1);
 }
 
-.sentence-learning-translation:active {
+.sentence-learning-translation:active:not(.speaking) {
   transform: scale(0.98);
 }
 
 .sentence-learning-translation.speaking {
-  background: var(--primary-color);
+  animation: blue-blink-bar 2s ease-in-out infinite;
+  background-color: rgba(74, 144, 226, 0.85);
   color: white;
-  /* No animation - only color change to avoid disturbing reading */
 }
 
 /* ============================================================================
@@ -1284,6 +1331,31 @@ body.dark-mode .translation-popup {
   }
 }
 
+/* Blue blinking bar animation for TTS pronunciation */
+@keyframes blue-blink-bar {
+  0%,
+  100% {
+    background-color: rgba(74, 144, 226, 0.85);
+    box-shadow: 0 0 6px rgba(74, 144, 226, 0.3);
+  }
+  50% {
+    background-color: rgba(74, 144, 226, 1);
+    box-shadow: 0 0 8px rgba(74, 144, 226, 0.5);
+  }
+}
+
+@keyframes blue-blink-bar-dark {
+  0%,
+  100% {
+    background-color: rgba(93, 173, 226, 0.8);
+    box-shadow: 0 0 6px rgba(93, 173, 226, 0.3);
+  }
+  50% {
+    background-color: rgba(93, 173, 226, 1);
+    box-shadow: 0 0 8px rgba(93, 173, 226, 0.5);
+  }
+}
+
 .tts-tooltip {
   position: fixed;
   top: 20px;
@@ -1468,6 +1540,20 @@ body.dark-mode .translation-popup {
 }
 .mb-4 {
   margin-bottom: 2rem;
+}
+
+/* ============================================================================
+   Dark Mode - Speaking States
+   ============================================================================ */
+
+body.dark-mode .clickable-text.speaking,
+body.dark-mode .sentence-learning-content.speaking,
+body.dark-mode .sentence-learning-translation.speaking,
+body.dark-mode .card-word-text.speaking,
+body.dark-mode .card-sentence-text.speaking,
+body.dark-mode .card-translation-text.speaking {
+  animation: blue-blink-bar-dark 0.8s ease-in-out infinite;
+  background-color: rgba(93, 173, 226, 0.75);
 }
 
 /* ============================================================================
@@ -2302,6 +2388,17 @@ body.dark-mode .highlight-mode-btn:disabled:hover {
 /* Dark mode hover effect for vocabulary cards */
 body.dark-mode .clickable-text:hover {
   background: #3d5a73;
+}
+
+/* Dark mode speaking state - blue blinking effect */
+body.dark-mode .clickable-text.speaking,
+body.dark-mode .sentence-learning-content.speaking,
+body.dark-mode .sentence-learning-translation.speaking,
+body.dark-mode .card-word-text.speaking,
+body.dark-mode .card-translation-text.speaking,
+body.dark-mode .card-sentence-text.speaking {
+  animation: blue-blink-bar-dark 2s ease-in-out infinite;
+  background-color: rgba(93, 173, 226, 0.8);
 }
 
 /* ============================================================================

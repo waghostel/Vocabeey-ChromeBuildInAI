@@ -1378,11 +1378,12 @@ function renderPartVocabularyCards(part: ArticlePart): void {
 
       // Original language speaker
       const pronounceBtn = card.querySelector('.pronounce-btn');
-      if (pronounceBtn) {
+      const wordTextElement = card.querySelector('.card-word-text');
+      if (pronounceBtn && wordTextElement) {
         pronounceBtn.addEventListener('click', e => {
           e.stopPropagation();
           void handlePronounceClick(
-            pronounceBtn as HTMLElement,
+            wordTextElement as HTMLElement,
             vocab.word,
             state.currentArticle?.originalLanguage
           );
@@ -1393,11 +1394,14 @@ function renderPartVocabularyCards(part: ArticlePart): void {
       const pronounceBtnTranslation = card.querySelector(
         '.pronounce-btn-translation'
       );
-      if (pronounceBtnTranslation) {
+      const translationTextElement = card.querySelector(
+        '.card-translation-text'
+      );
+      if (pronounceBtnTranslation && translationTextElement) {
         pronounceBtnTranslation.addEventListener('click', e => {
           e.stopPropagation();
           void handlePronounceClick(
-            pronounceBtnTranslation as HTMLElement,
+            translationTextElement as HTMLElement,
             vocab.translation,
             state.targetLanguage
           );
@@ -1425,13 +1429,13 @@ function createVocabularyCardHTML(vocab: VocabularyItem): string {
   return `
     <div class="vocab-card collapsed" data-vocab-id="${vocab.id}">
       <div class="card-header">
-        <span class="card-word">${escapeHtml(vocab.word)}</span>
+        <span class="card-word"><span class="card-word-text">${escapeHtml(vocab.word)}</span></span>
         <div class="card-actions">
           <button class="card-action-btn pronounce-btn" data-lang="original" title="Pronounce original">🔊</button>
         </div>
       </div>
       <div class="card-translation">
-        ${escapeHtml(vocab.translation)}
+        <span class="card-translation-text">${escapeHtml(vocab.translation)}</span>
         <button class="card-action-btn pronounce-btn-translation" data-lang="translation" title="Pronounce translation">🔊</button>
       </div>
       <div class="card-details">
@@ -1477,11 +1481,12 @@ function renderPartSentenceCards(part: ArticlePart): void {
 
       // Original language speaker
       const pronounceBtn = card.querySelector('.pronounce-btn');
-      if (pronounceBtn) {
+      const sentenceTextElement = card.querySelector('.card-sentence-text');
+      if (pronounceBtn && sentenceTextElement) {
         pronounceBtn.addEventListener('click', e => {
           e.stopPropagation();
           void handlePronounceClick(
-            pronounceBtn as HTMLElement,
+            sentenceTextElement as HTMLElement,
             sentence.content,
             state.currentArticle?.originalLanguage
           );
@@ -1492,11 +1497,14 @@ function renderPartSentenceCards(part: ArticlePart): void {
       const pronounceBtnTranslation = card.querySelector(
         '.pronounce-btn-translation'
       );
-      if (pronounceBtnTranslation) {
+      const translationTextElement = card.querySelector(
+        '.card-translation-text'
+      );
+      if (pronounceBtnTranslation && translationTextElement) {
         pronounceBtnTranslation.addEventListener('click', e => {
           e.stopPropagation();
           void handlePronounceClick(
-            pronounceBtnTranslation as HTMLElement,
+            translationTextElement as HTMLElement,
             sentence.translation,
             state.targetLanguage
           );
@@ -1524,14 +1532,14 @@ function createSentenceCardHTML(sentence: SentenceItem): string {
   return `
     <div class="sentence-card collapsed" data-sentence-id="${sentence.id}">
       <div class="card-header">
-        <span class="card-sentence">${escapeHtml(sentence.content)}</span>
+        <span class="card-sentence"><span class="card-sentence-text">${escapeHtml(sentence.content)}</span></span>
         <div class="card-actions">
           <button class="card-action-btn pronounce-btn" data-lang="original" title="Pronounce original">🔊</button>
         </div>
       </div>
       <div class="card-details">
         <div class="card-translation">
-          ${escapeHtml(sentence.translation)}
+          <span class="card-translation-text">${escapeHtml(sentence.translation)}</span>
           <button class="card-action-btn pronounce-btn-translation" data-lang="translation" title="Pronounce translation">🔊</button>
         </div>
       </div>
