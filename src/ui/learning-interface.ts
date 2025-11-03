@@ -504,7 +504,10 @@ function showParagraphContextMenu(paragraph: Element, event: MouseEvent): void {
 function updateContextMenuItems(
   contextType: 'paragraph' | 'vocabulary' | 'sentence' | 'selection'
 ): void {
-  const menuItems = document.querySelectorAll('.context-menu-item');
+  // Only select items from the regular context menu, not the edit context menu
+  const menuItems = document.querySelectorAll(
+    '.context-menu .context-menu-item'
+  );
 
   menuItems.forEach(item => {
     const action = (item as HTMLElement).dataset.action;
@@ -856,28 +859,42 @@ function setupEditModeKeyboardHandlers(paragraph: HTMLElement): void {
  * Handle context menu in edit mode
  */
 function handleEditModeContextMenu(event: MouseEvent): void {
+  console.log('🖱️ Right-click detected in edit mode');
+
   // Only handle if we're in edit mode
-  if (!editingParagraph) return;
+  if (!editingParagraph) {
+    console.log('⚠️ Not in edit mode, ignoring');
+    return;
+  }
 
   const target = event.target as HTMLElement;
 
   // Only handle if clicking within the editing paragraph
   if (target !== editingParagraph && !editingParagraph.contains(target)) {
+    console.log('⚠️ Click outside editing paragraph, ignoring');
     return;
   }
 
   // Get current selection
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed) {
+    console.log('⚠️ No text selection, allowing browser default');
     // No selection - allow browser default context menu
     return;
   }
 
   const selectedText = selection.toString().trim();
   if (!selectedText) {
+    console.log('⚠️ Empty selection, allowing browser default');
     // Empty selection - allow browser default
     return;
   }
+
+  console.log('✅ Valid selection detected:', {
+    text:
+      selectedText.substring(0, 50) + (selectedText.length > 50 ? '...' : ''),
+    length: selectedText.length,
+  });
 
   // We have a valid selection - prevent default and show custom menu
   event.preventDefault();
@@ -895,7 +912,21 @@ function handleEditModeContextMenu(event: MouseEvent): void {
  */
 function showEditContextMenu(x: number, y: number): void {
   const menu = document.querySelector('.edit-context-menu') as HTMLElement;
-  if (!menu) return;
+  if (!menu) {
+    console.error('❌ Edit context menu element not found in DOM');
+    return;
+  }
+
+  const menuItems = menu.querySelectorAll('.context-menu-item');
+  console.log('📋 Showing edit context menu:', {
+    position: { x, y },
+    itemCount: menuItems.length,
+    items: Array.from(menuItems).map(item => ({
+      action: (item as HTMLElement).dataset.action,
+      text: item.textContent?.trim(),
+      innerHTML: (item as HTMLElement).innerHTML,
+    })),
+  });
 
   // Position menu at cursor
   menu.style.left = `${x}px`;
@@ -909,14 +940,45 @@ function showEditContextMenu(x: number, y: number): void {
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
 
+  console.log('📐 Menu dimensions:', {
+    width: menuRect.width,
+    height: menuRect.height,
+    position: { left: menuRect.left, top: menuRect.top },
+  });
+
+  // Log detailed computed styles for each menu item
+  console.log('🎨 Menu item computed styles:');
+  menuItems.forEach((item, index) => {
+    const computed = window.getComputedStyle(item as HTMLElement);
+    console.log(`  Item ${index} (${(item as HTMLElement).dataset.action}):`, {
+      textContent: item.textContent,
+      fontSize: computed.fontSize,
+      color: computed.color,
+      backgroundColor: computed.backgroundColor,
+      display: computed.display,
+      lineHeight: computed.lineHeight,
+      padding: computed.padding,
+      width: computed.width,
+      height: computed.height,
+      opacity: computed.opacity,
+      visibility: computed.visibility,
+      overflow: computed.overflow,
+      whiteSpace: computed.whiteSpace,
+      fontFamily: computed.fontFamily,
+      fontWeight: computed.fontWeight,
+    });
+  });
+
   // Adjust horizontal position if off-screen
   if (menuRect.right > viewportWidth) {
     menu.style.left = `${x - menuRect.width}px`;
+    console.log('↔️ Adjusted horizontal position to prevent overflow');
   }
 
   // Adjust vertical position if off-screen
   if (menuRect.bottom > viewportHeight) {
     menu.style.top = `${y - menuRect.height}px`;
+    console.log('↕️ Adjusted vertical position to prevent overflow');
   }
 }
 
@@ -1761,10 +1823,18 @@ function setupEventListeners(): void {
   const editContextMenuItems = document.querySelectorAll(
     '.edit-context-menu .context-menu-item'
   );
+  console.log('🔧 Setting up edit context menu listeners:', {
+    itemCount: editContextMenuItems.length,
+    items: Array.from(editContextMenuItems).map(item => ({
+      action: (item as HTMLElement).dataset.action,
+      text: item.textContent?.trim(),
+    })),
+  });
   editContextMenuItems.forEach(item => {
     item.addEventListener('click', e => {
       e.stopPropagation();
       const action = (item as HTMLElement).dataset.action;
+      console.log('🖱️ Edit context menu item clicked:', action);
       if (action === 'copy-selection') {
         void handleCopySelection();
       } else if (action === 'delete-selection') {

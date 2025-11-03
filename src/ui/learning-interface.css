@@ -1176,11 +1176,30 @@ body.dark-mode .translation-popup {
   box-shadow: var(--card-hover-shadow);
   padding: 0.5rem 0;
   z-index: 1001;
-  min-width: 120px;
+  min-width: 150px;
 }
 
 .edit-context-menu.hidden {
   display: none;
+}
+
+.edit-context-menu .context-menu-item {
+  display: block !important;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #2c3e50;
+  transition: var(--transition);
+  line-height: 1.5;
+  min-height: 36px;
+}
+
+.edit-context-menu .context-menu-item:hover {
+  background: var(--secondary-color);
 }
 
 /* ============================================================================
@@ -2229,6 +2248,14 @@ body.dark-mode .edit-toolbar {
 body.dark-mode .edit-context-menu {
   background: #2c3e50;
   border-color: #34495e;
+}
+
+body.dark-mode .edit-context-menu .context-menu-item {
+  color: var(--text-primary);
+}
+
+body.dark-mode .edit-context-menu .context-menu-item:hover {
+  background: #34495e;
 }
 
 body.dark-mode .edit-btn-cancel {
