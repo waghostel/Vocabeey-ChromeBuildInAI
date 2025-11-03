@@ -12,6 +12,8 @@
 [ ] Create a sentence for each vocabularary
 [ ] Popup message when user doesn't have Chrome build-in AI tool installation
 [ ] Dark theme
+[ ] User can create blank page.
+[ ] The title, language, and url can be modified.
 
 ## done
 

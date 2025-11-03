@@ -2473,18 +2473,8 @@ body.dark-mode .card-sentence-text.speaking {
   }
 }
 
-/* Speaker icon on hover */
-.highlight-vocabulary:hover::after,
-.highlight-sentence:hover::after {
-  content: '🔊';
-  position: absolute;
-  right: -20px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.75em;
-  opacity: 0.7;
-  pointer-events: none;
-}
+/* Speaker icon on hover - REMOVED for cleaner interface */
+/* Click-to-pronounce functionality remains active */
 
 /* Dark mode adjustments */
 body.dark-mode .highlight-vocabulary {

@@ -1084,10 +1084,10 @@ async function handleVocabularyHighlight(
   let hoverTimeout: number | null = null;
 
   highlightData.highlightElement.addEventListener('mouseenter', e => {
-    // Increased delay to allow hover color to be visible before popup appears
+    // Fast popup display for better user experience
     hoverTimeout = window.setTimeout(() => {
       showTranslationPopup(e.target as HTMLElement, translation);
-    }, 500);
+    }, 50);
   });
 
   highlightData.highlightElement.addEventListener('mouseleave', () => {
@@ -1180,10 +1180,10 @@ async function handleSentenceHighlight(
   let hoverTimeout: number | null = null;
 
   highlightData.highlightElement.addEventListener('mouseenter', e => {
-    // Increased delay to allow hover color to be visible before popup appears
+    // Fast popup display for better user experience
     hoverTimeout = window.setTimeout(() => {
       showTranslationPopup(e.target as HTMLElement, translation);
-    }, 500);
+    }, 50);
   });
 
   highlightData.highlightElement.addEventListener('mouseleave', () => {
