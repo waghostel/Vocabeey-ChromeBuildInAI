@@ -304,12 +304,25 @@ body.dark-mode .language-badge.medium-confidence {
 }
 
 .language-option.selected {
-  background: var(--primary-color);
-  color: white;
+  background: rgba(74, 144, 226, 0.1);
+  font-weight: 600;
 }
 
 .language-option-name {
   font-weight: 500;
+  flex: 1;
+}
+
+.language-option.selected .language-option-name {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.language-option-checkmark {
+  color: var(--primary-color);
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-left: 0.5rem;
 }
 
 .language-option-code {
@@ -1862,6 +1875,18 @@ body.dark-mode .language-dropdown {
 
 body.dark-mode .language-option:hover {
   background: #2c3e50;
+}
+
+body.dark-mode .language-option.selected {
+  background: rgba(93, 173, 226, 0.2);
+}
+
+body.dark-mode .language-option.selected .language-option-name {
+  color: var(--primary-color);
+}
+
+body.dark-mode .language-option-checkmark {
+  color: var(--primary-color);
 }
 
 body.dark-mode .context-menu {

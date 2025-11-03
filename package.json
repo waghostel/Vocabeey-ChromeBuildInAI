@@ -17,6 +17,7 @@
     "build": "tsc && pnpm run copy-assets && pnpm run fix-imports",
     "copy-assets": "node scripts/copy-assets.js",
     "fix-imports": "node scripts/fix-imports.js",
+    "convert-icons": "node scripts/convert-icons.js",
     "dev": "tsc --watch",
     "test": "vitest --run",
     "test:watch": "vitest",
@@ -68,6 +69,7 @@
     "lint-staged": "^16.2.3",
     "oxlint": "^1.23.0",
     "prettier": "^3.6.2",
+    "sharp": "^0.34.4",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },

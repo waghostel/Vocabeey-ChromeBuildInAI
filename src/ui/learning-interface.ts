@@ -1482,13 +1482,15 @@ async function initializeLanguageSelector(): Promise<void> {
 function populateLanguageOptions(): void {
   if (!elements.languageOptions) return;
 
-  elements.languageOptions.innerHTML = LANGUAGES.map(
-    lang => `
-    <div class="language-option" data-code="${lang.code}">
-      ${escapeHtml(lang.name)}
+  elements.languageOptions.innerHTML = LANGUAGES.map(lang => {
+    const isSelected = lang.code === state.targetLanguage;
+    return `
+    <div class="language-option ${isSelected ? 'selected' : ''}" data-code="${lang.code}">
+      <span class="language-option-name">${escapeHtml(lang.name)}</span>
+      ${isSelected ? '<span class="language-option-checkmark">✓</span>' : ''}
     </div>
-  `
-  ).join('');
+  `;
+  }).join('');
 
   // Add click listeners
   const options = elements.languageOptions.querySelectorAll('.language-option');
@@ -1509,7 +1511,14 @@ function showLanguageDropdown(): void {
   if (elements.languageDropdown) {
     elements.languageDropdown.classList.add('active');
   }
-  filterLanguageOptions(elements.languageInput?.value || '');
+
+  // Clear input to show all languages when dropdown opens
+  if (elements.languageInput) {
+    elements.languageInput.value = '';
+  }
+
+  // Show all languages initially
+  filterLanguageOptions('');
 }
 
 /**
@@ -1531,9 +1540,10 @@ function filterLanguageOptions(search: string): void {
   const options = elements.languageOptions.querySelectorAll('.language-option');
 
   options.forEach(option => {
-    const name = option.textContent?.toLowerCase() || '';
+    const nameElement = option.querySelector('.language-option-name');
+    const name = nameElement?.textContent?.toLowerCase() || '';
     if (name.includes(searchLower)) {
-      (option as HTMLElement).style.display = 'block';
+      (option as HTMLElement).style.display = 'flex';
     } else {
       (option as HTMLElement).style.display = 'none';
     }
@@ -1552,13 +1562,16 @@ async function selectLanguage(code: string): Promise<void> {
   // Update state
   state.targetLanguage = code;
 
-  // Update input
+  // Update input to show selected language name
   if (elements.languageInput) {
     elements.languageInput.value = lang.name;
   }
 
   // Save to storage
   await chrome.storage.local.set({ targetLanguage: code });
+
+  // Repopulate options to update checkmark
+  populateLanguageOptions();
 
   // Hide dropdown
   hideLanguageDropdown();
