@@ -37,6 +37,7 @@ export class OffscreenDocumentManager {
     | null = null;
   private readonly TASK_TIMEOUT = 30000; // 30 seconds
   private readonly MAX_CONCURRENT_TASKS = 5;
+  private creationLock: Promise<string> | null = null;
 
   private constructor() {
     this.setupMessageListener();
@@ -54,15 +55,40 @@ export class OffscreenDocumentManager {
 
   /**
    * Create offscreen document for AI processing
+   * Uses lock to prevent race conditions and checks Chrome's actual state
    */
   async createDocument(
     config?: Partial<OffscreenDocumentConfig>
   ): Promise<string> {
-    // Check if document already exists
+    // If already creating, wait for that to finish
+    if (this.creationLock) {
+      console.log('Waiting for existing document creation to complete...');
+      return await this.creationLock;
+    }
+
+    // If already created, return it
     if (this.activeDocument) {
+      console.log('Reusing existing offscreen document:', this.activeDocument);
       return this.activeDocument;
     }
 
+    // Create with lock to prevent race conditions
+    this.creationLock = this._createDocumentInternal(config);
+
+    try {
+      const result = await this.creationLock;
+      return result;
+    } finally {
+      this.creationLock = null;
+    }
+  }
+
+  /**
+   * Internal method to actually create the offscreen document
+   */
+  private async _createDocumentInternal(
+    config?: Partial<OffscreenDocumentConfig>
+  ): Promise<string> {
     const documentConfig: OffscreenDocumentConfig = {
       url: chrome.runtime.getURL('offscreen/ai-processor.html'),
       reasons: [
@@ -79,6 +105,33 @@ export class OffscreenDocumentManager {
         throw new Error('Offscreen API not available');
       }
 
+      // Check Chrome's actual state for existing offscreen documents
+      try {
+        const existingContexts = await chrome.runtime.getContexts({
+          contextTypes: ['OFFSCREEN_DOCUMENT'],
+        });
+
+        if (existingContexts.length > 0) {
+          console.log(
+            'Offscreen document already exists in Chrome, reusing it'
+          );
+          const documentId = `offscreen_existing_${Date.now()}`;
+          this.activeDocument = documentId;
+
+          // Register with memory manager
+          const memoryManager = getMemoryManager();
+          memoryManager.registerOffscreenDocument(documentId);
+
+          return documentId;
+        }
+      } catch (contextError) {
+        console.warn(
+          'Could not check existing offscreen contexts:',
+          contextError
+        );
+        // Continue with creation attempt
+      }
+
       // Create the offscreen document
       await chrome.offscreen.createDocument(documentConfig);
 
@@ -92,6 +145,24 @@ export class OffscreenDocumentManager {
       console.log(`Created offscreen document: ${documentId}`);
       return documentId;
     } catch (error) {
+      // Handle "already exists" error gracefully
+      if (
+        error instanceof Error &&
+        error.message.includes('Only a single offscreen document')
+      ) {
+        console.log(
+          'Offscreen document already exists (caught error), reusing it'
+        );
+        const documentId = `offscreen_recovered_${Date.now()}`;
+        this.activeDocument = documentId;
+
+        // Register with memory manager
+        const memoryManager = getMemoryManager();
+        memoryManager.registerOffscreenDocument(documentId);
+
+        return documentId;
+      }
+
       console.error('Failed to create offscreen document:', error);
       throw error;
     }

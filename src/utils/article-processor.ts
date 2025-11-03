@@ -7,15 +7,24 @@ import type { ExtractedContent, ProcessedArticle, ArticlePart } from '../types';
 
 /**
  * Process extracted content into a structured article
+ *
+ * @param extracted - The extracted content
+ * @param languageDetectionHandler - Optional handler for language detection (for service worker context)
  */
 export async function processArticle(
-  extracted: ExtractedContent
+  extracted: ExtractedContent,
+  languageDetectionHandler?: (payload: {
+    text: string;
+  }) => Promise<{ language: string; confidence: number }>
 ): Promise<ProcessedArticle> {
   // Generate unique ID
   const articleId = generateArticleId();
 
   // Detect language (use provided or detect from content)
-  const language = await detectLanguage(extracted);
+  const detectionResult = await detectLanguage(
+    extracted,
+    languageDetectionHandler
+  );
 
   // Split content into parts for better UX
   const parts = splitContentIntoParts(extracted.content, articleId);
@@ -25,7 +34,8 @@ export async function processArticle(
     id: articleId,
     url: extracted.url,
     title: extracted.title,
-    originalLanguage: language,
+    originalLanguage: detectionResult.language,
+    detectedLanguageConfidence: detectionResult.confidence,
     processedAt: new Date(),
     parts,
     processingStatus: 'completed',
@@ -46,31 +56,94 @@ function generateArticleId(): string {
 
 /**
  * Detect language from extracted content
+ * Returns both language code and confidence score
+ *
+ * @param extracted - The extracted content
+ * @param languageDetectionHandler - Optional handler for direct calls (service worker context)
  */
-async function detectLanguage(extracted: ExtractedContent): Promise<string> {
-  // If language is already provided, use it
+async function detectLanguage(
+  extracted: ExtractedContent,
+  languageDetectionHandler?: (payload: {
+    text: string;
+  }) => Promise<{ language: string; confidence: number }>
+): Promise<{ language: string; confidence: number }> {
+  // If language is already provided, use it with high confidence
   if (extracted.language) {
-    return extracted.language;
+    console.log(
+      `🌍 Language provided by user: ${extracted.language.toUpperCase()} (100% confidence)`
+    );
+    return {
+      language: extracted.language,
+      confidence: 1.0, // User-provided language has full confidence
+    };
   }
+
+  console.log('🔍 Detecting article language...');
+  console.log('📊 Content stats:', {
+    totalLength: extracted.content.length,
+    wordCount: extracted.wordCount,
+    paragraphCount: extracted.paragraphCount,
+  });
 
   try {
     // Try to detect language using Chrome AI or Gemini API
     const textSample = extracted.content.substring(0, 1000); // First 1000 chars
+    console.log(`📝 Analyzing first ${textSample.length} characters...`);
+    console.log('📄 Text sample being analyzed:', {
+      preview: textSample.substring(0, 200) + '...',
+      fullLength: textSample.length,
+    });
 
+    // If handler is provided (service worker context), use it directly
+    if (languageDetectionHandler) {
+      console.log(
+        '🔧 Using provided language detection handler (service worker context)...'
+      );
+      const result = await languageDetectionHandler({ text: textSample });
+      console.log('✅ Language detected:', result);
+      return result;
+    }
+
+    // Otherwise, use message passing (content script context)
+    console.log('📤 Sending DETECT_LANGUAGE message to service worker...');
     const response = await chrome.runtime.sendMessage({
       type: 'DETECT_LANGUAGE',
       data: { text: textSample },
     });
 
+    console.log('📥 Received response from service worker:', response);
+
     if (response?.success && response.data) {
-      return response.data;
+      const result = {
+        language: response.data.language || response.data,
+        confidence: response.data.confidence || 0.5,
+      };
+      console.log(
+        `✅ Language detected: ${result.language.toUpperCase()} (${(result.confidence * 100).toFixed(2)}% confidence)`
+      );
+      return result;
+    } else {
+      console.warn('⚠️ Invalid response from service worker:', response);
     }
   } catch (error) {
-    console.warn('Language detection failed, using fallback:', error);
+    console.error('❌ Language detection failed with error:', error);
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
   }
 
-  // Fallback: Try to detect from common patterns
-  return detectLanguageFallback(extracted.content);
+  // Fallback: Try to detect from common patterns (low confidence)
+  console.log('🔄 Using heuristic fallback detection...');
+  const fallbackLanguage = detectLanguageFallback(extracted.content);
+  console.log(
+    `⚠️ Fallback detected: ${fallbackLanguage.toUpperCase()} (30% confidence - heuristic)`
+  );
+  return {
+    language: fallbackLanguage,
+    confidence: 0.3, // Low confidence for heuristic detection
+  };
 }
 
 /**

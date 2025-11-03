@@ -142,8 +142,11 @@ export class GeminiAPIClient implements AIProcessor {
 
   /**
    * Detect language of text
+   * Returns language code with medium confidence (0.5) since Gemini doesn't provide confidence scores
    */
-  async detectLanguage(text: string): Promise<string> {
+  async detectLanguage(
+    text: string
+  ): Promise<{ language: string; confidence: number }> {
     try {
       await this.rateLimiter.waitForSlot();
 
@@ -166,7 +169,11 @@ Text: ${text.substring(0, 500)}`;
         );
       }
 
-      return languageCode;
+      // Gemini doesn't provide confidence scores, so we return medium confidence
+      return {
+        language: languageCode,
+        confidence: 0.5,
+      };
     } catch (error) {
       if (this.isAIError(error)) {
         throw error;

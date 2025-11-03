@@ -96,7 +96,9 @@ export class AIServiceCoordinator implements AIProcessor, AIServiceManager {
   /**
    * Detect language with fallback
    */
-  async detectLanguage(text: string): Promise<string> {
+  async detectLanguage(
+    text: string
+  ): Promise<{ language: string; confidence: number }> {
     return this.processWithFallback('language_detection', { text });
   }
 

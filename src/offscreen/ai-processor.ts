@@ -108,13 +108,39 @@ class OffscreenAIProcessor {
    */
   private async processLanguageDetection(data: {
     text: string;
-  }): Promise<string> {
+  }): Promise<{ language: string; confidence: number }> {
+    console.log('🔬 [Offscreen] Processing language detection...');
+    console.log('📊 Input data:', {
+      textLength: data.text.length,
+      textPreview: data.text.substring(0, 150) + '...',
+      wordCount: data.text.split(/\s+/).length,
+    });
+
     try {
-      return await this.chromeAI.detectLanguage(data.text);
-    } catch {
+      console.log('🎯 [Offscreen] Attempting Chrome AI language detection...');
+      const result = await this.chromeAI.detectLanguage(data.text);
+      console.log('✅ [Offscreen] Chrome AI detection successful:', result);
+      return result;
+    } catch (error) {
       // Fallback to Gemini API
-      console.warn('Chrome AI language detection failed, trying Gemini API');
-      return await this.geminiAPI.detectLanguage(data.text);
+      console.error(
+        '❌ [Offscreen] Chrome AI language detection failed:',
+        error
+      );
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+      });
+      console.warn('🔄 [Offscreen] Trying Gemini API fallback...');
+
+      try {
+        const result = await this.geminiAPI.detectLanguage(data.text);
+        console.log('✅ [Offscreen] Gemini API detection successful:', result);
+        return result;
+      } catch (geminiError) {
+        console.error('❌ [Offscreen] Gemini API also failed:', geminiError);
+        throw geminiError;
+      }
     }
   }
 

@@ -32,7 +32,10 @@
           <h1 class="article-title"></h1>
           <div class="article-meta">
             <span class="article-url"></span>
-            <span class="article-language"></span>
+            <div class="language-badge" title="Detected language">
+              <span class="language-code"></span>
+              <span class="confidence-indicator"></span>
+            </div>
           </div>
           <div class="header-controls">
             <div class="language-selector-container">
@@ -154,10 +157,10 @@
         Pronounce
       </button>
       <button class="context-menu-item" data-action="change-to-sentence">
-        Change to Sentence
+        To sentence
       </button>
       <button class="context-menu-item" data-action="change-to-vocabulary">
-        Change to Vocabulary
+        To vocabulary
       </button>
       <button class="context-menu-item" data-action="add-vocabulary">
         Add as Vocabulary
@@ -168,6 +171,5 @@
     </div>
 
     <script src="learning-interface.js" type="module"></script>
-    <script src="debug-console.js" type="module"></script>
   </body>
 </html>

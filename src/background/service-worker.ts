@@ -421,6 +421,9 @@ chrome.runtime.onMessage.addListener(
     _sender,
     sendResponse
   ): boolean => {
+    // Log all incoming messages for debugging
+    console.log('📨 [ServiceWorker] Message received:', message.type);
+
     switch (message.type) {
       case 'CONTENT_EXTRACTED':
         handleContentExtracted(message.data as ExtractedContent)
@@ -454,6 +457,33 @@ chrome.runtime.onMessage.addListener(
           .catch(error =>
             sendResponse({ success: false, error: error.message })
           );
+        return true;
+
+      case 'DETECT_LANGUAGE':
+        console.log(
+          '🎯 [ServiceWorker] DETECT_LANGUAGE case matched, calling handler...'
+        );
+        console.log(
+          '📦 [ServiceWorker] Message data:',
+          message.data || message.payload
+        );
+        handleDetectLanguage(
+          (message.data || message.payload) as { text: string }
+        )
+          .then(result => {
+            console.log(
+              '✅ [ServiceWorker] handleDetectLanguage resolved with:',
+              result
+            );
+            sendResponse({ success: true, data: result });
+          })
+          .catch(error => {
+            console.error(
+              '❌ [ServiceWorker] handleDetectLanguage rejected with:',
+              error
+            );
+            sendResponse({ success: false, error: error.message });
+          });
         return true;
 
       case 'TRANSLATE_TEXT':
@@ -525,6 +555,95 @@ chrome.runtime.onMessage.addListener(
     }
   }
 );
+
+/**
+ * Handle language detection request
+ * Routes detection to offscreen document where Chrome AI APIs are available
+ *
+ * Exported as handleDetectLanguageInternal for direct calls from service worker context
+ */
+export async function handleDetectLanguageInternal(payload: {
+  text: string;
+}): Promise<{ language: string; confidence: number }> {
+  return handleDetectLanguage(payload);
+}
+
+/**
+ * Internal handler for language detection
+ */
+async function handleDetectLanguage(payload: {
+  text: string;
+}): Promise<{ language: string; confidence: number }> {
+  try {
+    console.log(
+      `🌍 [ServiceWorker] DETECT_LANGUAGE request: Analyzing ${payload.text.length} characters`
+    );
+    console.log(
+      '📄 [ServiceWorker] Text preview:',
+      payload.text.substring(0, 200) + '...'
+    );
+
+    // Route language detection to offscreen document where Chrome AI APIs are available
+    try {
+      console.log('📤 [ServiceWorker] Routing to offscreen document...');
+      const result = await executeOffscreenAITask<{
+        language: string;
+        confidence: number;
+      }>(
+        'language_detection',
+        { text: payload.text },
+        10000 // 10 second timeout for language detection
+      );
+
+      const confidencePercent = (result.confidence * 100).toFixed(2);
+      console.log(
+        `✅ [ServiceWorker] Language detection successful (Chrome AI): ${result.language.toUpperCase()} (${confidencePercent}% confidence)`
+      );
+      console.log('📥 [ServiceWorker] Full result:', result);
+      return result;
+    } catch (offscreenError) {
+      console.error(
+        '❌ [ServiceWorker] Offscreen language detection failed:',
+        offscreenError
+      );
+      console.error('Error details:', {
+        name: offscreenError instanceof Error ? offscreenError.name : 'Unknown',
+        message:
+          offscreenError instanceof Error
+            ? offscreenError.message
+            : String(offscreenError),
+      });
+      console.warn('🔄 [ServiceWorker] Falling back to Gemini API...');
+    }
+
+    // Fallback to Gemini API
+    const { settings } = await chrome.storage.local.get(['settings']);
+    const { apiKeys } = settings || {};
+    const geminiKey = apiKeys?.gemini;
+
+    if (!geminiKey) {
+      throw new Error(
+        'Language Detection API not available and no Gemini API key configured'
+      );
+    }
+
+    console.log('🔄 Using Gemini API for language detection...');
+    const geminiAPI = new GeminiAPIClient({ apiKey: geminiKey });
+    const result = await geminiAPI.detectLanguage(payload.text);
+
+    const confidencePercent = (result.confidence * 100).toFixed(2);
+    console.log(
+      `✅ Language detection successful (Gemini): ${result.language.toUpperCase()} (${confidencePercent}% confidence)`
+    );
+
+    return result;
+  } catch (error) {
+    console.error('DETECT_LANGUAGE error:', error);
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(errorMessage);
+  }
+}
 
 /**
  * Handle text translation request
@@ -664,7 +783,11 @@ async function handleContentExtracted(
   try {
     // Process the extracted content into a structured article
     console.log('Processing article...');
-    const processedArticle = await processArticle(content);
+    // Pass the language detection handler to avoid message passing to self
+    const processedArticle = await processArticle(
+      content,
+      handleDetectLanguage
+    );
     console.log('Article processed successfully:', {
       id: processedArticle.id,
       parts: processedArticle.parts.length,

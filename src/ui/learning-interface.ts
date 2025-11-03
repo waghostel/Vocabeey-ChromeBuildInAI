@@ -99,7 +99,11 @@ const elements = {
   // Article header
   articleTitle: document.querySelector('.article-title') as HTMLElement,
   articleUrl: document.querySelector('.article-url') as HTMLElement,
-  articleLanguage: document.querySelector('.article-language') as HTMLElement,
+  languageBadge: document.querySelector('.language-badge') as HTMLElement,
+  languageCode: document.querySelector('.language-code') as HTMLElement,
+  confidenceIndicator: document.querySelector(
+    '.confidence-indicator'
+  ) as HTMLElement,
 
   // Language selector
   languageInput: document.getElementById(
@@ -232,7 +236,56 @@ function renderArticleHeader(article: ProcessedArticle): void {
   elements.articleTitle.textContent = article.title;
   elements.articleUrl.textContent = article.url;
   elements.articleUrl.title = article.url;
-  elements.articleLanguage.textContent = article.originalLanguage.toUpperCase();
+
+  // Render language badge with confidence indicator
+  renderLanguageBadge(
+    article.originalLanguage,
+    article.detectedLanguageConfidence
+  );
+}
+
+/**
+ * Render language badge with confidence indicator
+ */
+function renderLanguageBadge(
+  languageCode: string,
+  confidence: number = 0.5
+): void {
+  // Get full language name
+  const language = LANGUAGES.find(l => l.code === languageCode);
+  const languageName = language?.name || languageCode.toUpperCase();
+
+  // Set language code
+  elements.languageCode.textContent = languageCode.toUpperCase();
+
+  // Determine confidence level and emoji
+  let confidenceClass: string;
+  let confidenceEmoji: string;
+  let confidenceText: string;
+
+  if (confidence >= 0.8) {
+    confidenceClass = 'high-confidence';
+    confidenceEmoji = '✅';
+    confidenceText = 'High confidence';
+  } else if (confidence >= 0.5) {
+    confidenceClass = 'medium-confidence';
+    confidenceEmoji = '⚠️';
+    confidenceText = 'Medium confidence';
+  } else {
+    confidenceClass = 'low-confidence';
+    confidenceEmoji = '❓';
+    confidenceText = 'Low confidence';
+  }
+
+  // Set confidence indicator
+  elements.confidenceIndicator.textContent = confidenceEmoji;
+
+  // Update badge class
+  elements.languageBadge.className = `language-badge ${confidenceClass}`;
+
+  // Set tooltip with detailed information
+  const confidencePercent = Math.round(confidence * 100);
+  elements.languageBadge.title = `${languageName}\n${confidenceText} (${confidencePercent}%)\nDetected using Chrome AI`;
 }
 
 /**

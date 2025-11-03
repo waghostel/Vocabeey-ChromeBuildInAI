@@ -152,11 +152,66 @@ body.dark-mode {
   max-width: 500px;
 }
 
-.article-language {
-  padding: 0.25rem 0.75rem;
-  background: var(--secondary-color);
+/* Language Badge with Confidence Indicator */
+.language-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.9rem;
   border-radius: 20px;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: help;
+  transition: var(--transition);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.language-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* High confidence (>80%) - Green */
+.language-badge.high-confidence {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  color: white;
+}
+
+/* Medium confidence (50-80%) - Yellow/Orange */
+.language-badge.medium-confidence {
+  background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%);
+  color: #2c3e50;
+}
+
+/* Low confidence (<50%) - Red */
+.language-badge.low-confidence {
+  background: linear-gradient(135deg, #e74c3c 0%, #ec7063 100%);
+  color: white;
+}
+
+.language-code {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.confidence-indicator {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* Dark mode adjustments */
+body.dark-mode .language-badge {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .language-badge:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .language-badge.medium-confidence {
+  color: #1a1a1a;
 }
 
 .header-controls {

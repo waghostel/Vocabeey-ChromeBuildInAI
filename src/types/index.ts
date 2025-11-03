@@ -30,6 +30,7 @@ export interface ProcessedArticle {
   url: string;
   title: string;
   originalLanguage: string;
+  detectedLanguageConfidence?: number; // 0.0 to 1.0, from Chrome AI Language Detector
   processedAt: Date;
   parts: ArticlePart[];
   processingStatus: 'processing' | 'completed' | 'failed';
@@ -108,7 +109,9 @@ export interface VocabularyAnalysis {
 }
 
 export interface AIProcessor {
-  detectLanguage(text: string): Promise<string>;
+  detectLanguage(
+    text: string
+  ): Promise<{ language: string; confidence: number }>;
   summarizeContent(text: string, options: SummaryOptions): Promise<string>;
   rewriteContent(text: string, difficulty: number): Promise<string>;
   translateText(text: string, from: string, to: string): Promise<string>;

@@ -115,49 +115,107 @@ declare global {
 // ============================================================================
 
 export class ChromeLanguageDetector {
-  private cache: Map<string, string> = new Map();
+  private cache: Map<string, { language: string; confidence: number }> =
+    new Map();
   private readonly maxCacheSize = 100;
 
   /**
    * Detect language of text using Chrome's Language Detector API
+   * Returns language code and confidence score
    */
-  async detectLanguage(text: string): Promise<string> {
+  async detectLanguage(
+    text: string
+  ): Promise<{ language: string; confidence: number }> {
+    console.log('🔬 [ChromeLanguageDetector] Starting language detection...');
+    console.log('📊 Input text stats:', {
+      length: text.length,
+      preview: text.substring(0, 100) + '...',
+      wordCount: text.split(/\s+/).length,
+    });
+
     // Check cache first
     const cacheKey = this.getCacheKey(text);
     const cached = this.cache.get(cacheKey);
     if (cached) {
+      console.log('💾 Cache hit! Returning cached result:', cached);
       return cached;
     }
 
+    console.log('🔍 No cache hit, proceeding with API detection...');
+
     try {
       // Check if API is available (global LanguageDetector)
+      console.log('🔎 Checking if LanguageDetector API is available...');
+      console.log('typeof LanguageDetector:', typeof LanguageDetector);
+
       if (typeof LanguageDetector === 'undefined') {
+        console.error('❌ LanguageDetector API is undefined!');
+        console.log(
+          'Available globals:',
+          Object.keys(globalThis).filter(
+            k => k.includes('Language') || k.includes('Detect')
+          )
+        );
         throw this.createError(
           'api_unavailable',
           'Language Detector API not available in this context'
         );
       }
 
+      console.log('✅ LanguageDetector API is available');
+      console.log('🏗️ Creating detector instance...');
+
       // Create detector and detect language
       const detector = await LanguageDetector.create();
+      console.log('✅ Detector instance created successfully');
+
+      console.log('🔄 Calling detector.detect() with text...');
       const results = await detector.detect(text);
+      console.log('📥 Raw detection results:', results);
 
       if (!results || results.length === 0) {
+        console.error('❌ No results returned from detector');
         throw this.createError('processing_failed', 'No language detected');
       }
 
+      // Log all detection results ranked by confidence
+      console.log('🌍 Language Detection Results (ranked by confidence):');
+      const sortedResults = [...results].sort(
+        (a, b) => b.confidence - a.confidence
+      );
+      sortedResults.forEach((result, index) => {
+        const percentage = (result.confidence * 100).toFixed(2);
+        const bar = '█'.repeat(Math.round(result.confidence * 20));
+        console.log(
+          `  ${index + 1}. ${result.detectedLanguage.toUpperCase()} - ${percentage}% ${bar}`
+        );
+      });
+
       // Get the most confident result
-      const topResult = results.reduce((prev, current) =>
-        current.confidence > prev.confidence ? current : prev
+      const topResult = sortedResults[0];
+
+      const result = {
+        language: topResult.detectedLanguage,
+        confidence: topResult.confidence,
+      };
+
+      console.log(
+        `✅ Selected: ${result.language.toUpperCase()} (${(result.confidence * 100).toFixed(2)}% confidence)`
       );
 
-      const detectedLanguage = topResult.detectedLanguage;
-
       // Cache the result
-      this.cacheResult(cacheKey, detectedLanguage);
+      this.cacheResult(cacheKey, result);
 
-      return detectedLanguage;
+      return result;
     } catch (error) {
+      console.error('❌ Language detection error caught:', error);
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        isAIError: this.isAIError(error),
+      });
+
       if (this.isAIError(error)) {
         throw error;
       }
@@ -197,7 +255,10 @@ export class ChromeLanguageDetector {
   /**
    * Cache detection result with size limit
    */
-  private cacheResult(key: string, language: string): void {
+  private cacheResult(
+    key: string,
+    result: { language: string; confidence: number }
+  ): void {
     // Implement LRU-like behavior: remove oldest if at capacity
     if (this.cache.size >= this.maxCacheSize) {
       const firstKey = this.cache.keys().next().value;
@@ -205,7 +266,7 @@ export class ChromeLanguageDetector {
         this.cache.delete(firstKey);
       }
     }
-    this.cache.set(key, language);
+    this.cache.set(key, result);
   }
 
   /**
@@ -1435,7 +1496,9 @@ export class ChromeAIManager implements AIProcessor {
   /**
    * Detect language of text
    */
-  async detectLanguage(text: string): Promise<string> {
+  async detectLanguage(
+    text: string
+  ): Promise<{ language: string; confidence: number }> {
     return await this.languageDetector.detectLanguage(text);
   }
 
