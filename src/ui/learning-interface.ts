@@ -306,6 +306,9 @@ function renderArticlePart(partIndex: number): void {
   // Render content
   elements.articlePartContent.innerHTML = formatArticleContent(part.content);
 
+  // Add copy buttons to paragraphs
+  addCopyButtonsToParagraphs();
+
   // Initialize highlight manager for this part
   initializeHighlightManager(
     state.currentArticle.id,
@@ -339,6 +342,167 @@ function escapeHtml(text: string): string {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+/**
+ * Add copy buttons to all paragraphs
+ */
+function addCopyButtonsToParagraphs(): void {
+  const paragraphs = elements.articlePartContent.querySelectorAll('p');
+
+  paragraphs.forEach(paragraph => {
+    // Create copy button
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'paragraph-copy-btn';
+    copyBtn.setAttribute('aria-label', 'Copy paragraph');
+    copyBtn.setAttribute('title', 'Copy paragraph');
+
+    // Add copy icon (SVG)
+    copyBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5 15H4C2.89543 15 2 14.1046 2 13V4C2 2.89543 2.89543 2 4 2H13C14.1046 2 15 2.89543 15 4V5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    `;
+
+    // Add click handler
+    copyBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      void handleParagraphCopy(paragraph, copyBtn);
+    });
+
+    // Add mousemove handler to show button only when near top-right corner
+    paragraph.addEventListener('mousemove', (e: MouseEvent) => {
+      const rect = paragraph.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      // Define the trigger area: top-right corner (80px from right, 40px from top)
+      const triggerWidth = 80;
+      const triggerHeight = 40;
+      const isInTopRightCorner =
+        mouseX > rect.width - triggerWidth && mouseY < triggerHeight;
+
+      if (isInTopRightCorner) {
+        copyBtn.style.opacity = '1';
+      } else {
+        copyBtn.style.opacity = '0';
+      }
+    });
+
+    // Hide button when mouse leaves paragraph
+    paragraph.addEventListener('mouseleave', () => {
+      copyBtn.style.opacity = '0';
+    });
+
+    // Add right-click context menu handler
+    paragraph.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      showParagraphContextMenu(paragraph, e as MouseEvent);
+    });
+
+    // Append to paragraph
+    paragraph.appendChild(copyBtn);
+  });
+}
+
+/**
+ * Handle paragraph copy action
+ */
+async function handleParagraphCopy(
+  paragraph: Element,
+  button: HTMLElement
+): Promise<void> {
+  try {
+    // Get paragraph text (excluding the copy button)
+    const copyButton = paragraph.querySelector('.paragraph-copy-btn');
+    const textToCopy = Array.from(paragraph.childNodes)
+      .filter(node => node !== copyButton)
+      .map(node => node.textContent || '')
+      .join('')
+      .trim();
+
+    // Copy to clipboard
+    await navigator.clipboard.writeText(textToCopy);
+
+    // Change icon to checkmark (same color, no background)
+    button.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 6L9 17L4 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    `;
+
+    // Show tooltip
+    showTooltip('Paragraph copied!');
+
+    // Reset after 2 seconds
+    setTimeout(() => {
+      button.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M5 15H4C2.89543 15 2 14.1046 2 13V4C2 2.89543 2.89543 2 4 2H13C14.1046 2 15 2.89543 15 4V5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
+    }, 2000);
+  } catch (error) {
+    console.error('Failed to copy paragraph:', error);
+    showTooltip('Failed to copy paragraph');
+  }
+}
+
+/**
+ * Show context menu for paragraph right-click
+ */
+function showParagraphContextMenu(paragraph: Element, event: MouseEvent): void {
+  const contextMenu = elements.contextMenu;
+  if (!contextMenu) return;
+
+  // Store paragraph reference and context type
+  contextMenu.dataset.itemType = 'paragraph';
+  contextMenu.dataset.paragraphElement = 'true';
+
+  // Store paragraph element reference (we'll use it in the action handler)
+  (contextMenu as any)._paragraphElement = paragraph;
+
+  // Update menu items visibility - show only "Copy"
+  updateContextMenuItems('paragraph');
+
+  // Position menu at cursor
+  contextMenu.style.left = `${event.pageX}px`;
+  contextMenu.style.top = `${event.pageY}px`;
+
+  // Show menu
+  contextMenu.classList.remove('hidden');
+}
+
+/**
+ * Update context menu items based on context type
+ */
+function updateContextMenuItems(
+  contextType: 'paragraph' | 'vocabulary' | 'sentence' | 'selection'
+): void {
+  const menuItems = document.querySelectorAll('.context-menu-item');
+
+  menuItems.forEach(item => {
+    const action = (item as HTMLElement).dataset.action;
+
+    if (contextType === 'paragraph') {
+      // For paragraphs, show only "Copy"
+      if (action === 'copy') {
+        (item as HTMLElement).style.display = 'block';
+      } else {
+        (item as HTMLElement).style.display = 'none';
+      }
+    } else {
+      // For other contexts, hide "Copy" and show relevant items
+      if (action === 'copy') {
+        (item as HTMLElement).style.display = 'none';
+      } else {
+        // Reset to default display for other items
+        (item as HTMLElement).style.display = 'block';
+      }
+    }
+  });
 }
 
 /**
@@ -1247,7 +1411,37 @@ async function handleContextMenuAction(event: Event): Promise<void> {
   const itemType = contextMenu.dataset.itemType as
     | 'vocabulary'
     | 'sentence'
-    | 'selection';
+    | 'selection'
+    | 'paragraph';
+
+  // Handle paragraph context menu
+  if (itemType === 'paragraph') {
+    if (action === 'copy') {
+      const paragraph = (contextMenu as any)._paragraphElement as Element;
+      if (paragraph) {
+        try {
+          // Get paragraph text (excluding the copy button)
+          const copyButton = paragraph.querySelector('.paragraph-copy-btn');
+          const textToCopy = Array.from(paragraph.childNodes)
+            .filter(node => node !== copyButton)
+            .map(node => node.textContent || '')
+            .join('')
+            .trim();
+
+          // Copy to clipboard
+          await navigator.clipboard.writeText(textToCopy);
+
+          // Show tooltip
+          showTooltip('Paragraph copied!');
+        } catch (error) {
+          console.error('Failed to copy paragraph:', error);
+          showTooltip('Failed to copy paragraph');
+        }
+      }
+    }
+    contextMenu.classList.add('hidden');
+    return;
+  }
 
   // Handle selection context menu (None mode)
   if (itemType === 'selection') {

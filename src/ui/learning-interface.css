@@ -414,6 +414,39 @@ body.dark-mode .language-badge.medium-confidence {
 
 .article-part-content p {
   margin-bottom: 1rem;
+  position: relative;
+}
+
+/* Paragraph Copy Button */
+.paragraph-copy-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+  padding: 0;
+  pointer-events: auto;
+}
+
+.paragraph-copy-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--text-secondary);
+  fill: none;
+}
+
+/* Dark mode support */
+body.dark-mode .paragraph-copy-btn svg {
+  stroke: var(--text-primary);
 }
 
 /* Highlight styles */
