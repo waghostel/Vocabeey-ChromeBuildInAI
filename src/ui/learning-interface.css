@@ -476,15 +476,15 @@ body.dark-mode .paragraph-copy-btn svg {
 
 /* Highlight styles */
 .highlight-vocabulary {
-  background-color: #fff3cd;
-  border-bottom: 2px solid #ffc107;
+  background-color: #f9a825;
+  border-bottom: 2px solid #f57f17;
   cursor: pointer;
   padding: 0 2px;
   transition: var(--transition);
 }
 
 .highlight-vocabulary:hover {
-  background-color: #ffe69c;
+  background-color: #fbc02d;
 }
 
 .highlight-sentence {
@@ -2339,15 +2339,32 @@ body.dark-mode .clickable-text:hover {
   border-bottom-color: rgba(33, 150, 243, 0.6);
 }
 
-/* Speaking state - blue blinking animation */
-.highlight-vocabulary.speaking,
+/* Speaking state - separate animations for vocabulary and sentence */
+.highlight-vocabulary.speaking {
+  animation: speaking-pulse-vocab 0.8s ease-in-out infinite;
+  background-color: rgba(249, 168, 37, 0.9) !important;
+  border-bottom-color: rgba(245, 127, 23, 1) !important;
+}
+
 .highlight-sentence.speaking {
-  animation: speaking-pulse 0.8s ease-in-out infinite;
+  animation: speaking-pulse-sentence 0.8s ease-in-out infinite;
   background-color: rgba(33, 150, 243, 0.5) !important;
   border-bottom-color: rgba(33, 150, 243, 0.8) !important;
 }
 
-@keyframes speaking-pulse {
+@keyframes speaking-pulse-vocab {
+  0%,
+  100% {
+    background-color: rgba(249, 168, 37, 0.9);
+    transform: scale(1);
+  }
+  50% {
+    background-color: rgba(251, 192, 45, 1);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes speaking-pulse-sentence {
   0%,
   100% {
     background-color: rgba(33, 150, 243, 0.5);
@@ -2393,7 +2410,11 @@ body.dark-mode .highlight-sentence:hover {
   border-bottom-color: rgba(33, 150, 243, 0.5);
 }
 
-body.dark-mode .highlight-vocabulary.speaking,
+body.dark-mode .highlight-vocabulary.speaking {
+  background-color: rgba(249, 168, 37, 0.6) !important;
+  border-bottom-color: rgba(245, 127, 23, 0.8) !important;
+}
+
 body.dark-mode .highlight-sentence.speaking {
   background-color: rgba(33, 150, 243, 0.4) !important;
   border-bottom-color: rgba(33, 150, 243, 0.7) !important;
