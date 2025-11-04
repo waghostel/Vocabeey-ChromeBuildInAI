@@ -669,6 +669,17 @@ function showArticleHeaderContextMenu(
 
 // Edit dialog state
 let editDialogSelectedLanguage: string = '';
+let editDialogOriginalValues: {
+  title: string;
+  url: string;
+  language: string;
+  content: string;
+} = {
+  title: '',
+  url: '',
+  language: '',
+  content: '',
+};
 
 /**
  * Show article header edit dialog
@@ -690,12 +701,22 @@ function showArticleHeaderEditDialog(): void {
   }
 
   // Populate paragraph content from current part
+  let currentContent = '';
   if (state.currentArticle.parts && state.currentArticle.parts.length > 0) {
     const currentPart = state.currentArticle.parts[state.currentPartIndex];
     if (currentPart && elements.editParagraphTextarea) {
-      elements.editParagraphTextarea.value = currentPart.content || '';
+      currentContent = currentPart.content || '';
+      elements.editParagraphTextarea.value = currentContent;
     }
   }
+
+  // Store original values for change detection
+  editDialogOriginalValues = {
+    title: state.currentArticle.title || '',
+    url: state.currentArticle.url || '',
+    language: state.currentArticle.originalLanguage || 'en',
+    content: currentContent,
+  };
 
   // Setup language selector
   setupEditDialogLanguageSelector();
@@ -738,6 +759,83 @@ function hideArticleHeaderEditDialog(): void {
 
   // Remove event listeners
   removeEditDialogEventListeners();
+}
+
+/**
+ * Check if there are unsaved changes in the edit dialog
+ */
+function hasUnsavedChanges(): boolean {
+  const currentTitle = elements.editTitleInput.value.trim();
+  const currentUrl = elements.editUrlInput.value.trim();
+  const currentLanguage = editDialogSelectedLanguage;
+  const currentContent = elements.editParagraphTextarea.value.trim();
+
+  return (
+    currentTitle !== editDialogOriginalValues.title ||
+    currentUrl !== editDialogOriginalValues.url ||
+    currentLanguage !== editDialogOriginalValues.language ||
+    currentContent !== editDialogOriginalValues.content
+  );
+}
+
+/**
+ * Handle close button click with unsaved changes check
+ */
+function handleEditDialogClose(): void {
+  if (hasUnsavedChanges()) {
+    showUnsavedChangesDialog();
+  } else {
+    hideArticleHeaderEditDialog();
+  }
+}
+
+/**
+ * Show unsaved changes confirmation dialog
+ */
+function showUnsavedChangesDialog(): void {
+  const dialog = document.querySelector(
+    '.unsaved-changes-dialog'
+  ) as HTMLElement;
+  if (!dialog) return;
+
+  // Show dialog
+  dialog.classList.remove('hidden');
+
+  // Setup button handlers
+  const saveBtn = dialog.querySelector('.dialog-btn-save') as HTMLButtonElement;
+  const discardBtn = dialog.querySelector(
+    '.dialog-btn-discard'
+  ) as HTMLButtonElement;
+  const cancelBtn = dialog.querySelector(
+    '.dialog-btn-cancel'
+  ) as HTMLButtonElement;
+
+  const handleSave = () => {
+    dialog.classList.add('hidden');
+    void saveArticleHeaderEdit();
+    cleanup();
+  };
+
+  const handleDiscard = () => {
+    dialog.classList.add('hidden');
+    hideArticleHeaderEditDialog();
+    cleanup();
+  };
+
+  const handleCancel = () => {
+    dialog.classList.add('hidden');
+    cleanup();
+  };
+
+  const cleanup = () => {
+    saveBtn.removeEventListener('click', handleSave);
+    discardBtn.removeEventListener('click', handleDiscard);
+    cancelBtn.removeEventListener('click', handleCancel);
+  };
+
+  saveBtn.addEventListener('click', handleSave);
+  discardBtn.addEventListener('click', handleDiscard);
+  cancelBtn.addEventListener('click', handleCancel);
 }
 
 /**
@@ -973,6 +1071,12 @@ async function saveArticleHeaderEdit(): Promise<void> {
  * Setup edit dialog event listeners
  */
 function setupEditDialogEventListeners(): void {
+  // Close button
+  const closeBtn = elements.editDialog.querySelector('.dialog-close-btn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', handleEditDialogCloseBtn);
+  }
+
   // Save button
   const saveBtn = elements.editDialog.querySelector('.dialog-btn-save');
   if (saveBtn) {
@@ -988,7 +1092,7 @@ function setupEditDialogEventListeners(): void {
   // Overlay click
   const overlay = elements.editDialog.querySelector('.dialog-overlay');
   if (overlay) {
-    overlay.addEventListener('click', handleEditDialogCancel);
+    overlay.addEventListener('click', handleEditDialogOverlayClick);
   }
 
   // Language input focus
@@ -1015,6 +1119,11 @@ function setupEditDialogEventListeners(): void {
  * Remove edit dialog event listeners
  */
 function removeEditDialogEventListeners(): void {
+  const closeBtn = elements.editDialog.querySelector('.dialog-close-btn');
+  if (closeBtn) {
+    closeBtn.removeEventListener('click', handleEditDialogCloseBtn);
+  }
+
   const saveBtn = elements.editDialog.querySelector('.dialog-btn-save');
   if (saveBtn) {
     saveBtn.removeEventListener('click', handleEditDialogSave);
@@ -1027,7 +1136,7 @@ function removeEditDialogEventListeners(): void {
 
   const overlay = elements.editDialog.querySelector('.dialog-overlay');
   if (overlay) {
-    overlay.removeEventListener('click', handleEditDialogCancel);
+    overlay.removeEventListener('click', handleEditDialogOverlayClick);
   }
 
   if (elements.editLanguageInput) {
@@ -1049,6 +1158,13 @@ function removeEditDialogEventListeners(): void {
 }
 
 /**
+ * Handle close button click
+ */
+function handleEditDialogCloseBtn(): void {
+  handleEditDialogClose();
+}
+
+/**
  * Handle edit dialog save button click
  */
 function handleEditDialogSave(): void {
@@ -1059,7 +1175,14 @@ function handleEditDialogSave(): void {
  * Handle edit dialog cancel button click
  */
 function handleEditDialogCancel(): void {
-  hideArticleHeaderEditDialog();
+  handleEditDialogClose();
+}
+
+/**
+ * Handle overlay click
+ */
+function handleEditDialogOverlayClick(): void {
+  handleEditDialogClose();
 }
 
 /**
@@ -1110,7 +1233,7 @@ function handleEditDialogKeydown(event: KeyboardEvent): void {
 
   if (event.key === 'Escape') {
     event.preventDefault();
-    hideArticleHeaderEditDialog();
+    handleEditDialogClose();
   } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
     event.preventDefault();
     void saveArticleHeaderEdit();

@@ -154,6 +154,7 @@
         <div class="learning-mode-header">
           <h2>Vocabulary Learning</h2>
           <div class="display-options">
+            n
             <button class="display-option active" data-display="both">
               A + B
             </button>
@@ -258,6 +259,25 @@
     <div class="article-edit-dialog hidden">
       <div class="dialog-overlay"></div>
       <div class="dialog-content article-edit-dialog-content">
+        <button
+          class="dialog-close-btn"
+          aria-label="Close dialog"
+          title="Close"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
         <h3 class="edit-dialog-title">Edit Article Header</h3>
 
         <!-- Article Title Field -->
@@ -322,6 +342,22 @@
 
         <!-- Action Buttons -->
         <div class="dialog-actions">
+          <button class="dialog-btn dialog-btn-cancel">Cancel</button>
+          <button class="dialog-btn dialog-btn-save">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unsaved Changes Confirmation Dialog -->
+    <div class="unsaved-changes-dialog hidden">
+      <div class="dialog-overlay"></div>
+      <div class="dialog-content">
+        <h3>Unsaved Changes</h3>
+        <p class="dialog-message">
+          You have unsaved changes. Do you want to save them before closing?
+        </p>
+        <div class="dialog-actions">
+          <button class="dialog-btn dialog-btn-discard">Discard Changes</button>
           <button class="dialog-btn dialog-btn-cancel">Cancel</button>
           <button class="dialog-btn dialog-btn-save">Save Changes</button>
         </div>

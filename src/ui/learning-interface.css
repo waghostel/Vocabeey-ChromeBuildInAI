@@ -2567,9 +2567,9 @@ body.dark-mode .highlight-sentence.speaking {
   background: white;
   border-radius: 12px;
   padding: 2rem;
-  max-width: 600px;
+  max-width: 900px;
   width: 90%;
-  max-height: 80vh;
+  max-height: 85vh;
   overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   z-index: 1;
@@ -2580,8 +2580,43 @@ body.dark-mode .article-edit-dialog-content {
   color: var(--text-primary);
 }
 
+/* Dialog Close Button */
+.dialog-close-btn {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: var(--transition);
+  z-index: 10;
+}
+
+.dialog-close-btn:hover {
+  background: var(--secondary-color);
+  color: var(--text-primary);
+}
+
+body.dark-mode .dialog-close-btn:hover {
+  background: #4a5f7f;
+}
+
+.dialog-close-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
 .edit-dialog-title {
   margin: 0 0 1.5rem 0;
+  padding-right: 2rem;
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-primary);
@@ -2600,7 +2635,19 @@ body.dark-mode .article-edit-dialog-content {
   color: var(--text-secondary);
 }
 
-.edit-field input[type='text'],
+.edit-field input[type='text'] {
+  width: 100%;
+  max-width: 600px;
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: white;
+  color: var(--text-primary);
+  transition: var(--transition);
+}
+
 .edit-field textarea {
   width: 100%;
   padding: 0.75rem;
@@ -2668,6 +2715,7 @@ body.dark-mode .edit-field textarea {
 /* Language Selector in Dialog */
 .edit-language-selector-wrapper {
   position: relative;
+  max-width: 600px;
 }
 
 .edit-language-input {
@@ -2787,6 +2835,12 @@ body.dark-mode .article-edit-dialog .dialog-actions {
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .article-edit-dialog-content {
+    max-width: 750px;
+  }
+}
+
 @media (max-width: 768px) {
   .article-edit-dialog-content {
     width: 95%;
@@ -2801,4 +2855,82 @@ body.dark-mode .article-edit-dialog .dialog-actions {
   .edit-field {
     margin-bottom: 1.25rem;
   }
+
+  .edit-field input[type='text'],
+  .edit-language-selector-wrapper {
+    max-width: 100%;
+  }
+}
+
+/* ============================================================================
+   Unsaved Changes Confirmation Dialog
+   ============================================================================ */
+
+.unsaved-changes-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.unsaved-changes-dialog.hidden {
+  display: none;
+}
+
+.unsaved-changes-dialog .dialog-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+}
+
+.unsaved-changes-dialog .dialog-content {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 450px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  z-index: 1;
+}
+
+body.dark-mode .unsaved-changes-dialog .dialog-content {
+  background: #2c3e50;
+  color: var(--text-primary);
+}
+
+.unsaved-changes-dialog h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+.unsaved-changes-dialog .dialog-message {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.unsaved-changes-dialog .dialog-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.dialog-btn-discard {
+  background: var(--danger-color);
+  color: white;
+}
+
+.dialog-btn-discard:hover {
+  background: #c0392b;
 }
