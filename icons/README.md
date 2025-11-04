@@ -9,12 +9,14 @@ Required sizes:
 - icon48.png (48x48) - Extension management page
 - icon128.png (128x128) - Chrome Web Store
 
-## Placeholder Icons
+## Current Icons
 
-The current icons are placeholders. Replace them with proper branded icons before publishing.
+The icons are generated from `bee only-2.png` using the Sharp image processing library.
 
-To generate icons from an SVG source:
+To regenerate icons from the source:
 
-1. Create a master icon design (preferably SVG)
-2. Export to PNG at each required size
-3. Ensure icons are optimized for file size
+```bash
+pnpm run convert-icons
+```
+
+This script automatically converts `bee only-2.png` to all required sizes with proper transparency and optimization.

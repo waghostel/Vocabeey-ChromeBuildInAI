@@ -1,6 +1,6 @@
 /**
  * Icon Conversion Script
- * Converts Vocabee.png to all required sizes for Chrome Extension
+ * Converts bee only-2.png to all required sizes for Chrome Extension
  */
 
 import sharp from 'sharp';
@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const sizes = [16, 32, 48, 128];
-const sourceIcon = path.join(__dirname, '../icons/Vocabee.png');
+const sourceIcon = path.join(__dirname, '../icons/bee only-2.png');
 const iconsDir = path.join(__dirname, '../icons');
 
 async function convertIcons() {
@@ -20,7 +20,7 @@ async function convertIcons() {
 
   // Check if source file exists
   if (!fs.existsSync(sourceIcon)) {
-    console.error('Error: Vocabee.png not found in icons directory');
+    console.error('Error: bee only-2.png not found in icons directory');
     process.exit(1);
   }
 
