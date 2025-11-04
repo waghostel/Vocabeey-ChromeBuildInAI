@@ -50,7 +50,8 @@ export interface VocabularyItem {
   id: string;
   word: string;
   phrase?: string;
-  translation: string;
+  translation: string; // Primary translation (for backward compatibility)
+  translations?: Record<string, string>; // Multi-language translations cache { 'en': 'hello', 'es': 'hola' }
   context: string;
   exampleSentences: string[];
   articleId: string;
@@ -64,7 +65,8 @@ export interface VocabularyItem {
 export interface SentenceItem {
   id: string;
   content: string;
-  translation: string;
+  translation: string; // Primary translation (for backward compatibility)
+  translations?: Record<string, string>; // Multi-language translations cache { 'en': 'hello', 'es': 'hola' }
   articleId: string;
   partId: string;
   createdAt: Date;

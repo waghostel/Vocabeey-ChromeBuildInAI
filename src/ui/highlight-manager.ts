@@ -1037,11 +1037,18 @@ async function handleVocabularyHighlight(
   // Translate the vocabulary using trimmed text
   const translation = await translateVocabulary(trimmedText, context);
 
-  // Create vocabulary item with trimmed text
+  // Get current target language for initial translation cache
+  const { targetLanguage } = await chrome.storage.local.get('targetLanguage');
+  const currentTargetLang = targetLanguage || 'en';
+
+  // Create vocabulary item with trimmed text and translations cache
   const vocabItem: VocabularyItem = {
     id: generateId(),
     word: trimmedText,
     translation: translation,
+    translations: {
+      [currentTargetLang]: translation, // Cache the initial translation
+    },
     context: context,
     exampleSentences: [],
     articleId: currentArticleId,
@@ -1080,13 +1087,18 @@ async function handleVocabularyHighlight(
     );
   });
 
-  // Add hover listener for translation popup with delay
+  // Add hover listener for translation popup with delay - DYNAMIC TRANSLATION
   let hoverTimeout: number | null = null;
 
   highlightData.highlightElement.addEventListener('mouseenter', e => {
     // Fast popup display for better user experience
     hoverTimeout = window.setTimeout(() => {
-      showTranslationPopup(e.target as HTMLElement, translation);
+      // Dynamically fetch translation for current target language
+      void getTranslationForHighlight(vocabItem.id, 'vocabulary').then(
+        currentTranslation => {
+          showTranslationPopup(e.target as HTMLElement, currentTranslation);
+        }
+      );
     }, 50);
   });
 
@@ -1138,11 +1150,18 @@ async function handleSentenceHighlight(
   // Translate the sentence using trimmed text
   const translation = await translateSentence(trimmedText);
 
-  // Create sentence item with trimmed text
+  // Get current target language for initial translation cache
+  const { targetLanguage } = await chrome.storage.local.get('targetLanguage');
+  const currentTargetLang = targetLanguage || 'en';
+
+  // Create sentence item with trimmed text and translations cache
   const sentenceItem: SentenceItem = {
     id: generateId(),
     content: trimmedText,
     translation: translation,
+    translations: {
+      [currentTargetLang]: translation, // Cache the initial translation
+    },
     articleId: currentArticleId,
     partId: currentPartId,
     createdAt: new Date(),
@@ -1176,13 +1195,18 @@ async function handleSentenceHighlight(
     );
   });
 
-  // Add hover listener for translation popup with delay
+  // Add hover listener for translation popup with delay - DYNAMIC TRANSLATION
   let hoverTimeout: number | null = null;
 
   highlightData.highlightElement.addEventListener('mouseenter', e => {
     // Fast popup display for better user experience
     hoverTimeout = window.setTimeout(() => {
-      showTranslationPopup(e.target as HTMLElement, translation);
+      // Dynamically fetch translation for current target language
+      void getTranslationForHighlight(sentenceItem.id, 'sentence').then(
+        currentTranslation => {
+          showTranslationPopup(e.target as HTMLElement, currentTranslation);
+        }
+      );
     }, 50);
   });
 
@@ -1684,6 +1708,96 @@ async function translateSentence(text: string): Promise<string> {
   } catch (error) {
     console.error('Error translating sentence:', error);
     return `[Translation error]`;
+  }
+}
+
+/**
+ * Get translation for a highlight in the current target language
+ * Fetches from cache or requests new translation if needed
+ */
+async function getTranslationForHighlight(
+  highlightId: string,
+  type: 'vocabulary' | 'sentence'
+): Promise<string> {
+  try {
+    // Get current target language
+    const { targetLanguage } = await chrome.storage.local.get('targetLanguage');
+    const currentTargetLang = targetLanguage || 'en';
+
+    // Fetch the item from storage
+    if (type === 'vocabulary') {
+      const data = await chrome.storage.local.get('vocabulary');
+      const vocabulary: Record<string, VocabularyItem> = data.vocabulary || {};
+      const vocabItem = vocabulary[highlightId];
+
+      if (!vocabItem) {
+        return '[Item not found]';
+      }
+
+      // Check if we have a cached translation for this language
+      if (vocabItem.translations && vocabItem.translations[currentTargetLang]) {
+        return vocabItem.translations[currentTargetLang];
+      }
+
+      // If not cached, request new translation
+      const newTranslation = await translateVocabulary(
+        vocabItem.word,
+        vocabItem.context
+      );
+
+      // Cache the new translation
+      if (!vocabItem.translations) {
+        vocabItem.translations = {};
+      }
+      vocabItem.translations[currentTargetLang] = newTranslation;
+
+      // Update primary translation for backward compatibility
+      vocabItem.translation = newTranslation;
+
+      // Save updated item
+      vocabulary[highlightId] = vocabItem;
+      await chrome.storage.local.set({ vocabulary });
+
+      return newTranslation;
+    } else {
+      // Sentence type
+      const data = await chrome.storage.local.get('sentences');
+      const sentences: Record<string, SentenceItem> = data.sentences || {};
+      const sentenceItem = sentences[highlightId];
+
+      if (!sentenceItem) {
+        return '[Item not found]';
+      }
+
+      // Check if we have a cached translation for this language
+      if (
+        sentenceItem.translations &&
+        sentenceItem.translations[currentTargetLang]
+      ) {
+        return sentenceItem.translations[currentTargetLang];
+      }
+
+      // If not cached, request new translation
+      const newTranslation = await translateSentence(sentenceItem.content);
+
+      // Cache the new translation
+      if (!sentenceItem.translations) {
+        sentenceItem.translations = {};
+      }
+      sentenceItem.translations[currentTargetLang] = newTranslation;
+
+      // Update primary translation for backward compatibility
+      sentenceItem.translation = newTranslation;
+
+      // Save updated item
+      sentences[highlightId] = sentenceItem;
+      await chrome.storage.local.set({ sentences });
+
+      return newTranslation;
+    }
+  } catch (error) {
+    console.error('Error getting translation for highlight:', error);
+    return '[Translation error]';
   }
 }
 

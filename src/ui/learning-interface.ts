@@ -709,8 +709,11 @@ function updateContextMenuItems(
         (item as HTMLElement).style.display = 'none';
       }
     } else if (contextType === 'card') {
-      // For cards, show only "Edit"
-      if (action === 'edit') {
+      // For cards, show "Remove" and "Edit"
+      if (action === 'remove') {
+        (item as HTMLElement).style.display = 'block';
+        item.textContent = 'Remove';
+      } else if (action === 'edit') {
         (item as HTMLElement).style.display = 'block';
         item.textContent = 'Edit';
       } else {
@@ -4219,10 +4222,43 @@ async function handleContextMenuAction(event: Event): Promise<void> {
 
   // Handle card context menu
   if (itemType === 'card') {
-    if (action === 'edit') {
-      const cardType = contextMenu.dataset.cardType as
-        | 'vocabulary'
-        | 'sentence';
+    const cardType = contextMenu.dataset.cardType as 'vocabulary' | 'sentence';
+
+    if (action === 'remove') {
+      // Remove the card
+      if (itemId && cardType) {
+        const { removeHighlight } = await import('./highlight-manager.js');
+        await removeHighlight(itemId, cardType);
+
+        // Update state and re-render
+        if (cardType === 'vocabulary') {
+          state.vocabularyItems = state.vocabularyItems.filter(
+            v => v.id !== itemId
+          );
+          if (state.currentArticle) {
+            const part = state.currentArticle.parts[state.currentPartIndex];
+            if (part) {
+              renderPartVocabularyCards(part);
+            }
+          }
+        } else if (cardType === 'sentence') {
+          state.sentenceItems = state.sentenceItems.filter(
+            s => s.id !== itemId
+          );
+          if (state.currentArticle) {
+            const part = state.currentArticle.parts[state.currentPartIndex];
+            if (part) {
+              renderPartSentenceCards(part);
+            }
+          }
+        }
+
+        // Show confirmation tooltip
+        showTooltip(
+          `${cardType === 'vocabulary' ? 'Vocabulary' : 'Sentence'} removed`
+        );
+      }
+    } else if (action === 'edit') {
       if (itemId && cardType) {
         await showCardEditDialog(itemId, cardType);
       }
