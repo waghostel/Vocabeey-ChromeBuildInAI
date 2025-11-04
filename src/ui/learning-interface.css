@@ -2681,7 +2681,8 @@ body.dark-mode .dialog-footer {
 
 /* Edit Fields */
 .edit-field {
-  margin-bottom: 1.5rem;
+  margin-bottom: 12px;
+  padding: 0;
 }
 
 .edit-field label {
@@ -3068,14 +3069,16 @@ body.dark-mode .unsaved-changes-dialog .dialog-content {
   position: relative;
   background: white;
   border-radius: 12px;
-  width: 500px;
-  max-width: 90%;
+  width: 1400px;
+  min-width: 600px;
+  max-width: 1400px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   z-index: 1;
   overflow: hidden;
+  padding: 6px;
 }
 
 body.dark-mode .card-edit-dialog-content {
@@ -3130,7 +3133,7 @@ body.dark-mode .card-edit-dialog .dialog-footer {
 .sentence-edit-fields {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0;
 }
 
 .vocab-edit-fields.hidden,
@@ -3139,9 +3142,16 @@ body.dark-mode .card-edit-dialog .dialog-footer {
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .card-edit-dialog-content {
+    width: 750px;
+  }
+}
+
 @media (max-width: 768px) {
   .card-edit-dialog-content {
-    width: 95%;
+    width: 95% !important;
+    min-width: 320px;
     max-height: 90vh;
   }
 
