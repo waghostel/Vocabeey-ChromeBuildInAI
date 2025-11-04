@@ -20,16 +20,49 @@ export class TranslationDebugger {
   private debugLog: TranslationDebugInfo[] = [];
   private readonly maxLogSize = 200;
   private debugMode = false;
+  private storageAvailable = false;
+  private storageWarningLogged = false;
 
   constructor() {
+    // Check storage availability
+    this.storageAvailable = this.checkStorageAvailability();
+
+    // Log info once if storage is unavailable
+    if (!this.storageAvailable && !this.storageWarningLogged) {
+      console.log(
+        'ℹ️ [TranslationDebugger] Running in offscreen context - debug logs will be kept in memory only.'
+      );
+      this.storageWarningLogged = true;
+    }
+
     // Check if debug mode is enabled
     void this.loadDebugMode();
+  }
+
+  /**
+   * Check if chrome.storage.local is available
+   */
+  private checkStorageAvailability(): boolean {
+    try {
+      return (
+        typeof chrome !== 'undefined' &&
+        chrome.storage !== undefined &&
+        chrome.storage.local !== undefined
+      );
+    } catch {
+      return false;
+    }
   }
 
   /**
    * Load debug mode from storage
    */
   private async loadDebugMode(): Promise<void> {
+    if (!this.storageAvailable) {
+      this.debugMode = false;
+      return;
+    }
+
     try {
       const { debugMode } = await chrome.storage.local.get('debugMode');
       this.debugMode = debugMode || false;
@@ -43,7 +76,11 @@ export class TranslationDebugger {
    */
   async enableDebugMode(): Promise<void> {
     this.debugMode = true;
-    await chrome.storage.local.set({ debugMode: true });
+
+    if (this.storageAvailable) {
+      await chrome.storage.local.set({ debugMode: true });
+    }
+
     console.log('🐛 Translation debug mode ENABLED');
   }
 
@@ -52,7 +89,11 @@ export class TranslationDebugger {
    */
   async disableDebugMode(): Promise<void> {
     this.debugMode = false;
-    await chrome.storage.local.set({ debugMode: false });
+
+    if (this.storageAvailable) {
+      await chrome.storage.local.set({ debugMode: false });
+    }
+
     console.log('🐛 Translation debug mode DISABLED');
   }
 
@@ -179,6 +220,10 @@ export class TranslationDebugger {
    * Save debug log to storage
    */
   private async saveDebugLog(): Promise<void> {
+    if (!this.storageAvailable) {
+      return; // Silently skip if storage unavailable
+    }
+
     try {
       await chrome.storage.local.set({
         translationDebugLog: this.debugLog,
@@ -193,6 +238,10 @@ export class TranslationDebugger {
    * Load debug log from storage
    */
   async loadDebugLog(): Promise<void> {
+    if (!this.storageAvailable) {
+      return; // Silently skip if storage unavailable
+    }
+
     try {
       const { translationDebugLog } = await chrome.storage.local.get(
         'translationDebugLog'
@@ -210,10 +259,14 @@ export class TranslationDebugger {
    */
   async clearDebugLog(): Promise<void> {
     this.debugLog = [];
-    await chrome.storage.local.remove([
-      'translationDebugLog',
-      'translationDebugTimestamp',
-    ]);
+
+    if (this.storageAvailable) {
+      await chrome.storage.local.remove([
+        'translationDebugLog',
+        'translationDebugTimestamp',
+      ]);
+    }
+
     console.log('🗑️ Translation debug log cleared');
   }
 }

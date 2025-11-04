@@ -421,9 +421,6 @@ chrome.runtime.onMessage.addListener(
     _sender,
     sendResponse
   ): boolean => {
-    // Log all incoming messages for debugging
-    console.log('📨 [ServiceWorker] Message received:', message.type);
-
     switch (message.type) {
       case 'CONTENT_EXTRACTED':
         handleContentExtracted(message.data as ExtractedContent)
@@ -657,8 +654,6 @@ async function handleTranslateText(payload: {
   sourceLanguage?: string;
 }): Promise<string> {
   try {
-    console.log('TRANSLATE_TEXT request:', payload);
-
     // Get user settings and current article language
     const {
       settings,
@@ -687,21 +682,8 @@ async function handleTranslateText(payload: {
       settings?.nativeLanguage ||
       'en';
 
-    console.log('Translation language pair:', {
-      source: sourceLanguage,
-      target: targetLanguage,
-      sourceFrom: payload.sourceLanguage
-        ? 'payload'
-        : currentArticleLanguage
-          ? 'article'
-          : 'settings',
-    });
-
     // Check if source and target languages are the same
     if (sourceLanguage === targetLanguage) {
-      console.log(
-        'Same language detected - skipping translation and returning original text'
-      );
       return payload.text;
     }
 
@@ -750,7 +732,6 @@ async function handleTranslateText(payload: {
       targetLanguage
     );
 
-    console.log('Translation successful (Gemini):', translation);
     return translation;
   } catch (error) {
     console.error('TRANSLATE_TEXT error:', error);

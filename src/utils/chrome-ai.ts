@@ -118,6 +118,7 @@ export class ChromeLanguageDetector {
   private cache: Map<string, { language: string; confidence: number }> =
     new Map();
   private readonly maxCacheSize = 100;
+  private activeSessions: Set<LanguageDetectorInstance> = new Set();
 
   /**
    * Detect language of text using Chrome's Language Detector API
@@ -126,22 +127,14 @@ export class ChromeLanguageDetector {
   async detectLanguage(
     text: string
   ): Promise<{ language: string; confidence: number }> {
-    console.log('🔬 [ChromeLanguageDetector] Starting language detection...');
-    console.log('📊 Input text stats:', {
-      length: text.length,
-      preview: text.substring(0, 100) + '...',
-      wordCount: text.split(/\s+/).length,
-    });
-
     // Check cache first
     const cacheKey = this.getCacheKey(text);
     const cached = this.cache.get(cacheKey);
     if (cached) {
-      console.log('💾 Cache hit! Returning cached result:', cached);
       return cached;
     }
 
-    console.log('🔍 No cache hit, proceeding with API detection...');
+    let detector: LanguageDetectorInstance | null = null;
 
     try {
       // Check if API is available (global LanguageDetector)
@@ -162,46 +155,26 @@ export class ChromeLanguageDetector {
         );
       }
 
-      console.log('✅ LanguageDetector API is available');
-      console.log('🏗️ Creating detector instance...');
-
       // Create detector and detect language
-      const detector = await LanguageDetector.create();
-      console.log('✅ Detector instance created successfully');
+      detector = await LanguageDetector.create();
+      this.activeSessions.add(detector);
 
-      console.log('🔄 Calling detector.detect() with text...');
       const results = await detector.detect(text);
-      console.log('📥 Raw detection results:', results);
 
       if (!results || results.length === 0) {
-        console.error('❌ No results returned from detector');
         throw this.createError('processing_failed', 'No language detected');
       }
 
-      // Log all detection results ranked by confidence
-      console.log('🌍 Language Detection Results (ranked by confidence):');
+      // Get the most confident result
       const sortedResults = [...results].sort(
         (a, b) => b.confidence - a.confidence
       );
-      sortedResults.forEach((result, index) => {
-        const percentage = (result.confidence * 100).toFixed(2);
-        const bar = '█'.repeat(Math.round(result.confidence * 20));
-        console.log(
-          `  ${index + 1}. ${result.detectedLanguage.toUpperCase()} - ${percentage}% ${bar}`
-        );
-      });
-
-      // Get the most confident result
       const topResult = sortedResults[0];
 
       const result = {
         language: topResult.detectedLanguage,
         confidence: topResult.confidence,
       };
-
-      console.log(
-        `✅ Selected: ${result.language.toUpperCase()} (${(result.confidence * 100).toFixed(2)}% confidence)`
-      );
 
       // Cache the result
       this.cacheResult(cacheKey, result);
@@ -223,7 +196,23 @@ export class ChromeLanguageDetector {
         'processing_failed',
         `Language detection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
+    } finally {
+      // Always destroy the detector instance to free memory
+      if (detector) {
+        this.activeSessions.delete(detector);
+        // Note: LanguageDetector doesn't have a destroy() method in the API
+        // but we remove it from tracking to allow garbage collection
+      }
     }
+  }
+
+  /**
+   * Destroy all active sessions
+   */
+  destroyAllSessions(): void {
+    // Clear session tracking to allow garbage collection
+    this.activeSessions.clear();
+    console.log('🧹 All language detector sessions cleared');
   }
 
   /**
@@ -243,6 +232,14 @@ export class ChromeLanguageDetector {
    */
   clearCache(): void {
     this.cache.clear();
+  }
+
+  /**
+   * Destroy and cleanup all resources
+   */
+  destroy(): void {
+    this.destroyAllSessions();
+    this.clearCache();
   }
 
   /**
@@ -1156,20 +1153,6 @@ export class ChromeTranslator {
   }
 
   /**
-   * Clean up all active translator sessions
-   */
-  destroy(): void {
-    this.activeSessions.forEach(session => {
-      try {
-        session.destroy();
-      } catch {
-        // Ignore cleanup errors
-      }
-    });
-    this.activeSessions.clear();
-  }
-
-  /**
    * Get or create translator session for language pair
    */
   private async getTranslator(
@@ -1261,6 +1244,30 @@ export class ChromeTranslator {
       'type' in error &&
       'message' in error
     );
+  }
+
+  /**
+   * Destroy all active translator sessions
+   */
+  destroyAllSessions(): void {
+    for (const [key, translator] of this.activeSessions) {
+      try {
+        translator.destroy();
+        console.log(`🧹 Destroyed translator session: ${key}`);
+      } catch (error) {
+        console.warn(`Failed to destroy translator session ${key}:`, error);
+      }
+    }
+    this.activeSessions.clear();
+    this.translationCache.clear();
+  }
+
+  /**
+   * Destroy and cleanup all resources
+   */
+  destroy(): void {
+    this.destroyAllSessions();
+    this.retryHandler = new RetryHandler(DEFAULT_TRANSLATION_RETRY_CONFIG);
   }
 }
 
@@ -1680,10 +1687,13 @@ export class ChromeAIManager implements AIProcessor {
    * Clean up all active sessions
    */
   destroy(): void {
+    console.log('🧹 Destroying all Chrome AI sessions...');
+    this.languageDetector.destroy();
     this.summarizer.destroy();
     this.rewriter.destroy();
     this.translator.destroy();
     this.vocabularyAnalyzer.destroy();
+    console.log('✅ All Chrome AI sessions destroyed');
   }
 }
 

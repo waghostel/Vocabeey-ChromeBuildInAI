@@ -4,6 +4,7 @@
  */
 
 import { getMemoryManager, type ResourceUsage } from '../utils/memory-manager';
+import { getMemoryProfiler, checkMemory } from '../utils/memory-profiler';
 
 import {
   initializeHighlightManager,
@@ -245,11 +246,18 @@ async function initialize(): Promise<void> {
   try {
     showLoading('Loading article...');
 
+    // Take initial memory snapshot
+    checkMemory('initialization:start');
+
     // Initialize hamburger menu
     initializeHamburgerMenu();
 
     // Initialize memory monitoring
     initializeMemoryMonitoring();
+
+    // Start memory profiling (always enabled for monitoring)
+    const profiler = getMemoryProfiler();
+    profiler.startMonitoring(60000); // Every minute
 
     // Initialize TTS debug console
     const { initTTSDebugConsole } = await import(
@@ -309,6 +317,43 @@ async function getArticleData(tabId: number): Promise<ProcessedArticle | null> {
 // ============================================================================
 
 /**
+ * Cleanup current article and release memory
+ */
+async function cleanupCurrentArticle(): Promise<void> {
+  if (!state.currentArticle) {
+    return;
+  }
+
+  console.log('🧹 Cleaning up current article...');
+
+  // Clean up highlights and event listeners
+  cleanupHighlightManager();
+
+  // Clear article content from DOM
+  if (elements.articlePartContent) {
+    elements.articlePartContent.innerHTML = '';
+  }
+
+  // Clear vocabulary cards
+  if (elements.vocabularyCardsSection) {
+    elements.vocabularyCardsSection.innerHTML = '';
+  }
+
+  // Clear sentence cards
+  if (elements.sentenceCardsSection) {
+    elements.sentenceCardsSection.innerHTML = '';
+  }
+
+  // Nullify state to allow garbage collection
+  state.currentArticle = null;
+  state.vocabularyItems = [];
+  state.sentenceItems = [];
+  state.currentPartIndex = 0;
+
+  console.log('✅ Article cleanup complete');
+}
+
+/**
  * Load and display article
  */
 async function loadArticle(article: ProcessedArticle): Promise<void> {
@@ -341,6 +386,9 @@ async function loadArticle(article: ProcessedArticle): Promise<void> {
       '❌ NO PARTS FOUND IN ARTICLE! This article needs re-segmentation.'
     );
   }
+
+  // Clean up previous article first
+  await cleanupCurrentArticle();
 
   state.currentArticle = article;
 
@@ -4382,8 +4430,8 @@ function initializeMemoryMonitoring(): void {
     (usage: ResourceUsage) => {
       updateMemoryIndicator(usage);
 
-      // Show warning if memory usage is high
-      if (usage.memory.percentage > 80) {
+      // Show warning if memory usage is high (absolute threshold: 100MB)
+      if (usage.memory.used > 100 * 1024 * 1024) {
         showMemoryWarning(usage);
       }
     }
@@ -4417,8 +4465,8 @@ function updateMemoryIndicator(usage: ResourceUsage): void {
     </div>
   `;
 
-  // Add warning class if usage is high
-  if (usage.memory.percentage > 80 || usage.storage.percentage > 80) {
+  // Add warning class if usage is high (100MB for memory, 80% for storage)
+  if (usage.memory.used > 100 * 1024 * 1024 || usage.storage.percentage > 80) {
     indicator.classList.add('warning');
   } else {
     indicator.classList.remove('warning');

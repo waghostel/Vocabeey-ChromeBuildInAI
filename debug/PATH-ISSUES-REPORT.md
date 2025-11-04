@@ -1,7 +1,7 @@
 # Chrome Extension Path Issues - Comprehensive Report
 
 **Generated:** ${new Date().toISOString()}  
-**Extension:** Language Learning Assistant v1.0.0  
+**Extension:** Vocabeey v1.0.0  
 **Issue:** Service worker registration failed. Status code: 3
 
 ---

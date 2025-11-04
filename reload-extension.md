@@ -5,7 +5,7 @@ After running `pnpm build`, you must reload the extension in Chrome:
 ## Method 1: Quick Reload
 
 1. Go to `chrome://extensions/`
-2. Find "Language Learning Assistant"
+2. Find "Vocabeey"
 3. Click the reload icon (🔄)
 
 ## Method 2: Toggle

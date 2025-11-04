@@ -33,6 +33,9 @@ export class CacheManager {
     hitCount: number;
     missCount: number;
   };
+  private cacheSize: number = 0;
+  private readonly MAX_CACHE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB limit
+  private accessTimes: Map<string, number> = new Map();
 
   constructor(config: Partial<CacheConfig> = {}) {
     this.config = {
@@ -64,6 +67,9 @@ export class CacheManager {
         return null;
       }
 
+      // Update access time for LRU
+      this.accessTimes.set(key, Date.now());
+
       return item.value;
     } catch (error) {
       console.error('Cache get error:', error);
@@ -73,11 +79,28 @@ export class CacheManager {
 
   async set<T = unknown>(key: string, value: T): Promise<void> {
     try {
+      const size = this.estimateSize(value);
+
+      // Check if we need to evict items to make space
+      while (
+        this.cacheSize + size > this.MAX_CACHE_SIZE_BYTES &&
+        this.accessTimes.size > 0
+      ) {
+        await this.evictLRU();
+      }
+
       const item: CacheItem<T> = {
         value,
         timestamp: Date.now(),
       };
+
       await chrome.storage.local.set({ [key]: item });
+      this.cacheSize += size;
+      this.accessTimes.set(key, Date.now());
+
+      console.log(
+        `📦 Cache set: ${key} (${(size / 1024).toFixed(2)}KB, total: ${(this.cacheSize / 1024 / 1024).toFixed(2)}MB)`
+      );
     } catch (error) {
       console.error('Cache set error:', error);
     }
@@ -85,7 +108,15 @@ export class CacheManager {
 
   async remove(key: string): Promise<void> {
     try {
+      // Get item size before removing
+      const data = await chrome.storage.local.get(key);
+      if (data[key]) {
+        const size = this.estimateSize(data[key]);
+        this.cacheSize -= size;
+      }
+
       await chrome.storage.local.remove(key);
+      this.accessTimes.delete(key);
     } catch (error) {
       console.error('Cache remove error:', error);
     }
@@ -94,8 +125,11 @@ export class CacheManager {
   async clear(): Promise<void> {
     try {
       await chrome.storage.local.clear();
-      // Reset performance metrics when clearing cache
+      // Reset all tracking
+      this.cacheSize = 0;
+      this.accessTimes.clear();
       this.resetPerformanceMetrics();
+      console.log('🧹 Cache cleared');
     } catch (error) {
       console.error('Cache clear error:', error);
     }
@@ -356,6 +390,56 @@ export class CacheManager {
       hitCount: 0,
       missCount: 0,
     };
+  }
+
+  /**
+   * Evict least recently used item from cache
+   */
+  private async evictLRU(): Promise<void> {
+    let oldestKey: string | null = null;
+    let oldestTime = Infinity;
+
+    // Find least recently accessed item
+    for (const [key, time] of this.accessTimes) {
+      if (time < oldestTime) {
+        oldestTime = time;
+        oldestKey = key;
+      }
+    }
+
+    if (oldestKey) {
+      console.log(`🗑️ Evicting LRU cache item: ${oldestKey}`);
+      await this.remove(oldestKey);
+    }
+  }
+
+  /**
+   * Estimate size of value in bytes
+   */
+  private estimateSize(value: unknown): number {
+    try {
+      return JSON.stringify(value).length * 2; // Rough estimate (UTF-16)
+    } catch {
+      return 1024; // Default 1KB if can't stringify
+    }
+  }
+
+  /**
+   * Get current cache size in bytes
+   */
+  getCacheSize(): number {
+    return this.cacheSize;
+  }
+
+  /**
+   * Get cache size as human-readable string
+   */
+  getCacheSizeFormatted(): string {
+    const mb = this.cacheSize / 1024 / 1024;
+    if (mb < 1) {
+      return `${(this.cacheSize / 1024).toFixed(2)}KB`;
+    }
+    return `${mb.toFixed(2)}MB`;
   }
 
   private generateProcessedContentKey(

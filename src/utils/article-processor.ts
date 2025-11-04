@@ -188,25 +188,11 @@ function splitContentIntoParts(
   const MAX_WORDS_PER_PART = 250; // Reduced from 500 to 250 for shorter, more manageable sections
   const parts: ArticlePart[] = [];
 
-  console.log('🔪 === ARTICLE SEGMENTATION DIAGNOSTIC ===');
-  console.log('📊 Article Info:', {
-    articleId,
-    contentLength: content.length,
-    totalWords: countWords(content),
-    maxWordsPerPart: MAX_WORDS_PER_PART,
-  });
-
   // Split by paragraphs first (try double newline)
   let paragraphs = content.split(/\n\n+/).filter(p => p.trim());
 
-  console.log('📄 Paragraph Detection (\\n\\n):', {
-    paragraphsFound: paragraphs.length,
-    firstParagraphPreview: paragraphs[0]?.substring(0, 100) + '...',
-  });
-
   // Fallback 1: Try single newline if double newline didn't work
   if (paragraphs.length <= 1 && content.length > MAX_WORDS_PER_PART * 2) {
-    console.log('🔄 Fallback: Trying single newline (\\n) split...');
     const singleNewlineParagraphs = content.split(/\n/).filter(p => p.trim());
 
     // Only use single newline split if it gives us reasonable paragraphs
@@ -215,37 +201,19 @@ function splitContentIntoParts(
       const wordCount = countWords(p);
       return wordCount >= 10; // At least 10 words to be considered a paragraph
     });
-
-    console.log('📄 Paragraph Detection (\\n):', {
-      paragraphsFound: paragraphs.length,
-      filteredFrom: singleNewlineParagraphs.length,
-    });
   }
 
   // Fallback 2: Split by sentences if still no luck (preserve punctuation)
   if (paragraphs.length <= 1 && content.length > MAX_WORDS_PER_PART * 2) {
-    console.log(
-      '🔄 Fallback: Trying sentence split (preserving punctuation)...'
-    );
     paragraphs = smartSentenceSplit(content);
-    console.log('📄 Paragraph Detection (sentences):', {
-      paragraphsFound: paragraphs.length,
-    });
   }
 
   // Fallback 3: Force split by word count if still one big chunk
   if (paragraphs.length <= 1 && countWords(content) > MAX_WORDS_PER_PART) {
-    console.log('🔄 Fallback: Force splitting by word count...');
     paragraphs = forceSplitByWordCount(content, MAX_WORDS_PER_PART);
-    console.log('📄 Forced split result:', {
-      chunksCreated: paragraphs.length,
-    });
   }
 
   if (paragraphs.length === 0) {
-    console.warn(
-      '⚠️ No paragraphs found! Creating single part with all content'
-    );
     // No paragraphs found, treat entire content as one part
     return [createArticlePart(content, content, articleId, 0)];
   }
@@ -258,20 +226,11 @@ function splitContentIntoParts(
     const paragraph = paragraphs[i];
     const paragraphWords = countWords(paragraph);
 
-    console.log(`📝 Processing paragraph ${i + 1}/${paragraphs.length}:`, {
-      words: paragraphWords,
-      currentPartWords: currentWordCount,
-      willExceedLimit: currentWordCount + paragraphWords > MAX_WORDS_PER_PART,
-    });
-
     // If adding this paragraph exceeds limit and we have content, create a part
     if (
       currentWordCount + paragraphWords > MAX_WORDS_PER_PART &&
       currentPart.length > 0
     ) {
-      console.log(
-        `✂️ Creating part ${partIndex + 1} (${currentWordCount} words)`
-      );
       parts.push(
         createArticlePart(
           currentPart.trim(),
@@ -292,9 +251,6 @@ function splitContentIntoParts(
 
   // Add remaining content as final part
   if (currentPart.trim()) {
-    console.log(
-      `✂️ Creating final part ${partIndex + 1} (${currentWordCount} words)`
-    );
     parts.push(
       createArticlePart(
         currentPart.trim(),
@@ -307,20 +263,10 @@ function splitContentIntoParts(
 
   // If no parts were created, create one with all content
   if (parts.length === 0) {
-    console.warn('⚠️ No parts created! Creating single part as fallback');
     parts.push(createArticlePart(content, content, articleId, 0));
   }
 
-  console.log('✅ Segmentation Complete:', {
-    totalParts: parts.length,
-    partsDetails: parts.map((p, i) => ({
-      partIndex: i + 1,
-      partId: p.id,
-      words: countWords(p.content),
-      contentPreview: p.content.substring(0, 50) + '...',
-    })),
-  });
-  console.log('🔪 === END SEGMENTATION DIAGNOSTIC ===\n');
+  console.log(`✅ Article segmented into ${parts.length} parts`);
 
   return parts;
 }

@@ -18,6 +18,7 @@
     "copy-assets": "node scripts/copy-assets.js",
     "fix-imports": "node scripts/fix-imports.js",
     "convert-icons": "node scripts/convert-icons.js",
+    "generate-icons": "node scripts/generate-icons.js",
     "dev": "tsc --watch",
     "test": "vitest --run",
     "test:watch": "vitest",

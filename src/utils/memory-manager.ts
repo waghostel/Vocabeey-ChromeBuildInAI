@@ -39,7 +39,7 @@ export interface ResourceUsage {
 export class MemoryManager {
   private static instance: MemoryManager | null = null;
   private monitoringInterval: number | null = null;
-  private readonly MEMORY_THRESHOLD = 100 * 1024 * 1024; // 100MB
+  private readonly MEMORY_THRESHOLD = 200 * 1024 * 1024; // 200MB (increased to reduce false alarms)
   private readonly MONITORING_INTERVAL = 30000; // 30 seconds
   private readonly activeTabs = new Set<number>();
   private readonly activeOffscreenDocs = new Set<string>();
@@ -169,11 +169,11 @@ export class MemoryManager {
       return true;
     }
 
-    // Check if too many resources are active
+    // Check if too many resources are active (increased thresholds)
     if (
-      usage.activeTabs > 5 ||
-      usage.aiSessions > 10 ||
-      usage.offscreenDocuments > 2
+      usage.activeTabs > 10 ||
+      usage.aiSessions > 20 ||
+      usage.offscreenDocuments > 3
     ) {
       console.warn('Too many active resources, performing cleanup');
       await this.performResourceCleanup();

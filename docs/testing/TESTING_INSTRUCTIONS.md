@@ -1,6 +1,6 @@
-# Testing Instructions - Language Learning Assistant
+# Testing Instructions - Vocabeey
 
-Simple manual testing guide for the Language Learning Chrome Extension.
+Simple manual testing guide for the Vocabeey Chrome Extension.
 
 ## Prerequisites
 
@@ -28,7 +28,7 @@ console.log('Chrome AI available:', 'ai' in window);
 **Steps**:
 
 1. Navigate to a news article (e.g., BBC News, Medium, Wikipedia)
-2. Click the Language Learning Assistant extension icon in toolbar
+2. Click the Vocabeey extension icon in toolbar
 3. Wait for processing to complete
 4. Verify learning interface opens in a new tab
 
@@ -344,7 +344,7 @@ Monitor during testing:
 **Check Memory** (Chrome Task Manager):
 
 1. Press Shift+Esc to open Task Manager
-2. Find "Extension: Language Learning Assistant"
+2. Find "Extension: Vocabeey"
 3. Monitor memory usage during testing
 
 ---

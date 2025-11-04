@@ -5,7 +5,7 @@ Since MCP chrome-devtools can't access your extension, use these manual debuggin
 ## 1. Service Worker Debugging
 
 1. **Navigate to**: `chrome://extensions/`
-2. **Find**: "Language Learning Assistant"
+2. **Find**: "Vocabeey"
 3. **Click**: "Inspect views: service worker"
 4. **Use Console**: Run these commands:
 

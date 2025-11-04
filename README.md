@@ -1,8 +1,173 @@
-# Language Learning Assistant
+<div align="center">
+  <img src="icons/Vocabee.png" alt="Vocabeey Logo" width="128" height="128">
+  
+  # Vocabeey
+  
+  Transform any web article into an interactive language learning experience powered by AI.
+  
+  Learn languages naturally by reading real content with smart vocabulary highlighting, instant translations, and interactive learning cards.
+</div>
 
-Interactive language learning extension using Chrome's built-in AI APIs to transform web articles into learning experiences.
+---
 
-## Quick Start
+## ✨ What is Vocabeey?
+
+Vocabeey turns your everyday web browsing into a powerful language learning tool. Read articles in your target language and get instant help with vocabulary, sentence structure, and pronunciation - all powered by Chrome's built-in AI.
+
+Perfect for language learners who want to practice with real-world content instead of textbooks.
+
+## 🚀 Features
+
+- **📖 Smart Reading Mode**: Clean, distraction-free article view with AI-powered content extraction
+- **🎯 Dual Highlighting System**: Switch between vocabulary and sentence learning modes
+- **🤖 AI-Powered Translations**: Instant translations with context-aware explanations
+- **🔊 Text-to-Speech**: Hear correct pronunciation for any word or sentence
+- **💡 Interactive Learning Cards**: Review vocabulary and sentences with spaced repetition
+- **🎨 Difficulty Adaptation**: Content automatically adjusted to your learning level (1-10 scale)
+- **🔒 Privacy-First**: All your learning data stays local on your device
+- **⚡ Works Offline**: Continue learning even without internet connection
+- **⌨️ Keyboard Shortcuts**: Navigate and learn faster with intuitive hotkeys
+
+## 📥 Installation
+
+### Requirements
+
+- **Chrome Browser**: Version 140 or higher
+- **Storage Space**: 22GB for AI model downloads (one-time, automatic)
+- **RAM**: 4GB minimum (8GB recommended for best performance)
+- **Platform**: Windows 10+, macOS 13+, Linux, or ChromeOS
+
+### Step 1: Enable Chrome AI
+
+1. Open Chrome and navigate to: `chrome://flags/#optimization-guide-on-device-model`
+2. Set "Optimization Guide On Device Model" to **Enabled**
+3. Restart Chrome
+4. AI models will download automatically in the background (22GB, may take some time)
+
+### Step 2: Install Vocabeey
+
+**Option A: From Chrome Web Store** (Coming Soon)
+
+- Visit the Chrome Web Store
+- Click "Add to Chrome"
+- Start learning!
+
+**Option B: Install from Source** (For Early Adopters)
+
+1. Download or clone this repository
+2. Open Chrome and go to `chrome://extensions/`
+3. Enable "Developer mode" (toggle in top-right corner)
+4. Click "Load unpacked"
+5. Select the extension directory
+6. The Vocabeey icon will appear in your toolbar
+
+### Step 3: Verify Installation
+
+Open any webpage, press F12 to open DevTools Console, and run:
+
+```javascript
+console.log('Chrome AI available:', 'ai' in window);
+```
+
+If it returns `true`, you're ready to go!
+
+## 🎓 How to Use
+
+### Getting Started
+
+1. **Find an Article**: Navigate to any article or blog post in your target language
+2. **Click the Extension**: Click the Vocabeey icon in your Chrome toolbar
+3. **Start Learning**: The article opens in a clean learning interface with AI-powered features
+
+### Learning Modes
+
+**📖 Reading Mode**
+
+- Read the article with optional vocabulary or sentence highlighting
+- Click any highlighted word for instant translation and explanation
+- Switch highlight modes on the fly
+
+**📝 Vocabulary Mode**
+
+- Review all vocabulary words from the article
+- See difficulty ratings, translations, and example sentences
+- Practice with interactive flashcards
+
+**💬 Sentences Mode**
+
+- Study complete sentences with translations
+- Understand grammar and sentence structure
+- Listen to native pronunciation
+
+## ⌨️ Keyboard Shortcuts
+
+Master Vocabeey with these time-saving shortcuts:
+
+### Navigate Articles
+
+- **← / →** (Arrow Keys): Move between article sections
+
+### Switch Learning Modes
+
+- **R**: Reading mode 📖
+- **V**: Vocabulary mode 📝
+- **S**: Sentences mode 💬
+
+### Control Highlighting (Reading Mode)
+
+- **1**: Highlight vocabulary words
+- **2**: Highlight sentences
+- **3 / 0 / Esc**: Turn off highlighting
+
+### Manage Highlights
+
+- **Delete / Backspace**: Remove selected highlight
+- **Esc**: Deselect without deleting
+
+### Quick Editing
+
+- **Enter**: Save your edits
+- **Esc**: Cancel editing
+
+## 🌍 Supported Languages
+
+Vocabeey works with any language pair supported by Chrome's AI translation:
+
+- English, Spanish, French, German, Italian, Portuguese
+- Chinese (Simplified & Traditional), Japanese, Korean
+- Arabic, Russian, Hindi, and many more!
+
+The AI automatically detects the article's language and provides translations to your preferred language.
+
+## 💡 Tips for Best Results
+
+- **Start with easier content**: Begin with articles at your current level and gradually increase difficulty
+- **Use keyboard shortcuts**: They make learning much faster and more enjoyable
+- **Review regularly**: Revisit vocabulary and sentences in learning mode to reinforce memory
+- **Adjust difficulty**: Use the rewriter feature to simplify or complexify content
+- **Practice pronunciation**: Use text-to-speech to hear correct pronunciation
+- **Stay consistent**: Make it a daily habit to read one article in your target language
+
+## 📚 Learn More
+
+- **[Complete User Guide](docs/user-guide/README.md)** - Detailed usage instructions
+- **[Troubleshooting](docs/user-guide/README.md#troubleshooting)** - Common issues and solutions
+- **[FAQ](docs/user-guide/README.md#faq)** - Frequently asked questions
+
+---
+
+## 👨‍💻 For Developers
+
+Want to contribute or build your own features? Check out our developer documentation below.
+
+## Development Setup
+
+### Prerequisites
+
+- Node.js 18+ & pnpm 8+
+- Chrome 140+ (for built-in AI APIs)
+
+### Quick Start for Developers
 
 ```bash
 # Install dependencies
@@ -24,174 +189,41 @@ pnpm test
 pnpm test:coverage
 ```
 
-## Documentation
+### Developer Documentation
 
-- **[Complete Documentation](docs/README.md)** - Full documentation index
 - **[Quick Start Guide](docs/development/quick-start.md)** - Get running in 5 minutes
-- **[User Guide](docs/user-guide/README.md)** - End-user documentation
 - **[Architecture](docs/architecture/README.md)** - Technical architecture
 - **[API Reference](docs/api/README.md)** - Chrome AI integration
 - **[Testing Guide](docs/testing/README.md)** - Test suite and coverage
+- **[Complete Documentation](docs/README.md)** - Full documentation index
 
-## Features
-
-- **AI-Powered Processing**: Chrome Built-in AI APIs with Gemini fallback
-- **Smart Content Extraction**: Readability.js → Jina Reader API → DOM parsing pipeline
-- **Interactive Learning Interface**: Full-page takeover with card-based UI
-- **Dual Highlighting System**: Vocabulary mode and sentence mode learning
-- **Text-to-Speech Support**: Native pronunciation with TTS service
-- **Privacy-First Storage**: Local-first data with offline capability
-- **Performance Optimized**: Memory management and caching system
-- **Keyboard Shortcuts**: Fast navigation and mode switching with hotkeys
-
-## Keyboard Shortcuts
-
-### Navigation
-
-- **← (Left Arrow)**: Navigate to previous article part
-- **→ (Right Arrow)**: Navigate to next article part
-
-### Learning Mode Switching
-
-- **R**: Switch to Reading mode (📖)
-- **V**: Switch to Vocabulary learning mode (📝)
-- **S**: Switch to Sentences learning mode (💬)
-
-### Highlight Mode Switching (Reading Mode)
-
-- **1**: Vocabulary highlight mode
-- **2**: Sentence highlight mode
-- **3**, **0**, or **Esc**: None (disable highlighting)
-
-### Highlight Management
-
-- **Delete** or **Backspace**: Delete selected highlight
-- **Esc**: Deselect highlight without deleting
-
-### Bulk Delete (None Mode)
-
-1. Switch to None mode (`0`, `3`, or `Esc`)
-2. Select text by clicking and dragging
-3. Press `Delete` or `Backspace` to delete all selected highlights
-4. Press `Esc` to cancel bulk delete preview
-
-### Edit Mode (Paragraph Editing)
-
-- **Enter**: Save changes
-- **Esc**: Cancel editing
-
-## Development
-
-### Prerequisites
-
-- Node.js 18+ & pnpm 8+
-- Chrome 140+ (for built-in AI APIs)
-
-### Chrome AI Module Requirements
-
-Chrome's built-in AI APIs require:
-
-- **Chrome Version**: 140+ (stable channel)
-- **Storage**: 22GB for AI model downloads (automatic)
-- **RAM**: 4GB minimum, 8GB recommended
-- **VRAM**: 4GB recommended
-- **Platform**: Windows 10+, macOS 13+, Linux, or ChromeOS
-
-**Chrome Built-in AI APIs Used**:
-
-1. **Language Detector API** - Automatic language detection for articles
-2. **Summarizer API** - Content summarization for learning
-3. **Rewriter API** - Difficulty-based content rewriting (1-10 scale)
-4. **Translator API** - Vocabulary and sentence translation
-5. **Prompt API (Language Model)** - Advanced vocabulary analysis using Gemini Nano
-
-**Setup Steps**:
-
-1. Navigate to `chrome://flags/#optimization-guide-on-device-model`
-2. Set "Optimization Guide On Device Model" to **Enabled**
-3. Relaunch Chrome
-4. AI models will download automatically (22GB)
-
-**Verify Installation**:
-
-```javascript
-// Open any webpage console and run:
-console.log('Chrome AI available:', 'ai' in window);
-```
-
-### Project Structure
-
-```
-src/
-├── background/       # Service worker (extension lifecycle)
-├── content/          # Content scripts (DOM interaction)
-├── offscreen/        # Offscreen documents (AI processing)
-├── ui/               # User interface components
-│   ├── learning-interface.ts    # Main learning UI
-│   ├── settings.ts              # Settings management
-│   └── setup-wizard.ts          # Initial setup
-├── types/            # TypeScript type definitions
-└── utils/            # Shared utilities and services
-    ├── ai-service-coordinator.ts  # AI service orchestration
-    ├── cache-manager.ts           # Caching system
-    ├── chrome-ai.ts               # Chrome AI integration
-    ├── content-extraction.ts      # Article extraction
-    ├── storage-manager.ts         # Data persistence
-    └── tts-service.ts             # Text-to-speech
-
-docs/                 # Documentation
-tests/                # Test suite (22 test files, 740+ tests)
-```
-
-### Key Commands
-
-```bash
-# Development
-pnpm dev              # TypeScript watch mode
-pnpm build            # Production build
-pnpm copy-assets      # Copy static assets
-
-# Code Quality
-pnpm lint             # Oxlint checking
-pnpm lint:fix         # Auto-fix linting issues
-pnpm format           # Prettier formatting
-pnpm type-check       # TypeScript validation
-
-# Testing
-pnpm test             # Run test suite once
-pnpm test:watch       # Watch mode testing
-pnpm test:coverage    # Coverage reports
-pnpm test:ui          # Vitest UI
-
-# Validation
-pnpm validate:extension  # Full validation pipeline
-```
-
-## Quality Assurance
-
-- **740+ Tests**: Comprehensive test coverage across 22 test files
-- **Dual Linting**: Oxlint (primary) + ESLint (fallback) with TypeScript rules
-- **Type Safety**: Strict TypeScript with Chrome extension types
-- **Pre-commit Hooks**: Husky with lint-staged for automated quality checks
-- **Performance Testing**: Memory management and benchmark tests included
-
-## Architecture
+### Tech Stack
 
 - **Chrome Extension**: Manifest V3 with service worker architecture
-- **AI Integration**: Chrome Built-in AI APIs with Gemini fallback
-  - Language Detector API - Automatic language detection
-  - Summarizer API - Content summarization
-  - Rewriter API - Difficulty-based rewriting
-  - Translator API - Vocabulary and sentence translation
-  - Prompt API (Language Model) - Vocabulary analysis with Gemini Nano
-- **Content Processing**: Multi-stage extraction pipeline with caching
-- **Storage**: Versioned schema with local-first privacy approach
-- **Testing**: Vitest with jsdom environment and Chrome API mocking
+- **Language**: TypeScript with strict mode
+- **AI Integration**: Chrome Built-in AI APIs (Language Detector, Summarizer, Rewriter, Translator, Prompt API)
+- **Testing**: Vitest with 740+ tests across 22 test files
+- **Code Quality**: Oxlint + ESLint, Prettier, Husky pre-commit hooks
+- **Build System**: TypeScript compiler with custom asset pipeline
 
-## License
+## 🤝 Contributing
+
+We welcome contributions! Whether it's bug reports, feature requests, or code contributions, we'd love your help making Vocabeey better.
+
+Check out our [development documentation](docs/development/quick-start.md) to get started.
+
+## 📄 License
 
 MIT - See [LICENSE](LICENSE) for details
 
 ---
 
-**Ready to start?** Check the [Quick Start Guide](docs/development/quick-start.md) or [User Guide](docs/user-guide/README.md).
+<div align="center">
+  
+**Ready to transform your language learning?**
+
+[Get Started](#-installation) • [User Guide](docs/user-guide/README.md) • [Report an Issue](https://github.com/yourusername/vocabeey/issues)
+
+Made with ❤️ for language learners everywhere
+
+</div>

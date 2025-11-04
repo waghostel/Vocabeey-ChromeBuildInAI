@@ -16,18 +16,14 @@ export async function pronounceText(
   text: string,
   language?: string
 ): Promise<void> {
-  console.log('TTS: pronounceText called for:', text.substring(0, 30));
-
   // Check if clicking the same element (cancel action)
   if (isTTSActive && currentSpeakingElement === element) {
-    console.log('TTS: Same element clicked, cancelling...');
     cancelTTS();
     return;
   }
 
   // If switching elements, abort the current TTS execution
   if (currentTTSAbortController) {
-    console.log('TTS: Aborting previous TTS execution...');
     currentTTSAbortController.abort();
   }
 
@@ -42,7 +38,6 @@ export async function pronounceText(
 
     // Check if aborted before proceeding
     if (abortController.signal.aborted) {
-      console.log('TTS: Aborted before TTS check');
       return;
     }
 
@@ -56,7 +51,6 @@ export async function pronounceText(
 
     // Check if aborted after stopping
     if (abortController.signal.aborted) {
-      console.log('TTS: Aborted after stopping previous speech');
       return;
     }
 
@@ -71,8 +65,6 @@ export async function pronounceText(
     // Show indicator
     showTTSRetryIndicator(text);
 
-    console.log('TTS: Starting speech for:', text.substring(0, 30));
-
     // Speak the text with specified language
     await speak(text, { language });
 
@@ -84,7 +76,6 @@ export async function pronounceText(
 
     // TTS completed successfully
     if (currentTTSAbortController === abortController) {
-      console.log('TTS: Speech completed successfully');
       isTTSActive = false;
       hideTTSRetryIndicator();
       removeSpeakingIndicators();
@@ -93,7 +84,6 @@ export async function pronounceText(
   } catch (error: unknown) {
     // Check if this execution was aborted
     if (abortController.signal.aborted) {
-      console.log('TTS: Execution was aborted, ignoring error');
       return;
     }
 

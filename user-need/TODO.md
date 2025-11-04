@@ -1,6 +1,7 @@
 ## High
 
 [ ] Language detection is not display correctly
+[ ] Place Edit paragraph button to right.
 
 # Medium
 
@@ -15,6 +16,9 @@
 [ ] User can create blank page.
 [ ] The title, language, and url personal editing feature(Trigger by double click on it.)
 [ ] icon to copy all the article(include header, url, )
+[ ] Is highlight and vocabulary/Sentence have been duplicate translated?
+[ ] Make previous and next page an onmouseover floating icon
+[ ] Create jump to Vocabulary and Sentence feature
 
 ## done
 

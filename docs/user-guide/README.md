@@ -1,6 +1,6 @@
 # User Guide
 
-## Getting Started with Language Learning Assistant
+## Getting Started with Vocabeey
 
 Transform any web article into an interactive language learning experience using Chrome's built-in AI APIs.
 
@@ -35,7 +35,7 @@ Before using the extension, enable Chrome's AI features:
 2. Open Chrome and navigate to `chrome://extensions/`
 3. Enable "Developer mode" in the top right
 4. Click "Load unpacked" and select the extension directory
-5. The Language Learning Assistant icon will appear in your toolbar
+5. The Vocabeey icon will appear in your toolbar
 
 ### First-Time Setup
 
@@ -52,7 +52,7 @@ After installation, the setup wizard will guide you through:
 ### Processing an Article
 
 1. **Navigate to an Article**: Visit any webpage with article content
-2. **Click Extension Icon**: Click the Language Learning Assistant icon in your toolbar
+2. **Click Extension Icon**: Click the Vocabeey icon in your toolbar
 3. **Automatic Extraction**: The extension automatically extracts and processes the content
 4. **Learning Interface Opens**: A new tab opens with the processed article in learning mode
 
@@ -638,4 +638,4 @@ A: The extension will show error messages if Chrome AI is unavailable. Ensure yo
 **Q: What should I do if content extraction fails?**
 A: Try different articles or websites, ensure the page has substantial text content, and consider adding a Jina Reader API key for better extraction from complex sites with heavy JavaScript or unusual layouts.
 
-This comprehensive user guide covers all aspects of the Language Learning Assistant extension. For additional technical support, refer to the troubleshooting section or check the extension's development documentation.
+This comprehensive user guide covers all aspects of the Vocabeey extension. For additional technical support, refer to the troubleshooting section or check the extension's development documentation.

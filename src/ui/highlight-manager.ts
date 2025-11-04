@@ -553,24 +553,65 @@ export function getHighlightMode(): HighlightMode {
 
 /**
  * Cleanup highlight manager
+ * CRITICAL: Properly removes all event listeners and DOM elements to prevent memory leaks
  */
 export function cleanupHighlightManager(): void {
+  console.log('🧹 Cleaning up highlight manager...');
+
+  // Remove global event listeners
   document.removeEventListener('mouseup', handleTextSelection);
   document.removeEventListener('touchend', handleTextSelection);
   document.removeEventListener('dblclick', handleDoubleClick);
   document.removeEventListener('contextmenu', handleContextMenu);
   document.removeEventListener('keydown', handleKeyPress);
   document.removeEventListener('mousemove', handleGlobalMouseMove);
-  highlights.clear();
-  deselectHighlight();
-  clearBulkDeletePreview();
-  hideTranslationPopup();
 
-  // Clear popup check interval if running
+  // Clear translation popup interval
   if (popupCheckInterval) {
     clearInterval(popupCheckInterval);
     popupCheckInterval = null;
   }
+
+  // Remove and cleanup translation popup
+  hideTranslationPopup();
+  if (currentPopupElement) {
+    currentPopupElement.remove();
+    currentPopupElement = null;
+  }
+  currentPopupHighlightElement = null;
+
+  // Remove all highlight elements from DOM and their event listeners
+  const articleContent = document.querySelector('.article-part-content');
+  if (articleContent) {
+    // Find all highlight elements
+    const highlightElements = articleContent.querySelectorAll(
+      '[data-highlight-id]'
+    );
+
+    highlightElements.forEach(element => {
+      const parent = element.parentNode;
+
+      if (parent) {
+        // Replace highlight with plain text to free memory
+        const textNode = document.createTextNode(element.textContent || '');
+        parent.replaceChild(textNode, element);
+      }
+    });
+  }
+
+  // Clear all state
+  highlights.clear();
+  deselectHighlight();
+  clearBulkDeletePreview();
+
+  // Reset module-level state
+  currentMode = 'none';
+  currentArticleId = null;
+  currentPartId = null;
+  currentArticleLanguage = null;
+  pendingSelection = null;
+
+  console.log('✅ Highlight manager cleaned up');
 }
 
 /**

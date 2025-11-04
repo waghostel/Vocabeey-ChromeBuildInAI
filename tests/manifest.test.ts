@@ -12,7 +12,7 @@ describe('Manifest Validation', () => {
   });
 
   it('should have required extension metadata', () => {
-    expect(manifest.name).toBe('Language Learning Assistant');
+    expect(manifest.name).toBe('Vocabeey');
     expect(manifest.version).toBe('1.0.0');
     expect(manifest.description).toBeTruthy();
     expect(manifest.description.length).toBeGreaterThan(0);

@@ -13,7 +13,7 @@
 ```json
 {
   "manifest_version": 3,
-  "name": "Language Learning Assistant",
+  "name": "Vocabeey",
   "version": "1.0.0",
   "description": "Interactive language learning extension using Chrome's built-in AI APIs",
   "permissions": ["storage", "activeTab", "scripting", "offscreen", "tabs"],
@@ -51,7 +51,7 @@
 
 ### `name`
 
-- **值：** `"Language Learning Assistant"`
+- **值：** `"Vocabeey"`
 - **解說：** 擴充功能的名稱，會顯示在 Chrome 應用程式商店、擴充功能管理頁面以及各種提示訊息中。
 
 ### `version`
