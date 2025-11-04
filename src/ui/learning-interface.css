@@ -2576,6 +2576,7 @@ body.dark-mode .highlight-sentence.speaking {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   z-index: 1;
   overflow: hidden;
+  padding: 6px;
 }
 
 body.dark-mode .article-edit-dialog-content {
@@ -2587,10 +2588,12 @@ body.dark-mode .article-edit-dialog-content {
 .dialog-header {
   position: relative;
   flex-shrink: 0;
-  padding: 1.5rem 2rem;
+  padding: 1.25rem 2rem;
   border-bottom: 1px solid var(--border-color);
   background: white;
   z-index: 10;
+  display: flex;
+  align-items: center;
 }
 
 body.dark-mode .dialog-header {
@@ -2601,7 +2604,8 @@ body.dark-mode .dialog-header {
 /* Dialog Close Button */
 .dialog-close-btn {
   position: absolute;
-  top: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
   right: 1.5rem;
   width: 32px;
   height: 32px;
@@ -2633,11 +2637,21 @@ body.dark-mode .dialog-close-btn:hover {
 }
 
 .edit-dialog-title {
-  margin: 0;
+  margin: 0 !important;
+  margin-bottom: 0 !important;
+  padding: 0;
   padding-right: 2.5rem;
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-primary);
+  line-height: 1.2;
+}
+
+/* Ensure all h3 in dialog headers have no bottom margin */
+.article-edit-dialog .dialog-header h3,
+.card-edit-dialog .dialog-header h3,
+.dialog-header h3 {
+  margin-bottom: 0 !important;
 }
 
 /* Scrollable Body */
@@ -2651,10 +2665,13 @@ body.dark-mode .dialog-close-btn:hover {
 /* Fixed Footer */
 .dialog-footer {
   flex-shrink: 0;
-  padding: 1.5rem 2rem;
+  padding: 1.25rem 2rem;
   border-top: 1px solid var(--border-color);
   background: white;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 body.dark-mode .dialog-footer {
@@ -3069,9 +3086,11 @@ body.dark-mode .card-edit-dialog-content {
 .card-edit-dialog .dialog-header {
   position: relative;
   flex-shrink: 0;
-  padding: 1.5rem 2rem;
+  padding: 1.25rem 2rem;
   border-bottom: 1px solid var(--border-color);
   background: white;
+  display: flex;
+  align-items: center;
 }
 
 body.dark-mode .card-edit-dialog .dialog-header {
@@ -3087,9 +3106,12 @@ body.dark-mode .card-edit-dialog .dialog-header {
 
 .card-edit-dialog .dialog-footer {
   flex-shrink: 0;
-  padding: 1.5rem 2rem;
+  padding: 1.25rem 2rem;
   border-top: 1px solid var(--border-color);
   background: white;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 body.dark-mode .card-edit-dialog .dialog-footer {
