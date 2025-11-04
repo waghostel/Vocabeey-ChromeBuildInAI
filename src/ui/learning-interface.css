@@ -2531,3 +2531,274 @@ body.dark-mode .highlight-sentence.speaking {
     background-color: rgba(231, 76, 60, 0.6);
   }
 }
+
+/* ============================================================================
+   Article Header Edit Dialog
+   ============================================================================ */
+
+.article-edit-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.article-edit-dialog.hidden {
+  display: none;
+}
+
+.article-edit-dialog .dialog-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.article-edit-dialog-content {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+body.dark-mode .article-edit-dialog-content {
+  background: #2c3e50;
+  color: var(--text-primary);
+}
+
+.edit-dialog-title {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Edit Fields */
+.edit-field {
+  margin-bottom: 1.5rem;
+}
+
+.edit-field label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.edit-field input[type='text'],
+.edit-field textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: white;
+  color: var(--text-primary);
+  transition: var(--transition);
+}
+
+body.dark-mode .edit-field input[type='text'],
+body.dark-mode .edit-field textarea {
+  background: #34495e;
+  border-color: #4a5f7f;
+  color: var(--text-primary);
+}
+
+.edit-field input[type='text']:focus,
+.edit-field textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.edit-field input[type='text'].error,
+.edit-field textarea.error {
+  border-color: var(--danger-color);
+}
+
+.edit-field textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+  font-family: inherit;
+}
+
+.edit-paragraph-textarea {
+  min-height: 200px;
+  max-height: 400px;
+}
+
+/* Field Help Text */
+.field-help {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Field Error Messages */
+.field-error {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--danger-color);
+}
+
+.field-error.hidden {
+  display: none;
+}
+
+/* Language Selector in Dialog */
+.edit-language-selector-wrapper {
+  position: relative;
+}
+
+.edit-language-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  color: var(--text-primary);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+body.dark-mode .edit-language-input {
+  background: #34495e;
+  border-color: #4a5f7f;
+  color: var(--text-primary);
+}
+
+.edit-language-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.edit-language-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.25rem;
+  background: white;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--card-hover-shadow);
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+}
+
+body.dark-mode .edit-language-dropdown {
+  background: #34495e;
+  border-color: #4a5f7f;
+}
+
+.edit-language-dropdown.active {
+  display: block;
+}
+
+.edit-language-options {
+  padding: 0.25rem 0;
+}
+
+.edit-language-option {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-language-option:hover {
+  background: var(--secondary-color);
+}
+
+body.dark-mode .edit-language-option:hover {
+  background: #4a5f7f;
+}
+
+.edit-language-option.selected {
+  background: rgba(74, 144, 226, 0.1);
+  font-weight: 600;
+}
+
+body.dark-mode .edit-language-option.selected {
+  background: rgba(93, 173, 226, 0.2);
+}
+
+.edit-language-option-name {
+  font-weight: 500;
+  flex: 1;
+}
+
+.edit-language-option.selected .edit-language-option-name {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.edit-language-option-checkmark {
+  color: var(--primary-color);
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-left: 0.5rem;
+}
+
+.edit-language-option-code {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-left: 0.5rem;
+}
+
+/* Dialog Actions */
+.article-edit-dialog .dialog-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+body.dark-mode .article-edit-dialog .dialog-actions {
+  border-top-color: #4a5f7f;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .article-edit-dialog-content {
+    width: 95%;
+    padding: 1.5rem;
+    max-height: 90vh;
+  }
+
+  .edit-dialog-title {
+    font-size: 1.25rem;
+  }
+
+  .edit-field {
+    margin-bottom: 1.25rem;
+  }
+}

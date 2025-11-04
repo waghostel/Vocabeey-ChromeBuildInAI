@@ -254,6 +254,80 @@
       </button>
     </div>
 
+    <!-- Article Header Edit Dialog -->
+    <div class="article-edit-dialog hidden">
+      <div class="dialog-overlay"></div>
+      <div class="dialog-content article-edit-dialog-content">
+        <h3 class="edit-dialog-title">Edit Article Header</h3>
+
+        <!-- Article Title Field -->
+        <div class="edit-field">
+          <label for="edit-title-input">Article Title</label>
+          <input
+            type="text"
+            id="edit-title-input"
+            class="edit-title-input"
+            placeholder="Enter article title..."
+            maxlength="500"
+          />
+          <span class="field-error hidden"></span>
+        </div>
+
+        <!-- Article URL Field -->
+        <div class="edit-field">
+          <label for="edit-url-input">Article URL</label>
+          <input
+            type="text"
+            id="edit-url-input"
+            class="edit-url-input"
+            placeholder="Enter article URL..."
+            maxlength="2000"
+          />
+          <span class="field-error hidden"></span>
+        </div>
+
+        <!-- Language Selector -->
+        <div class="edit-field">
+          <label for="edit-language-input">Detected Language</label>
+          <div class="edit-language-selector-wrapper">
+            <input
+              type="text"
+              id="edit-language-input"
+              class="edit-language-input"
+              placeholder="Search language..."
+              autocomplete="off"
+            />
+            <div class="edit-language-dropdown">
+              <div class="edit-language-options"></div>
+            </div>
+          </div>
+          <span class="field-error hidden"></span>
+        </div>
+
+        <!-- Paragraph Content Field -->
+        <div class="edit-field">
+          <label for="edit-paragraph-textarea">Article Content</label>
+          <textarea
+            id="edit-paragraph-textarea"
+            class="edit-paragraph-textarea"
+            placeholder="Enter article content... (Each paragraph should be separated by a blank line)"
+            rows="10"
+          ></textarea>
+          <span class="field-help"
+            >Separate paragraphs with blank lines. Each paragraph will be
+            displayed separately in the reading interface.</span
+          >
+          <span class="field-error hidden"></span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="dialog-actions">
+          <button class="dialog-btn dialog-btn-cancel">Cancel</button>
+          <button class="dialog-btn dialog-btn-save">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
     <script src="learning-interface.js" type="module"></script>
   </body>
 </html>

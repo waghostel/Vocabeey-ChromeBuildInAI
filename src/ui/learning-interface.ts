@@ -145,6 +145,26 @@ const elements = {
 
   // Context menu
   contextMenu: document.querySelector('.context-menu') as HTMLElement,
+
+  // Edit dialog
+  editDialog: document.querySelector('.article-edit-dialog') as HTMLElement,
+  editDialogTitle: document.querySelector('.edit-dialog-title') as HTMLElement,
+  editTitleInput: document.querySelector(
+    '.edit-title-input'
+  ) as HTMLInputElement,
+  editUrlInput: document.querySelector('.edit-url-input') as HTMLInputElement,
+  editLanguageInput: document.querySelector(
+    '.edit-language-input'
+  ) as HTMLInputElement,
+  editLanguageDropdown: document.querySelector(
+    '.edit-language-dropdown'
+  ) as HTMLElement,
+  editLanguageOptions: document.querySelector(
+    '.edit-language-options'
+  ) as HTMLElement,
+  editParagraphTextarea: document.querySelector(
+    '.edit-paragraph-textarea'
+  ) as HTMLTextAreaElement,
 };
 
 // ============================================================================
@@ -641,6 +661,460 @@ function showArticleHeaderContextMenu(
 
   // Show menu
   contextMenu.classList.remove('hidden');
+}
+
+// ============================================================================
+// Article Header Edit Dialog
+// ============================================================================
+
+// Edit dialog state
+let editDialogSelectedLanguage: string = '';
+
+/**
+ * Show article header edit dialog
+ */
+function showArticleHeaderEditDialog(): void {
+  if (!elements.editDialog || !state.currentArticle) return;
+
+  // Populate fields with current values
+  elements.editTitleInput.value = state.currentArticle.title || '';
+  elements.editUrlInput.value = state.currentArticle.url || '';
+
+  // Set language
+  editDialogSelectedLanguage = state.currentArticle.originalLanguage || 'en';
+  const selectedLang = LANGUAGES.find(
+    l => l.code === editDialogSelectedLanguage
+  );
+  if (selectedLang && elements.editLanguageInput) {
+    elements.editLanguageInput.value = selectedLang.name;
+  }
+
+  // Populate paragraph content from current part
+  if (state.currentArticle.parts && state.currentArticle.parts.length > 0) {
+    const currentPart = state.currentArticle.parts[state.currentPartIndex];
+    if (currentPart && elements.editParagraphTextarea) {
+      elements.editParagraphTextarea.value = currentPart.content || '';
+    }
+  }
+
+  // Setup language selector
+  setupEditDialogLanguageSelector();
+
+  // Clear any previous errors
+  clearEditDialogErrors();
+
+  // Show dialog
+  elements.editDialog.classList.remove('hidden');
+
+  // Focus first input
+  setTimeout(() => elements.editTitleInput.focus(), 100);
+
+  // Setup event listeners
+  setupEditDialogEventListeners();
+}
+
+/**
+ * Hide article header edit dialog
+ */
+function hideArticleHeaderEditDialog(): void {
+  if (!elements.editDialog) return;
+
+  // Hide dialog
+  elements.editDialog.classList.add('hidden');
+
+  // Clear fields
+  elements.editTitleInput.value = '';
+  elements.editUrlInput.value = '';
+  elements.editLanguageInput.value = '';
+  elements.editParagraphTextarea.value = '';
+
+  // Hide language dropdown
+  if (elements.editLanguageDropdown) {
+    elements.editLanguageDropdown.classList.remove('active');
+  }
+
+  // Clear errors
+  clearEditDialogErrors();
+
+  // Remove event listeners
+  removeEditDialogEventListeners();
+}
+
+/**
+ * Setup edit dialog language selector
+ */
+function setupEditDialogLanguageSelector(): void {
+  if (!elements.editLanguageOptions) return;
+
+  // Populate language options
+  elements.editLanguageOptions.innerHTML = LANGUAGES.map(lang => {
+    const isSelected = lang.code === editDialogSelectedLanguage;
+    return `
+      <div class="edit-language-option ${isSelected ? 'selected' : ''}" data-code="${lang.code}">
+        <span class="edit-language-option-name">${escapeHtml(lang.name)}</span>
+        <span class="edit-language-option-code">${lang.code.toUpperCase()}</span>
+        ${isSelected ? '<span class="edit-language-option-checkmark">✓</span>' : ''}
+      </div>
+    `;
+  }).join('');
+
+  // Add click listeners to options
+  const options = elements.editLanguageOptions.querySelectorAll(
+    '.edit-language-option'
+  );
+  options.forEach(option => {
+    option.addEventListener('click', () => {
+      const code = (option as HTMLElement).dataset.code;
+      if (code) {
+        selectEditDialogLanguage(code);
+      }
+    });
+  });
+}
+
+/**
+ * Select language in edit dialog
+ */
+function selectEditDialogLanguage(code: string): void {
+  const lang = LANGUAGES.find(l => l.code === code);
+  if (!lang) return;
+
+  // Update selected language
+  editDialogSelectedLanguage = code;
+
+  // Update input value
+  if (elements.editLanguageInput) {
+    elements.editLanguageInput.value = lang.name;
+  }
+
+  // Hide dropdown
+  if (elements.editLanguageDropdown) {
+    elements.editLanguageDropdown.classList.remove('active');
+  }
+
+  // Update options display
+  setupEditDialogLanguageSelector();
+}
+
+/**
+ * Filter edit dialog language options
+ */
+function filterEditDialogLanguageOptions(search: string): void {
+  if (!elements.editLanguageOptions) return;
+
+  const searchLower = search.toLowerCase();
+  const options = elements.editLanguageOptions.querySelectorAll(
+    '.edit-language-option'
+  );
+
+  options.forEach(option => {
+    const nameElement = option.querySelector('.edit-language-option-name');
+    const name = nameElement?.textContent?.toLowerCase() || '';
+    if (name.includes(searchLower)) {
+      (option as HTMLElement).style.display = 'flex';
+    } else {
+      (option as HTMLElement).style.display = 'none';
+    }
+  });
+}
+
+/**
+ * Validate edit dialog fields
+ */
+function validateEditDialogFields(): boolean {
+  let isValid = true;
+
+  // Clear previous errors
+  clearEditDialogErrors();
+
+  // Validate title
+  const title = elements.editTitleInput.value.trim();
+  if (!title) {
+    showEditDialogFieldError(elements.editTitleInput, 'Title is required');
+    isValid = false;
+  } else if (title.length > 500) {
+    showEditDialogFieldError(
+      elements.editTitleInput,
+      'Title is too long (max 500 characters)'
+    );
+    isValid = false;
+  }
+
+  // Validate URL
+  const url = elements.editUrlInput.value.trim();
+  if (!url) {
+    showEditDialogFieldError(elements.editUrlInput, 'URL is required');
+    isValid = false;
+  } else if (url.length > 2000) {
+    showEditDialogFieldError(
+      elements.editUrlInput,
+      'URL is too long (max 2000 characters)'
+    );
+    isValid = false;
+  }
+
+  // Validate language
+  if (!editDialogSelectedLanguage) {
+    showEditDialogFieldError(
+      elements.editLanguageInput,
+      'Language is required'
+    );
+    isValid = false;
+  }
+
+  // Validate paragraph content
+  const paragraphContent = elements.editParagraphTextarea.value.trim();
+  if (!paragraphContent) {
+    showEditDialogFieldError(
+      elements.editParagraphTextarea,
+      'Article content is required'
+    );
+    isValid = false;
+  } else if (paragraphContent.length > 50000) {
+    showEditDialogFieldError(
+      elements.editParagraphTextarea,
+      'Content is too long (max 50,000 characters)'
+    );
+    isValid = false;
+  }
+
+  return isValid;
+}
+
+/**
+ * Show field error
+ */
+function showEditDialogFieldError(
+  input: HTMLInputElement | HTMLTextAreaElement,
+  message: string
+): void {
+  input.classList.add('error');
+  const errorSpan = input.parentElement?.querySelector('.field-error');
+  if (errorSpan) {
+    errorSpan.textContent = message;
+    errorSpan.classList.remove('hidden');
+  }
+}
+
+/**
+ * Clear all edit dialog errors
+ */
+function clearEditDialogErrors(): void {
+  // Remove error class from inputs
+  elements.editTitleInput.classList.remove('error');
+  elements.editUrlInput.classList.remove('error');
+  elements.editLanguageInput.classList.remove('error');
+  elements.editParagraphTextarea.classList.remove('error');
+
+  // Hide error messages
+  const errorSpans = elements.editDialog.querySelectorAll('.field-error');
+  errorSpans.forEach(span => {
+    span.classList.add('hidden');
+    span.textContent = '';
+  });
+}
+
+/**
+ * Save edit dialog changes
+ */
+async function saveArticleHeaderEdit(): Promise<void> {
+  // Validate fields
+  if (!validateEditDialogFields()) {
+    return;
+  }
+
+  if (!state.currentArticle) return;
+
+  try {
+    // Get values
+    const title = elements.editTitleInput.value.trim();
+    const url = elements.editUrlInput.value.trim();
+    const language = editDialogSelectedLanguage;
+    const paragraphContent = elements.editParagraphTextarea.value.trim();
+
+    // Update article in state
+    state.currentArticle.title = title;
+    state.currentArticle.url = url;
+    state.currentArticle.originalLanguage = language;
+
+    // Update current part content
+    if (
+      state.currentArticle.parts &&
+      state.currentArticle.parts[state.currentPartIndex]
+    ) {
+      state.currentArticle.parts[state.currentPartIndex].content =
+        paragraphContent;
+    }
+
+    // Update session storage
+    const tabId = await getCurrentTabId();
+    await chrome.storage.session.set({
+      [`article_${tabId}`]: state.currentArticle,
+    });
+
+    // Re-render article header
+    renderArticleHeader(state.currentArticle);
+
+    // Re-render article part to show updated content
+    renderArticlePart(state.currentPartIndex);
+
+    // Show success message
+    showTooltip('Article updated successfully!');
+
+    // Close dialog
+    hideArticleHeaderEditDialog();
+  } catch (error) {
+    console.error('Error saving article:', error);
+    showTooltip('Failed to save changes');
+  }
+}
+
+/**
+ * Setup edit dialog event listeners
+ */
+function setupEditDialogEventListeners(): void {
+  // Save button
+  const saveBtn = elements.editDialog.querySelector('.dialog-btn-save');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', handleEditDialogSave);
+  }
+
+  // Cancel button
+  const cancelBtn = elements.editDialog.querySelector('.dialog-btn-cancel');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', handleEditDialogCancel);
+  }
+
+  // Overlay click
+  const overlay = elements.editDialog.querySelector('.dialog-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', handleEditDialogCancel);
+  }
+
+  // Language input focus
+  if (elements.editLanguageInput) {
+    elements.editLanguageInput.addEventListener(
+      'focus',
+      handleEditLanguageInputFocus
+    );
+    elements.editLanguageInput.addEventListener(
+      'input',
+      handleEditLanguageInputChange
+    );
+    elements.editLanguageInput.addEventListener(
+      'blur',
+      handleEditLanguageInputBlur
+    );
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', handleEditDialogKeydown);
+}
+
+/**
+ * Remove edit dialog event listeners
+ */
+function removeEditDialogEventListeners(): void {
+  const saveBtn = elements.editDialog.querySelector('.dialog-btn-save');
+  if (saveBtn) {
+    saveBtn.removeEventListener('click', handleEditDialogSave);
+  }
+
+  const cancelBtn = elements.editDialog.querySelector('.dialog-btn-cancel');
+  if (cancelBtn) {
+    cancelBtn.removeEventListener('click', handleEditDialogCancel);
+  }
+
+  const overlay = elements.editDialog.querySelector('.dialog-overlay');
+  if (overlay) {
+    overlay.removeEventListener('click', handleEditDialogCancel);
+  }
+
+  if (elements.editLanguageInput) {
+    elements.editLanguageInput.removeEventListener(
+      'focus',
+      handleEditLanguageInputFocus
+    );
+    elements.editLanguageInput.removeEventListener(
+      'input',
+      handleEditLanguageInputChange
+    );
+    elements.editLanguageInput.removeEventListener(
+      'blur',
+      handleEditLanguageInputBlur
+    );
+  }
+
+  document.removeEventListener('keydown', handleEditDialogKeydown);
+}
+
+/**
+ * Handle edit dialog save button click
+ */
+function handleEditDialogSave(): void {
+  void saveArticleHeaderEdit();
+}
+
+/**
+ * Handle edit dialog cancel button click
+ */
+function handleEditDialogCancel(): void {
+  hideArticleHeaderEditDialog();
+}
+
+/**
+ * Handle language input focus
+ */
+function handleEditLanguageInputFocus(): void {
+  if (elements.editLanguageDropdown) {
+    elements.editLanguageDropdown.classList.add('active');
+  }
+  // Clear input to show all languages
+  elements.editLanguageInput.value = '';
+  filterEditDialogLanguageOptions('');
+}
+
+/**
+ * Handle language input change
+ */
+function handleEditLanguageInputChange(): void {
+  const search = elements.editLanguageInput.value;
+  filterEditDialogLanguageOptions(search);
+}
+
+/**
+ * Handle language input blur
+ */
+function handleEditLanguageInputBlur(): void {
+  // Delay to allow click on option
+  setTimeout(() => {
+    if (elements.editLanguageDropdown) {
+      elements.editLanguageDropdown.classList.remove('active');
+    }
+    // Restore selected language name
+    const selectedLang = LANGUAGES.find(
+      l => l.code === editDialogSelectedLanguage
+    );
+    if (selectedLang) {
+      elements.editLanguageInput.value = selectedLang.name;
+    }
+  }, 200);
+}
+
+/**
+ * Handle edit dialog keyboard shortcuts
+ */
+function handleEditDialogKeydown(event: KeyboardEvent): void {
+  // Only handle if dialog is visible
+  if (elements.editDialog.classList.contains('hidden')) return;
+
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    hideArticleHeaderEditDialog();
+  } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault();
+    void saveArticleHeaderEdit();
+  }
 }
 
 // ============================================================================
@@ -2307,13 +2781,7 @@ async function handleContextMenuAction(event: Event): Promise<void> {
   // Handle article header context menu
   if (itemType === 'article-header') {
     if (action === 'edit') {
-      // Placeholder for future article header edit functionality
-      showTooltip('Article header edit feature coming soon!');
-      console.log('Edit article header:', {
-        title: state.currentArticle?.title,
-        url: state.currentArticle?.url,
-        language: state.currentArticle?.originalLanguage,
-      });
+      showArticleHeaderEditDialog();
     }
     contextMenu.classList.add('hidden');
     return;
