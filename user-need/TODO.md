@@ -14,6 +14,8 @@
 [ ] Dark theme
 [ ] User can create blank page.
 [ ] The title, language, and url personal editing feature(Trigger by double click on it.)
+[ ] Divide the article into sections
+[ ] icon to copy all the article(include header, url, )
 
 ## done
 

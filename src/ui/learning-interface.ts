@@ -583,13 +583,28 @@ function updateContextMenuItems(
       // For paragraphs, show only "Copy" and "Edit"
       if (action === 'copy' || action === 'edit') {
         (item as HTMLElement).style.display = 'block';
+        // Set custom text for paragraph context menu
+        if (action === 'copy') {
+          item.textContent = 'Copy paragraph';
+        } else if (action === 'edit') {
+          item.textContent = 'Edit Paragraph';
+        }
       } else {
         (item as HTMLElement).style.display = 'none';
       }
-    } else if (contextType === 'card' || contextType === 'article-header') {
-      // For cards and article header, show only "Edit"
+    } else if (contextType === 'card') {
+      // For cards, show only "Edit"
       if (action === 'edit') {
         (item as HTMLElement).style.display = 'block';
+        item.textContent = 'Edit';
+      } else {
+        (item as HTMLElement).style.display = 'none';
+      }
+    } else if (contextType === 'article-header') {
+      // For article header, show only "Edit Article"
+      if (action === 'edit') {
+        (item as HTMLElement).style.display = 'block';
+        item.textContent = 'Edit Article';
       } else {
         (item as HTMLElement).style.display = 'none';
       }
