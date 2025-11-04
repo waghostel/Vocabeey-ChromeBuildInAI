@@ -382,6 +382,127 @@
       </div>
     </div>
 
+    <!-- Card Edit Dialog -->
+    <div class="card-edit-dialog hidden">
+      <div class="dialog-overlay"></div>
+      <div class="dialog-content card-edit-dialog-content">
+        <!-- Fixed Header -->
+        <div class="dialog-header">
+          <button
+            class="dialog-close-btn"
+            aria-label="Close dialog"
+            title="Close"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          <h3 class="edit-dialog-title">Edit Card</h3>
+        </div>
+
+        <!-- Scrollable Body -->
+        <div class="dialog-body">
+          <!-- Vocabulary Fields (shown for vocab cards) -->
+          <div class="vocab-edit-fields hidden">
+            <div class="edit-field">
+              <label for="edit-vocab-word">Word/Phrase</label>
+              <input
+                type="text"
+                id="edit-vocab-word"
+                class="edit-vocab-word"
+                placeholder="Enter word or phrase..."
+                maxlength="200"
+              />
+              <span class="field-error hidden"></span>
+            </div>
+
+            <div class="edit-field">
+              <label for="edit-vocab-translation">Translation</label>
+              <input
+                type="text"
+                id="edit-vocab-translation"
+                class="edit-vocab-translation"
+                placeholder="Enter translation..."
+                maxlength="500"
+              />
+              <span class="field-error hidden"></span>
+            </div>
+
+            <div class="edit-field">
+              <label for="edit-vocab-context">Context</label>
+              <textarea
+                id="edit-vocab-context"
+                class="edit-vocab-context"
+                placeholder="Enter context where this word appears..."
+                rows="3"
+                maxlength="1000"
+              ></textarea>
+              <span class="field-error hidden"></span>
+            </div>
+
+            <div class="edit-field">
+              <label for="edit-vocab-examples">Example Sentences</label>
+              <textarea
+                id="edit-vocab-examples"
+                class="edit-vocab-examples"
+                placeholder="Enter example sentences (one per line)..."
+                rows="4"
+              ></textarea>
+              <span class="field-help"
+                >Enter one example sentence per line</span
+              >
+              <span class="field-error hidden"></span>
+            </div>
+          </div>
+
+          <!-- Sentence Fields (shown for sentence cards) -->
+          <div class="sentence-edit-fields hidden">
+            <div class="edit-field">
+              <label for="edit-sentence-content">Sentence</label>
+              <textarea
+                id="edit-sentence-content"
+                class="edit-sentence-content"
+                placeholder="Enter sentence..."
+                rows="3"
+                maxlength="1000"
+              ></textarea>
+              <span class="field-error hidden"></span>
+            </div>
+
+            <div class="edit-field">
+              <label for="edit-sentence-translation">Translation</label>
+              <textarea
+                id="edit-sentence-translation"
+                class="edit-sentence-translation"
+                placeholder="Enter translation..."
+                rows="3"
+                maxlength="1000"
+              ></textarea>
+              <span class="field-error hidden"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fixed Footer -->
+        <div class="dialog-footer">
+          <div class="dialog-actions">
+            <button class="dialog-btn dialog-btn-cancel">Cancel</button>
+            <button class="dialog-btn dialog-btn-save">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="learning-interface.js" type="module"></script>
   </body>
 </html>

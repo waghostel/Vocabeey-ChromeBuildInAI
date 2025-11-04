@@ -1514,6 +1514,575 @@ function saveDialogWidth(width: number): void {
 }
 
 // ============================================================================
+// Card Edit Dialog
+// ============================================================================
+
+// Card edit dialog state
+let editingCardId: string = '';
+let editingCardType: 'vocabulary' | 'sentence' = 'vocabulary';
+
+/**
+ * Show card edit dialog
+ */
+async function showCardEditDialog(
+  itemId: string,
+  itemType: 'vocabulary' | 'sentence'
+): Promise<void> {
+  const dialog = document.querySelector('.card-edit-dialog') as HTMLElement;
+  if (!dialog) return;
+
+  // Store editing state
+  editingCardId = itemId;
+  editingCardType = itemType;
+
+  // Load card data from storage
+  if (itemType === 'vocabulary') {
+    const vocab = state.vocabularyItems.find(v => v.id === itemId);
+    if (!vocab) {
+      showTooltip('Vocabulary item not found');
+      return;
+    }
+    populateVocabularyEditFields(vocab);
+  } else {
+    const sentence = state.sentenceItems.find(s => s.id === itemId);
+    if (!sentence) {
+      showTooltip('Sentence item not found');
+      return;
+    }
+    populateSentenceEditFields(sentence);
+  }
+
+  // Show dialog
+  dialog.classList.remove('hidden');
+
+  // Focus first input
+  setTimeout(() => {
+    if (itemType === 'vocabulary') {
+      const wordInput = document.getElementById(
+        'edit-vocab-word'
+      ) as HTMLInputElement;
+      wordInput?.focus();
+    } else {
+      const contentTextarea = document.getElementById(
+        'edit-sentence-content'
+      ) as HTMLTextAreaElement;
+      contentTextarea?.focus();
+    }
+  }, 100);
+
+  // Setup event listeners
+  setupCardEditDialogEventListeners();
+}
+
+/**
+ * Populate vocabulary edit fields
+ */
+function populateVocabularyEditFields(vocab: VocabularyItem): void {
+  // Show vocabulary fields, hide sentence fields
+  const vocabFields = document.querySelector(
+    '.vocab-edit-fields'
+  ) as HTMLElement;
+  const sentenceFields = document.querySelector(
+    '.sentence-edit-fields'
+  ) as HTMLElement;
+
+  if (vocabFields) vocabFields.classList.remove('hidden');
+  if (sentenceFields) sentenceFields.classList.add('hidden');
+
+  // Update dialog title
+  const dialogTitle = document.querySelector(
+    '.card-edit-dialog .edit-dialog-title'
+  ) as HTMLElement;
+  if (dialogTitle) dialogTitle.textContent = 'Edit Vocabulary Card';
+
+  // Populate fields
+  const wordInput = document.getElementById(
+    'edit-vocab-word'
+  ) as HTMLInputElement;
+  const translationInput = document.getElementById(
+    'edit-vocab-translation'
+  ) as HTMLInputElement;
+  const contextTextarea = document.getElementById(
+    'edit-vocab-context'
+  ) as HTMLTextAreaElement;
+  const examplesTextarea = document.getElementById(
+    'edit-vocab-examples'
+  ) as HTMLTextAreaElement;
+
+  if (wordInput) wordInput.value = vocab.word || '';
+  if (translationInput) translationInput.value = vocab.translation || '';
+  if (contextTextarea) contextTextarea.value = vocab.context || '';
+  if (examplesTextarea) {
+    examplesTextarea.value = vocab.exampleSentences.join('\n');
+  }
+
+  // Clear errors
+  clearCardEditDialogErrors();
+}
+
+/**
+ * Populate sentence edit fields
+ */
+function populateSentenceEditFields(sentence: SentenceItem): void {
+  // Show sentence fields, hide vocabulary fields
+  const vocabFields = document.querySelector(
+    '.vocab-edit-fields'
+  ) as HTMLElement;
+  const sentenceFields = document.querySelector(
+    '.sentence-edit-fields'
+  ) as HTMLElement;
+
+  if (vocabFields) vocabFields.classList.add('hidden');
+  if (sentenceFields) sentenceFields.classList.remove('hidden');
+
+  // Update dialog title
+  const dialogTitle = document.querySelector(
+    '.card-edit-dialog .edit-dialog-title'
+  ) as HTMLElement;
+  if (dialogTitle) dialogTitle.textContent = 'Edit Sentence Card';
+
+  // Populate fields
+  const contentTextarea = document.getElementById(
+    'edit-sentence-content'
+  ) as HTMLTextAreaElement;
+  const translationTextarea = document.getElementById(
+    'edit-sentence-translation'
+  ) as HTMLTextAreaElement;
+
+  if (contentTextarea) contentTextarea.value = sentence.content || '';
+  if (translationTextarea)
+    translationTextarea.value = sentence.translation || '';
+
+  // Clear errors
+  clearCardEditDialogErrors();
+}
+
+/**
+ * Setup card edit dialog event listeners
+ */
+function setupCardEditDialogEventListeners(): void {
+  const dialog = document.querySelector('.card-edit-dialog') as HTMLElement;
+  if (!dialog) return;
+
+  // Remove existing listeners
+  removeCardEditDialogEventListeners();
+
+  // Close button
+  const closeBtn = dialog.querySelector('.dialog-close-btn') as HTMLElement;
+  if (closeBtn) {
+    const closeHandler = () => hideCardEditDialog();
+    closeBtn.addEventListener('click', closeHandler);
+    (closeBtn as any)._cardEditCloseHandler = closeHandler;
+  }
+
+  // Overlay click
+  const overlay = dialog.querySelector('.dialog-overlay') as HTMLElement;
+  if (overlay) {
+    const overlayHandler = () => hideCardEditDialog();
+    overlay.addEventListener('click', overlayHandler);
+    (overlay as any)._cardEditOverlayHandler = overlayHandler;
+  }
+
+  // Cancel button
+  const cancelBtn = dialog.querySelector(
+    '.dialog-btn-cancel'
+  ) as HTMLButtonElement;
+  if (cancelBtn) {
+    const cancelHandler = () => hideCardEditDialog();
+    cancelBtn.addEventListener('click', cancelHandler);
+    (cancelBtn as any)._cardEditCancelHandler = cancelHandler;
+  }
+
+  // Save button
+  const saveBtn = dialog.querySelector('.dialog-btn-save') as HTMLButtonElement;
+  if (saveBtn) {
+    const saveHandler = () => void handleCardEditSave();
+    saveBtn.addEventListener('click', saveHandler);
+    (saveBtn as any)._cardEditSaveHandler = saveHandler;
+  }
+
+  // Keyboard shortcuts
+  const keyHandler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      hideCardEditDialog();
+    } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      void handleCardEditSave();
+    }
+  };
+  document.addEventListener('keydown', keyHandler);
+  (dialog as any)._cardEditKeyHandler = keyHandler;
+}
+
+/**
+ * Remove card edit dialog event listeners
+ */
+function removeCardEditDialogEventListeners(): void {
+  const dialog = document.querySelector('.card-edit-dialog') as HTMLElement;
+  if (!dialog) return;
+
+  // Close button
+  const closeBtn = dialog.querySelector('.dialog-close-btn') as HTMLElement;
+  if (closeBtn && (closeBtn as any)._cardEditCloseHandler) {
+    closeBtn.removeEventListener(
+      'click',
+      (closeBtn as any)._cardEditCloseHandler
+    );
+    delete (closeBtn as any)._cardEditCloseHandler;
+  }
+
+  // Overlay
+  const overlay = dialog.querySelector('.dialog-overlay') as HTMLElement;
+  if (overlay && (overlay as any)._cardEditOverlayHandler) {
+    overlay.removeEventListener(
+      'click',
+      (overlay as any)._cardEditOverlayHandler
+    );
+    delete (overlay as any)._cardEditOverlayHandler;
+  }
+
+  // Cancel button
+  const cancelBtn = dialog.querySelector(
+    '.dialog-btn-cancel'
+  ) as HTMLButtonElement;
+  if (cancelBtn && (cancelBtn as any)._cardEditCancelHandler) {
+    cancelBtn.removeEventListener(
+      'click',
+      (cancelBtn as any)._cardEditCancelHandler
+    );
+    delete (cancelBtn as any)._cardEditCancelHandler;
+  }
+
+  // Save button
+  const saveBtn = dialog.querySelector('.dialog-btn-save') as HTMLButtonElement;
+  if (saveBtn && (saveBtn as any)._cardEditSaveHandler) {
+    saveBtn.removeEventListener('click', (saveBtn as any)._cardEditSaveHandler);
+    delete (saveBtn as any)._cardEditSaveHandler;
+  }
+
+  // Keyboard handler
+  if ((dialog as any)._cardEditKeyHandler) {
+    document.removeEventListener(
+      'keydown',
+      (dialog as any)._cardEditKeyHandler
+    );
+    delete (dialog as any)._cardEditKeyHandler;
+  }
+}
+
+/**
+ * Hide card edit dialog
+ */
+function hideCardEditDialog(): void {
+  const dialog = document.querySelector('.card-edit-dialog') as HTMLElement;
+  if (!dialog) return;
+
+  // Hide dialog
+  dialog.classList.add('hidden');
+
+  // Clear fields
+  const wordInput = document.getElementById(
+    'edit-vocab-word'
+  ) as HTMLInputElement;
+  const translationInput = document.getElementById(
+    'edit-vocab-translation'
+  ) as HTMLInputElement;
+  const contextTextarea = document.getElementById(
+    'edit-vocab-context'
+  ) as HTMLTextAreaElement;
+  const examplesTextarea = document.getElementById(
+    'edit-vocab-examples'
+  ) as HTMLTextAreaElement;
+  const contentTextarea = document.getElementById(
+    'edit-sentence-content'
+  ) as HTMLTextAreaElement;
+  const translationTextarea = document.getElementById(
+    'edit-sentence-translation'
+  ) as HTMLTextAreaElement;
+
+  if (wordInput) wordInput.value = '';
+  if (translationInput) translationInput.value = '';
+  if (contextTextarea) contextTextarea.value = '';
+  if (examplesTextarea) examplesTextarea.value = '';
+  if (contentTextarea) contentTextarea.value = '';
+  if (translationTextarea) translationTextarea.value = '';
+
+  // Clear errors
+  clearCardEditDialogErrors();
+
+  // Remove event listeners
+  removeCardEditDialogEventListeners();
+
+  // Reset state
+  editingCardId = '';
+}
+
+/**
+ * Validate card edit fields
+ */
+function validateCardEditFields(): boolean {
+  let isValid = true;
+
+  // Clear previous errors
+  clearCardEditDialogErrors();
+
+  if (editingCardType === 'vocabulary') {
+    // Validate word
+    const wordInput = document.getElementById(
+      'edit-vocab-word'
+    ) as HTMLInputElement;
+    const word = wordInput?.value.trim() || '';
+    if (!word) {
+      showCardEditFieldError(wordInput, 'Word/phrase is required');
+      isValid = false;
+    } else if (word.length > 200) {
+      showCardEditFieldError(
+        wordInput,
+        'Word/phrase is too long (max 200 characters)'
+      );
+      isValid = false;
+    }
+
+    // Validate translation
+    const translationInput = document.getElementById(
+      'edit-vocab-translation'
+    ) as HTMLInputElement;
+    const translation = translationInput?.value.trim() || '';
+    if (!translation) {
+      showCardEditFieldError(translationInput, 'Translation is required');
+      isValid = false;
+    } else if (translation.length > 500) {
+      showCardEditFieldError(
+        translationInput,
+        'Translation is too long (max 500 characters)'
+      );
+      isValid = false;
+    }
+
+    // Validate context (optional)
+    const contextTextarea = document.getElementById(
+      'edit-vocab-context'
+    ) as HTMLTextAreaElement;
+    const context = contextTextarea?.value.trim() || '';
+    if (context.length > 1000) {
+      showCardEditFieldError(
+        contextTextarea,
+        'Context is too long (max 1000 characters)'
+      );
+      isValid = false;
+    }
+  } else {
+    // Validate sentence content
+    const contentTextarea = document.getElementById(
+      'edit-sentence-content'
+    ) as HTMLTextAreaElement;
+    const content = contentTextarea?.value.trim() || '';
+    if (!content) {
+      showCardEditFieldError(contentTextarea, 'Sentence is required');
+      isValid = false;
+    } else if (content.length > 1000) {
+      showCardEditFieldError(
+        contentTextarea,
+        'Sentence is too long (max 1000 characters)'
+      );
+      isValid = false;
+    }
+
+    // Validate translation
+    const translationTextarea = document.getElementById(
+      'edit-sentence-translation'
+    ) as HTMLTextAreaElement;
+    const translation = translationTextarea?.value.trim() || '';
+    if (!translation) {
+      showCardEditFieldError(translationTextarea, 'Translation is required');
+      isValid = false;
+    } else if (translation.length > 1000) {
+      showCardEditFieldError(
+        translationTextarea,
+        'Translation is too long (max 1000 characters)'
+      );
+      isValid = false;
+    }
+  }
+
+  return isValid;
+}
+
+/**
+ * Show field error in card edit dialog
+ */
+function showCardEditFieldError(field: HTMLElement, message: string): void {
+  const editField = field.closest('.edit-field');
+  if (!editField) return;
+
+  const errorSpan = editField.querySelector('.field-error') as HTMLElement;
+  if (errorSpan) {
+    errorSpan.textContent = message;
+    errorSpan.classList.remove('hidden');
+  }
+
+  field.classList.add('error');
+}
+
+/**
+ * Clear all errors in card edit dialog
+ */
+function clearCardEditDialogErrors(): void {
+  const dialog = document.querySelector('.card-edit-dialog') as HTMLElement;
+  if (!dialog) return;
+
+  const errorSpans = dialog.querySelectorAll('.field-error');
+  errorSpans.forEach(span => {
+    span.classList.add('hidden');
+    span.textContent = '';
+  });
+
+  const errorFields = dialog.querySelectorAll('.error');
+  errorFields.forEach(field => {
+    field.classList.remove('error');
+  });
+}
+
+/**
+ * Handle card edit save
+ */
+async function handleCardEditSave(): Promise<void> {
+  // Validate fields
+  if (!validateCardEditFields()) {
+    return;
+  }
+
+  try {
+    if (editingCardType === 'vocabulary') {
+      await saveVocabularyCardEdit();
+    } else {
+      await saveSentenceCardEdit();
+    }
+
+    // Show success message
+    showTooltip('Card updated successfully');
+
+    // Hide dialog
+    hideCardEditDialog();
+  } catch (error) {
+    console.error('Error saving card edit:', error);
+    showTooltip('Failed to save card changes');
+  }
+}
+
+/**
+ * Save vocabulary card edit
+ */
+async function saveVocabularyCardEdit(): Promise<void> {
+  // Get field values
+  const wordInput = document.getElementById(
+    'edit-vocab-word'
+  ) as HTMLInputElement;
+  const translationInput = document.getElementById(
+    'edit-vocab-translation'
+  ) as HTMLInputElement;
+  const contextTextarea = document.getElementById(
+    'edit-vocab-context'
+  ) as HTMLTextAreaElement;
+  const examplesTextarea = document.getElementById(
+    'edit-vocab-examples'
+  ) as HTMLTextAreaElement;
+
+  const word = wordInput.value.trim();
+  const translation = translationInput.value.trim();
+  const context = contextTextarea.value.trim();
+  const examplesText = examplesTextarea.value.trim();
+
+  // Parse examples (one per line, filter empty lines)
+  const exampleSentences = examplesText
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .slice(0, 5); // Max 5 examples
+
+  // Find and update vocabulary item
+  const vocabIndex = state.vocabularyItems.findIndex(
+    v => v.id === editingCardId
+  );
+  if (vocabIndex === -1) {
+    throw new Error('Vocabulary item not found');
+  }
+
+  // Update item
+  state.vocabularyItems[vocabIndex] = {
+    ...state.vocabularyItems[vocabIndex],
+    word,
+    translation,
+    context,
+    exampleSentences,
+  };
+
+  // Save to storage
+  await chrome.storage.local.set({
+    vocabularyItems: state.vocabularyItems,
+  });
+
+  // Update card in DOM
+  if (state.currentArticle) {
+    const part = state.currentArticle.parts[state.currentPartIndex];
+    if (part) {
+      renderPartVocabularyCards(part);
+    }
+  }
+
+  // Dispatch event for other components
+  window.dispatchEvent(new CustomEvent('vocabulary-updated'));
+}
+
+/**
+ * Save sentence card edit
+ */
+async function saveSentenceCardEdit(): Promise<void> {
+  // Get field values
+  const contentTextarea = document.getElementById(
+    'edit-sentence-content'
+  ) as HTMLTextAreaElement;
+  const translationTextarea = document.getElementById(
+    'edit-sentence-translation'
+  ) as HTMLTextAreaElement;
+
+  const content = contentTextarea.value.trim();
+  const translation = translationTextarea.value.trim();
+
+  // Find and update sentence item
+  const sentenceIndex = state.sentenceItems.findIndex(
+    s => s.id === editingCardId
+  );
+  if (sentenceIndex === -1) {
+    throw new Error('Sentence item not found');
+  }
+
+  // Update item
+  state.sentenceItems[sentenceIndex] = {
+    ...state.sentenceItems[sentenceIndex],
+    content,
+    translation,
+  };
+
+  // Save to storage
+  await chrome.storage.local.set({
+    sentenceItems: state.sentenceItems,
+  });
+
+  // Update card in DOM
+  if (state.currentArticle) {
+    const part = state.currentArticle.parts[state.currentPartIndex];
+    if (part) {
+      renderPartSentenceCards(part);
+    }
+  }
+
+  // Dispatch event for other components
+  window.dispatchEvent(new CustomEvent('sentences-updated'));
+}
+
+// ============================================================================
 // Paragraph Edit Mode
 // ============================================================================
 
@@ -3163,12 +3732,12 @@ async function handleContextMenuAction(event: Event): Promise<void> {
   // Handle card context menu
   if (itemType === 'card') {
     if (action === 'edit') {
-      // Placeholder for future card edit functionality
-      showTooltip('Card edit feature coming soon!');
-      console.log('Edit card:', {
-        itemId,
-        cardType: contextMenu.dataset.cardType,
-      });
+      const cardType = contextMenu.dataset.cardType as
+        | 'vocabulary'
+        | 'sentence';
+      if (itemId && cardType) {
+        await showCardEditDialog(itemId, cardType);
+      }
     }
     contextMenu.classList.add('hidden');
     return;
