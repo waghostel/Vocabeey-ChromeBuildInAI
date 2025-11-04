@@ -12,6 +12,7 @@ import {
   cleanupHighlightManager,
   pauseHighlightManager,
   resumeHighlightManager,
+  restoreHighlightsForPart,
   type HighlightMode,
 } from './highlight-manager';
 
@@ -539,6 +540,12 @@ function renderArticlePart(partIndex: number): void {
     state.highlightMode,
     state.currentArticle.originalLanguage
   );
+
+  // Restore existing highlights for this part
+  // Use requestAnimationFrame to ensure DOM is fully rendered before restoring highlights
+  requestAnimationFrame(() => {
+    void restoreHighlightsForPart(state.currentArticle!.id, part.id);
+  });
 
   // Update navigation
   updateNavigation();

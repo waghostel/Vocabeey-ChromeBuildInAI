@@ -6,6 +6,11 @@
   Transform any web article into an interactive language learning experience powered by AI.
   
   Learn languages naturally by reading real content with smart vocabulary highlighting, instant translations, and interactive learning cards.
+  
+  <br>
+  
+  **[📖 Interactive User Guide](https://vocabeey.vercel.app)** • **[🚀 Quick Start](#-installation)** • **[💡 Features](#-features)**
+  
 </div>
 
 ---
@@ -72,6 +77,8 @@ console.log('Chrome AI available:', 'ai' in window);
 If it returns `true`, you're ready to go!
 
 ## 🎓 How to Use
+
+> **💡 New to Vocabeey?** Check out our [**Interactive User Guide**](https://vocabeey-guide.vercel.app) for a visual, step-by-step walkthrough of all features!
 
 ### Getting Started
 
@@ -150,6 +157,7 @@ The AI automatically detects the article's language and provides translations to
 
 ## 📚 Learn More
 
+- **[🌐 Interactive User Guide](https://vocabeey-guide.vercel.app)** - Visual, interactive guide with examples
 - **[Complete User Guide](docs/user-guide/README.md)** - Detailed usage instructions
 - **[Troubleshooting](docs/user-guide/README.md#troubleshooting)** - Common issues and solutions
 - **[FAQ](docs/user-guide/README.md#faq)** - Frequently asked questions

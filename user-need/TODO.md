@@ -36,3 +36,36 @@ Low-hanging fruit:
 Language detection: 1-2 hours to enable
 Article summarization: 4-6 hours
 Difficulty-based rewriting: 8-12 hours (but it's a core feature!)
+
+Top Suggestions:
+
+1. 📱 Cross-Device Sync (if implemented)
+   Sync across devices
+   Cloud backup option
+   Access anywhere
+   Seamless experience
+2. 📊 Learning Progress (if tracking exists)
+   Track words learned
+   Review statistics
+   Progress over time
+   Motivation boost
+3. ⚙️ Smart Settings
+   Customize behavior
+   Auto-save preferences
+   Adjust AI settings
+   Personalize experience
+4. 🌐 Multi-Language Support
+   Learn multiple languages
+   Switch between languages
+   Separate progress tracking
+   Flexible learning
+5. 💾 Export & Backup
+   Export flashcards
+   Backup your data
+   Import/export settings
+   Data portability
+6. 🔍 Search & Filter
+   Find saved words quickly
+   Filter by difficulty
+   Search across articles
+   Organize learning

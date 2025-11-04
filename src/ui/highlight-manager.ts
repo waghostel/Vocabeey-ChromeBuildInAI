@@ -534,6 +534,445 @@ export function initializeHighlightManager(
 }
 
 /**
+ * Restore highlights for a specific article part
+ * This function reads stored vocabulary and sentence items and recreates their highlights in the DOM
+ */
+export async function restoreHighlightsForPart(
+  articleId: string,
+  partId: string
+): Promise<void> {
+  console.log('🔄 Restoring highlights for part:', { articleId, partId });
+
+  try {
+    // Get vocabulary items for this part
+    const vocabData = await chrome.storage.local.get('vocabulary');
+    const allVocab: Record<string, VocabularyItem> = vocabData.vocabulary || {};
+    const partVocab = Object.values(allVocab).filter(
+      v => v.articleId === articleId && v.partId === partId
+    );
+
+    // Get sentence items for this part
+    const sentenceData = await chrome.storage.local.get('sentences');
+    const allSentences: Record<string, SentenceItem> =
+      sentenceData.sentences || {};
+    const partSentences = Object.values(allSentences).filter(
+      s => s.articleId === articleId && s.partId === partId
+    );
+
+    console.log('📊 Found items to restore:', {
+      vocabulary: partVocab.length,
+      sentences: partSentences.length,
+    });
+
+    if (partVocab.length === 0 && partSentences.length === 0) {
+      console.log('ℹ️ No highlights to restore for this part');
+      return;
+    }
+
+    let restoredVocab = 0;
+    let restoredSentences = 0;
+    let failedVocab = 0;
+    let failedSentences = 0;
+
+    // Restore vocabulary highlights
+    for (const vocabItem of partVocab) {
+      const success = await restoreVocabularyHighlight(vocabItem);
+      if (success) {
+        restoredVocab++;
+      } else {
+        failedVocab++;
+      }
+    }
+
+    // Restore sentence highlights
+    for (const sentenceItem of partSentences) {
+      const success = await restoreSentenceHighlight(sentenceItem);
+      if (success) {
+        restoredSentences++;
+      } else {
+        failedSentences++;
+      }
+    }
+
+    console.log('✅ Highlight restoration complete:', {
+      vocabulary: { restored: restoredVocab, failed: failedVocab },
+      sentences: { restored: restoredSentences, failed: failedSentences },
+    });
+
+    if (failedVocab > 0 || failedSentences > 0) {
+      console.warn(
+        '⚠️ Some highlights could not be restored. This may happen if the article content was edited.'
+      );
+    }
+  } catch (error) {
+    console.error('❌ Error restoring highlights:', error);
+  }
+}
+
+/**
+ * Restore a vocabulary highlight in the DOM
+ * Returns true if successful, false otherwise
+ */
+async function restoreVocabularyHighlight(
+  vocabItem: VocabularyItem
+): Promise<boolean> {
+  try {
+    // Find the text in the DOM using the word and context
+    const range = findTextInDOM(vocabItem.word, vocabItem.context);
+    if (!range) {
+      console.warn(
+        '⚠️ Could not find text in DOM for vocabulary:',
+        vocabItem.word
+      );
+      return false;
+    }
+
+    // Create the highlight element
+    const highlightData = createHighlight(vocabItem.word, range, 'vocabulary');
+
+    // Set the ID attribute on the DOM element
+    highlightData.highlightElement.setAttribute(
+      'data-highlight-id',
+      vocabItem.id
+    );
+
+    // Store highlight reference
+    highlights.set(vocabItem.id, {
+      id: vocabItem.id,
+      text: vocabItem.word,
+      startOffset: 0,
+      endOffset: vocabItem.word.length,
+      type: 'vocabulary',
+    });
+
+    // Add click listener - pronounce the word
+    highlightData.highlightElement.addEventListener('click', (e: Event) => {
+      e.stopPropagation();
+      void pronounceText(
+        highlightData.highlightElement,
+        vocabItem.word,
+        currentArticleLanguage || undefined
+      );
+    });
+
+    // Add hover listener for translation popup with delay
+    let hoverTimeout: number | null = null;
+
+    highlightData.highlightElement.addEventListener('mouseenter', e => {
+      hoverTimeout = window.setTimeout(() => {
+        void getTranslationForHighlight(vocabItem.id, 'vocabulary').then(
+          currentTranslation => {
+            showTranslationPopup(e.target as HTMLElement, currentTranslation);
+          }
+        );
+      }, 50);
+    });
+
+    highlightData.highlightElement.addEventListener('mouseleave', () => {
+      if (hoverTimeout) {
+        clearTimeout(hoverTimeout);
+        hoverTimeout = null;
+      }
+      hideTranslationPopup();
+
+      if (selectedHighlightId === vocabItem.id) {
+        deselectHighlight();
+      }
+    });
+
+    // Add context menu listener
+    highlightData.highlightElement.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      showContextMenu(
+        highlightData.highlightElement,
+        vocabItem.id,
+        'vocabulary'
+      );
+    });
+
+    // Add click listener for selection in None mode
+    highlightData.highlightElement.addEventListener('click', e => {
+      if (currentMode === 'none') {
+        e.stopPropagation();
+        selectHighlight(
+          vocabItem.id,
+          'vocabulary',
+          highlightData.highlightElement
+        );
+      }
+    });
+
+    return true;
+  } catch (error) {
+    console.error(
+      '❌ Error restoring vocabulary highlight:',
+      vocabItem.word,
+      error
+    );
+    return false;
+  }
+}
+
+/**
+ * Restore a sentence highlight in the DOM
+ * Returns true if successful, false otherwise
+ */
+async function restoreSentenceHighlight(
+  sentenceItem: SentenceItem
+): Promise<boolean> {
+  try {
+    // Find the text in the DOM using the sentence content
+    const range = findTextInDOM(sentenceItem.content, sentenceItem.content);
+    if (!range) {
+      console.warn(
+        '⚠️ Could not find text in DOM for sentence:',
+        sentenceItem.content.substring(0, 50)
+      );
+      return false;
+    }
+
+    // Create the highlight element
+    const highlightData = createHighlight(
+      sentenceItem.content,
+      range,
+      'sentence'
+    );
+
+    // Set the ID attribute on the DOM element
+    highlightData.highlightElement.setAttribute(
+      'data-highlight-id',
+      sentenceItem.id
+    );
+
+    // Store highlight reference
+    highlights.set(sentenceItem.id, {
+      id: sentenceItem.id,
+      text: sentenceItem.content,
+      startOffset: 0,
+      endOffset: sentenceItem.content.length,
+      type: 'sentence',
+    });
+
+    // Add click listener - pronounce the sentence
+    highlightData.highlightElement.addEventListener('click', (e: Event) => {
+      e.stopPropagation();
+      void pronounceText(
+        highlightData.highlightElement,
+        sentenceItem.content,
+        currentArticleLanguage || undefined
+      );
+    });
+
+    // Add hover listener for translation popup with delay
+    let hoverTimeout: number | null = null;
+
+    highlightData.highlightElement.addEventListener('mouseenter', e => {
+      hoverTimeout = window.setTimeout(() => {
+        void getTranslationForHighlight(sentenceItem.id, 'sentence').then(
+          currentTranslation => {
+            showTranslationPopup(e.target as HTMLElement, currentTranslation);
+          }
+        );
+      }, 50);
+    });
+
+    highlightData.highlightElement.addEventListener('mouseleave', () => {
+      if (hoverTimeout) {
+        clearTimeout(hoverTimeout);
+        hoverTimeout = null;
+      }
+      hideTranslationPopup();
+
+      if (selectedHighlightId === sentenceItem.id) {
+        deselectHighlight();
+      }
+    });
+
+    // Add context menu listener
+    highlightData.highlightElement.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      showContextMenu(
+        highlightData.highlightElement,
+        sentenceItem.id,
+        'sentence'
+      );
+    });
+
+    // Add click listener for selection in None mode
+    highlightData.highlightElement.addEventListener('click', e => {
+      if (currentMode === 'none') {
+        e.stopPropagation();
+        selectHighlight(
+          sentenceItem.id,
+          'sentence',
+          highlightData.highlightElement
+        );
+      }
+    });
+
+    return true;
+  } catch (error) {
+    console.error(
+      '❌ Error restoring sentence highlight:',
+      sentenceItem.content.substring(0, 50),
+      error
+    );
+    return false;
+  }
+}
+
+/**
+ * Find text in the DOM and return a Range object
+ * Uses context to disambiguate when text appears multiple times
+ */
+function findTextInDOM(text: string, context: string): Range | null {
+  const articleContent = document.querySelector('.article-part-content');
+  if (!articleContent) {
+    console.error('Article content not found');
+    return null;
+  }
+
+  const trimmedText = text.trim();
+
+  // Create a TreeWalker to traverse all text nodes
+  const walker = document.createTreeWalker(
+    articleContent,
+    NodeFilter.SHOW_TEXT,
+    null
+  );
+
+  const textNodes: Text[] = [];
+  let node: Node | null;
+
+  while ((node = walker.nextNode())) {
+    // Skip empty text nodes and nodes that are already inside highlights
+    const textNode = node as Text;
+    const parent = textNode.parentElement;
+
+    // Skip if parent is already a highlight element
+    if (parent && parent.hasAttribute('data-highlight-id')) {
+      continue;
+    }
+
+    textNodes.push(textNode);
+  }
+
+  // Strategy 1: Try exact match with context verification
+  for (const textNode of textNodes) {
+    const nodeText = textNode.textContent || '';
+    const index = nodeText.indexOf(trimmedText);
+
+    if (index !== -1) {
+      // Found the text, create a range
+      const range = document.createRange();
+      range.setStart(textNode, index);
+      range.setEnd(textNode, index + trimmedText.length);
+
+      // Verify this is the right occurrence by checking context
+      if (context && context.length > trimmedText.length) {
+        // Get surrounding text to verify context
+        const parent = textNode.parentElement;
+        if (parent) {
+          const parentText = parent.textContent || '';
+          const textInParent = parentText.indexOf(trimmedText);
+
+          if (textInParent !== -1) {
+            // Extract context around the found text
+            const contextStart = Math.max(0, textInParent - 100);
+            const contextEnd = Math.min(
+              parentText.length,
+              textInParent + trimmedText.length + 100
+            );
+            const foundContext = parentText.substring(contextStart, contextEnd);
+
+            // Check if the stored context is similar to the found context
+            // Use a simple substring check (could be improved with fuzzy matching)
+            if (
+              context.includes(trimmedText) &&
+              foundContext.includes(trimmedText)
+            ) {
+              return range;
+            }
+          }
+        }
+      } else {
+        // No context to verify, return the first match
+        return range;
+      }
+    }
+  }
+
+  // Strategy 2: If exact match not found, try normalized whitespace search
+  for (const textNode of textNodes) {
+    const nodeText = textNode.textContent || '';
+
+    // Normalize whitespace for comparison
+    const normalizedNodeText = nodeText.replace(/\s+/g, ' ').trim();
+    const normalizedSearchText = trimmedText.replace(/\s+/g, ' ').trim();
+
+    const index = normalizedNodeText.indexOf(normalizedSearchText);
+
+    if (index !== -1) {
+      // Found with normalized text, now find the actual position in original text
+      // We need to map the normalized index back to the original text
+      let normalizedCharCount = 0;
+      let startIndex = -1;
+
+      for (let i = 0; i < nodeText.length; i++) {
+        const char = nodeText[i];
+        const isWhitespace = /\s/.test(char);
+
+        if (!isWhitespace || (i > 0 && !/\s/.test(nodeText[i - 1]))) {
+          if (normalizedCharCount === index) {
+            startIndex = i;
+          }
+          normalizedCharCount++;
+        }
+
+        if (
+          startIndex !== -1 &&
+          normalizedCharCount >= index + normalizedSearchText.length
+        ) {
+          const range = document.createRange();
+          range.setStart(textNode, startIndex);
+          range.setEnd(textNode, i + 1);
+          return range;
+        }
+      }
+
+      // Fallback: try simple indexOf
+      const actualIndex = nodeText.indexOf(trimmedText);
+      if (actualIndex !== -1) {
+        const range = document.createRange();
+        range.setStart(textNode, actualIndex);
+        range.setEnd(textNode, actualIndex + trimmedText.length);
+        return range;
+      }
+    }
+  }
+
+  // Strategy 3: Try case-insensitive search as last resort
+  const lowerText = trimmedText.toLowerCase();
+  for (const textNode of textNodes) {
+    const nodeText = textNode.textContent || '';
+    const lowerNodeText = nodeText.toLowerCase();
+    const index = lowerNodeText.indexOf(lowerText);
+
+    if (index !== -1) {
+      const range = document.createRange();
+      range.setStart(textNode, index);
+      range.setEnd(textNode, index + trimmedText.length);
+      return range;
+    }
+  }
+
+  console.warn('⚠️ Text not found in DOM:', trimmedText.substring(0, 50));
+  return null;
+}
+
+/**
  * Set highlight mode
  */
 export function setHighlightMode(mode: HighlightMode): void {

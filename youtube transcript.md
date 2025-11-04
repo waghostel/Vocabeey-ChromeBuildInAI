@@ -1,7 +1,9 @@
 [Intro]
 Hey everyone! Today I'm going to show you Vocabeey - a Chrome extension that turns any article you're reading into a language learning tool. It uses Chrome's built-in AI to detect languages and translate, so you can highlight words and sentences, and they instantly become flashcards with audio. Whether you're learning your second or third language, this makes real content your best teacher. So let me show you how it works.
 
-[ ]
+[ ] 做Vocabulary highlight->做Sentence highlight
+[ ] 點選Pron
+[ ] 瀏覽Chrome build-in AI頁面
 
 [Getting Started]
 First, when you're on any webpage, just click the Vocabeey extension icon to extract the article. Sometimes you'll see some extra content being captured. You can switch to edit mode here, and you can remove anything you don't need before you start reading. Since we haven't introduced the AI content cleaning feature yet, I recommend doing this first to keep your learning materials as clean as possible.
