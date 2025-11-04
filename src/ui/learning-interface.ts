@@ -9,7 +9,6 @@ import {
   initializeHighlightManager,
   setHighlightMode,
   cleanupHighlightManager,
-  showContextMenu,
   pauseHighlightManager,
   resumeHighlightManager,
   type HighlightMode,
@@ -100,6 +99,7 @@ const elements = {
   ) as NodeListOf<HTMLElement>,
 
   // Article header
+  articleHeader: document.querySelector('.article-header') as HTMLElement,
   articleTitle: document.querySelector('.article-title') as HTMLElement,
   articleUrl: document.querySelector('.article-url') as HTMLElement,
   languageBadge: document.querySelector('.language-badge') as HTMLElement,
@@ -250,6 +250,45 @@ function renderArticleHeader(article: ProcessedArticle): void {
     article.originalLanguage,
     article.detectedLanguageConfidence
   );
+
+  // Setup article header context menu
+  setupArticleHeaderContextMenu();
+}
+
+/**
+ * Setup article header context menu
+ */
+function setupArticleHeaderContextMenu(): void {
+  if (!elements.articleHeader) return;
+
+  // Remove existing listener if any
+  const existingHandler = (elements.articleHeader as any)._contextMenuHandler;
+  if (existingHandler) {
+    elements.articleHeader.removeEventListener('contextmenu', existingHandler);
+  }
+
+  // Create new handler
+  const contextMenuHandler = (e: Event) => {
+    const event = e as MouseEvent;
+    const target = event.target as HTMLElement;
+
+    // Don't show context menu if clicking on header controls (language selector, highlight mode buttons)
+    const headerControls =
+      elements.articleHeader.querySelector('.header-controls');
+    if (headerControls && headerControls.contains(target)) {
+      return; // Allow default browser context menu for controls
+    }
+
+    // Prevent default and show custom context menu
+    event.preventDefault();
+    showArticleHeaderContextMenu(elements.articleHeader, event);
+  };
+
+  // Store handler reference for cleanup
+  (elements.articleHeader as any)._contextMenuHandler = contextMenuHandler;
+
+  // Add listener
+  elements.articleHeader.addEventListener('contextmenu', contextMenuHandler);
 }
 
 /**
@@ -504,7 +543,13 @@ function showParagraphContextMenu(paragraph: Element, event: MouseEvent): void {
  * Update context menu items based on context type
  */
 function updateContextMenuItems(
-  contextType: 'paragraph' | 'vocabulary' | 'sentence' | 'selection'
+  contextType:
+    | 'paragraph'
+    | 'vocabulary'
+    | 'sentence'
+    | 'selection'
+    | 'card'
+    | 'article-header'
 ): void {
   // Only select items from the regular context menu, not the edit context menu
   const menuItems = document.querySelectorAll(
@@ -521,6 +566,13 @@ function updateContextMenuItems(
       } else {
         (item as HTMLElement).style.display = 'none';
       }
+    } else if (contextType === 'card' || contextType === 'article-header') {
+      // For cards and article header, show only "Edit"
+      if (action === 'edit') {
+        (item as HTMLElement).style.display = 'block';
+      } else {
+        (item as HTMLElement).style.display = 'none';
+      }
     } else {
       // For vocabulary/sentence highlights and selections, hide "Copy" and "Edit"
       if (action === 'copy' || action === 'edit') {
@@ -531,6 +583,64 @@ function updateContextMenuItems(
       }
     }
   });
+}
+
+/**
+ * Show context menu for card right-click
+ */
+function showCardContextMenu(
+  card: HTMLElement,
+  itemId: string,
+  itemType: 'vocabulary' | 'sentence',
+  event: MouseEvent
+): void {
+  const contextMenu = elements.contextMenu;
+  if (!contextMenu) return;
+
+  // Store card reference and context type
+  contextMenu.dataset.itemType = 'card';
+  contextMenu.dataset.itemId = itemId;
+  contextMenu.dataset.cardType = itemType;
+
+  // Store card element reference (we'll use it in the action handler)
+  (contextMenu as any)._cardElement = card;
+
+  // Update menu items visibility - show only "Edit"
+  updateContextMenuItems('card');
+
+  // Position menu at cursor
+  contextMenu.style.left = `${event.pageX}px`;
+  contextMenu.style.top = `${event.pageY}px`;
+
+  // Show menu
+  contextMenu.classList.remove('hidden');
+}
+
+/**
+ * Show context menu for article header right-click
+ */
+function showArticleHeaderContextMenu(
+  header: HTMLElement,
+  event: MouseEvent
+): void {
+  const contextMenu = elements.contextMenu;
+  if (!contextMenu) return;
+
+  // Store header reference and context type
+  contextMenu.dataset.itemType = 'article-header';
+
+  // Store header element reference (we'll use it in the action handler)
+  (contextMenu as any)._articleHeaderElement = header;
+
+  // Update menu items visibility - show only "Edit"
+  updateContextMenuItems('article-header');
+
+  // Position menu at cursor
+  contextMenu.style.left = `${event.pageX}px`;
+  contextMenu.style.top = `${event.pageY}px`;
+
+  // Show menu
+  contextMenu.classList.remove('hidden');
 }
 
 // ============================================================================
@@ -1411,7 +1521,7 @@ function renderPartVocabularyCards(part: ArticlePart): void {
       // Add context menu listener
       card.addEventListener('contextmenu', e => {
         e.preventDefault();
-        showContextMenu(
+        showCardContextMenu(
           card as HTMLElement,
           vocab.id,
           'vocabulary',
@@ -1514,7 +1624,7 @@ function renderPartSentenceCards(part: ArticlePart): void {
       // Add context menu listener
       card.addEventListener('contextmenu', e => {
         e.preventDefault();
-        showContextMenu(
+        showCardContextMenu(
           card as HTMLElement,
           sentence.id,
           'sentence',
@@ -1801,6 +1911,21 @@ function setupEventListeners(): void {
     const target = e.target as HTMLElement;
     // Don't hide if clicking inside the context menu
     if (!elements.contextMenu.contains(target)) {
+      elements.contextMenu.classList.add('hidden');
+    }
+  });
+
+  // Close card context menu when clicking on cards (but not on action buttons)
+  document.addEventListener('click', e => {
+    const target = e.target as HTMLElement;
+    // Check if clicking on a card but not on action buttons
+    const card = target.closest('.vocab-card, .sentence-card');
+    const actionBtn = target.closest(
+      '.card-action-btn, .pronounce-btn-translation'
+    );
+
+    if (card && !actionBtn) {
+      // Hide context menu when clicking on card content
       elements.contextMenu.classList.add('hidden');
     }
   });
@@ -2127,7 +2252,9 @@ async function handleContextMenuAction(event: Event): Promise<void> {
     | 'vocabulary'
     | 'sentence'
     | 'selection'
-    | 'paragraph';
+    | 'paragraph'
+    | 'card'
+    | 'article-header';
 
   // Handle paragraph context menu
   if (itemType === 'paragraph') {
@@ -2158,6 +2285,35 @@ async function handleContextMenuAction(event: Event): Promise<void> {
       if (paragraph) {
         await handleParagraphEdit(paragraph);
       }
+    }
+    contextMenu.classList.add('hidden');
+    return;
+  }
+
+  // Handle card context menu
+  if (itemType === 'card') {
+    if (action === 'edit') {
+      // Placeholder for future card edit functionality
+      showTooltip('Card edit feature coming soon!');
+      console.log('Edit card:', {
+        itemId,
+        cardType: contextMenu.dataset.cardType,
+      });
+    }
+    contextMenu.classList.add('hidden');
+    return;
+  }
+
+  // Handle article header context menu
+  if (itemType === 'article-header') {
+    if (action === 'edit') {
+      // Placeholder for future article header edit functionality
+      showTooltip('Article header edit feature coming soon!');
+      console.log('Edit article header:', {
+        title: state.currentArticle?.title,
+        url: state.currentArticle?.url,
+        language: state.currentArticle?.originalLanguage,
+      });
     }
     contextMenu.classList.add('hidden');
     return;

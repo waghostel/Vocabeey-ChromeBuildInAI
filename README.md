@@ -42,6 +42,43 @@ pnpm test:coverage
 - **Text-to-Speech Support**: Native pronunciation with TTS service
 - **Privacy-First Storage**: Local-first data with offline capability
 - **Performance Optimized**: Memory management and caching system
+- **Keyboard Shortcuts**: Fast navigation and mode switching with hotkeys
+
+## Keyboard Shortcuts
+
+### Navigation
+
+- **← (Left Arrow)**: Navigate to previous article part
+- **→ (Right Arrow)**: Navigate to next article part
+
+### Learning Mode Switching
+
+- **R**: Switch to Reading mode (📖)
+- **V**: Switch to Vocabulary learning mode (📝)
+- **S**: Switch to Sentences learning mode (💬)
+
+### Highlight Mode Switching (Reading Mode)
+
+- **1**: Vocabulary highlight mode
+- **2**: Sentence highlight mode
+- **3**, **0**, or **Esc**: None (disable highlighting)
+
+### Highlight Management
+
+- **Delete** or **Backspace**: Delete selected highlight
+- **Esc**: Deselect highlight without deleting
+
+### Bulk Delete (None Mode)
+
+1. Switch to None mode (`0`, `3`, or `Esc`)
+2. Select text by clicking and dragging
+3. Press `Delete` or `Backspace` to delete all selected highlights
+4. Press `Esc` to cancel bulk delete preview
+
+### Edit Mode (Paragraph Editing)
+
+- **Enter**: Save changes
+- **Esc**: Cancel editing
 
 ## Development
 

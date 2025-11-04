@@ -389,7 +389,7 @@ class TTSService {
     if (this.synthesis) {
       try {
         this.synthesis.cancel();
-      } catch (error) {
+      } catch {
         // Silently ignore cancellation errors
         // This can happen if there's nothing to cancel
       }
