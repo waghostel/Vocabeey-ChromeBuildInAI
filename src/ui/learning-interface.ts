@@ -4600,7 +4600,10 @@ async function selectLanguage(code: string): Promise<void> {
   hideLanguageDropdown();
 
   // Show confirmation with option to re-translate
-  if (previousLanguage !== code && state.vocabularyItems.length > 0) {
+  if (
+    previousLanguage !== code &&
+    (state.vocabularyItems.length > 0 || state.sentenceItems.length > 0)
+  ) {
     showLanguageChangeConfirmation(lang.name);
   } else {
     showTooltip(`Translation language set to ${lang.name}`);
@@ -4616,7 +4619,7 @@ function showLanguageChangeConfirmation(languageName: string): void {
   confirmation.innerHTML = `
     <div class="confirmation-content">
       <p>Translation language changed to <strong>${languageName}</strong></p>
-      <p>Would you like to re-translate existing vocabulary?</p>
+      <p>Would you like to re-translate existing vocabulary and sentences?</p>
       <div class="confirmation-actions">
         <button class="btn-retranslate">Re-translate</button>
         <button class="btn-dismiss">Not now</button>
@@ -4632,7 +4635,7 @@ function showLanguageChangeConfirmation(languageName: string): void {
 
   retranslateBtn?.addEventListener('click', async () => {
     confirmation.remove();
-    await retranslateAllVocabulary();
+    await retranslateAll();
   });
 
   dismissBtn?.addEventListener('click', () => {
@@ -4650,80 +4653,169 @@ function showLanguageChangeConfirmation(languageName: string): void {
 }
 
 /**
- * Re-translate all vocabulary items to the new target language
+ * Re-translate all vocabulary and sentence items to the new target language
  */
-async function retranslateAllVocabulary(): Promise<void> {
-  if (state.vocabularyItems.length === 0) return;
+async function retranslateAll(): Promise<void> {
+  const totalItems = state.vocabularyItems.length + state.sentenceItems.length;
+  if (totalItems === 0) return;
 
-  showLoading(
-    `Re-translating ${state.vocabularyItems.length} vocabulary items...`
-  );
+  showLoading(`Re-translating ${totalItems} items...`);
 
   try {
-    let successCount = 0;
-    let failCount = 0;
+    let vocabSuccess = 0;
+    let vocabFail = 0;
+    let sentenceSuccess = 0;
+    let sentenceFail = 0;
 
-    // Re-translate each vocabulary item
-    for (const vocab of state.vocabularyItems) {
-      try {
-        const response = await chrome.runtime.sendMessage({
-          type: 'TRANSLATE_TEXT',
-          payload: {
-            text: vocab.word,
-            context: vocab.context,
-            type: 'vocabulary',
-            targetLanguage: state.targetLanguage,
-            sourceLanguage: state.currentArticle?.originalLanguage,
-          },
-        });
-
-        if (response.success) {
-          // Update the vocabulary item with new translation
-          vocab.translation = response.data.translation;
-          successCount++;
-        } else {
-          failCount++;
-          console.error('Failed to translate:', vocab.word, response.error);
-        }
-      } catch (error) {
-        failCount++;
-        console.error('Error translating:', vocab.word, error);
-      }
+    // Re-translate vocabulary items
+    if (state.vocabularyItems.length > 0) {
+      const vocabResult = await retranslateVocabularyItems();
+      vocabSuccess = vocabResult.successCount;
+      vocabFail = vocabResult.failCount;
     }
 
-    // Save updated vocabulary to storage
-    const vocabMap: Record<string, VocabularyItem> = {};
-    state.vocabularyItems.forEach(v => {
-      vocabMap[v.id] = v;
-    });
-    await chrome.storage.local.set({ vocabulary: vocabMap });
+    // Re-translate sentence items
+    if (state.sentenceItems.length > 0) {
+      const sentenceResult = await retranslateSentenceItems();
+      sentenceSuccess = sentenceResult.successCount;
+      sentenceFail = sentenceResult.failCount;
+    }
 
     // Re-render current part
     if (state.currentArticle) {
       const part = state.currentArticle.parts[state.currentPartIndex];
       if (part) {
         renderPartVocabularyCards(part);
+        renderPartSentenceCards(part);
       }
     }
 
-    // Re-render vocabulary learning mode if active
+    // Re-render learning modes if active
     if (state.currentMode === 'vocabulary') {
       renderVocabularyLearningMode();
+    } else if (state.currentMode === 'sentences') {
+      renderSentenceLearningMode();
     }
 
     hideLoading();
 
     // Show result
-    if (failCount === 0) {
-      showTooltip(`✓ Successfully re-translated ${successCount} items`);
+    const totalSuccess = vocabSuccess + sentenceSuccess;
+    const totalFail = vocabFail + sentenceFail;
+
+    if (totalFail === 0) {
+      showTooltip(`✓ Successfully re-translated ${totalSuccess} items`);
     } else {
-      showTooltip(`Re-translated ${successCount} items (${failCount} failed)`);
+      showTooltip(`Re-translated ${totalSuccess} items (${totalFail} failed)`);
     }
   } catch (error) {
     console.error('Error during re-translation:', error);
     hideLoading();
-    showTooltip('Failed to re-translate vocabulary');
+    showTooltip('Failed to re-translate items');
   }
+}
+
+/**
+ * Re-translate vocabulary items to the new target language
+ */
+async function retranslateVocabularyItems(): Promise<{
+  successCount: number;
+  failCount: number;
+}> {
+  let successCount = 0;
+  let failCount = 0;
+
+  // Re-translate each vocabulary item
+  for (const vocab of state.vocabularyItems) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'TRANSLATE_TEXT',
+        payload: {
+          text: vocab.word,
+          context: vocab.context,
+          type: 'vocabulary',
+          targetLanguage: state.targetLanguage,
+          sourceLanguage: state.currentArticle?.originalLanguage,
+        },
+      });
+
+      if (response.success) {
+        // Update the vocabulary item with new translation
+        vocab.translation = response.data.translation;
+        successCount++;
+      } else {
+        failCount++;
+        console.error('Failed to translate:', vocab.word, response.error);
+      }
+    } catch (error) {
+      failCount++;
+      console.error('Error translating:', vocab.word, error);
+    }
+  }
+
+  // Save updated vocabulary to storage
+  const vocabMap: Record<string, VocabularyItem> = {};
+  state.vocabularyItems.forEach(v => {
+    vocabMap[v.id] = v;
+  });
+  await chrome.storage.local.set({ vocabulary: vocabMap });
+
+  return { successCount, failCount };
+}
+
+/**
+ * Re-translate sentence items to the new target language
+ */
+async function retranslateSentenceItems(): Promise<{
+  successCount: number;
+  failCount: number;
+}> {
+  let successCount = 0;
+  let failCount = 0;
+
+  // Re-translate each sentence item
+  for (const sentence of state.sentenceItems) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'TRANSLATE_TEXT',
+        payload: {
+          text: sentence.content,
+          context: sentence.content,
+          type: 'sentence',
+          targetLanguage: state.targetLanguage,
+          sourceLanguage: state.currentArticle?.originalLanguage,
+        },
+      });
+
+      if (response.success) {
+        // Update the sentence item with new translation
+        sentence.translation = response.data.translation;
+
+        // Update translations cache if it exists
+        if (sentence.translations) {
+          sentence.translations[state.targetLanguage] =
+            response.data.translation;
+        }
+
+        successCount++;
+      } else {
+        failCount++;
+        console.error('Failed to translate:', sentence.content, response.error);
+      }
+    } catch (error) {
+      failCount++;
+      console.error('Error translating:', sentence.content, error);
+    }
+  }
+
+  // Save updated sentences to storage
+  const sentenceMap: Record<string, SentenceItem> = {};
+  state.sentenceItems.forEach(s => {
+    sentenceMap[s.id] = s;
+  });
+  await chrome.storage.local.set({ sentences: sentenceMap });
+
+  return { successCount, failCount };
 }
 
 // ============================================================================
