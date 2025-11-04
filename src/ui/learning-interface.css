@@ -2566,18 +2566,36 @@ body.dark-mode .highlight-sentence.speaking {
   position: relative;
   background: white;
   border-radius: 12px;
-  padding: 2rem;
-  max-width: 900px;
-  width: 90%;
+  width: 900px;
+  min-width: 600px;
+  max-width: 1400px;
+  height: 85vh;
   max-height: 85vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   z-index: 1;
+  overflow: hidden;
 }
 
 body.dark-mode .article-edit-dialog-content {
   background: #2c3e50;
   color: var(--text-primary);
+}
+
+/* Fixed Header */
+.dialog-header {
+  position: relative;
+  flex-shrink: 0;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--border-color);
+  background: white;
+  z-index: 10;
+}
+
+body.dark-mode .dialog-header {
+  background: #2c3e50;
+  border-bottom-color: #4a5f7f;
 }
 
 /* Dialog Close Button */
@@ -2597,7 +2615,7 @@ body.dark-mode .article-edit-dialog-content {
   justify-content: center;
   color: var(--text-secondary);
   transition: var(--transition);
-  z-index: 10;
+  z-index: 11;
 }
 
 .dialog-close-btn:hover {
@@ -2615,11 +2633,33 @@ body.dark-mode .dialog-close-btn:hover {
 }
 
 .edit-dialog-title {
-  margin: 0 0 1.5rem 0;
-  padding-right: 2rem;
+  margin: 0;
+  padding-right: 2.5rem;
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+/* Scrollable Body */
+.dialog-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1.5rem 2rem;
+}
+
+/* Fixed Footer */
+.dialog-footer {
+  flex-shrink: 0;
+  padding: 1.5rem 2rem;
+  border-top: 1px solid var(--border-color);
+  background: white;
+  z-index: 10;
+}
+
+body.dark-mode .dialog-footer {
+  background: #2c3e50;
+  border-top-color: #4a5f7f;
 }
 
 /* Edit Fields */
@@ -2825,27 +2865,64 @@ body.dark-mode .edit-language-option.selected {
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color);
+  margin: 0;
 }
 
-body.dark-mode .article-edit-dialog .dialog-actions {
-  border-top-color: #4a5f7f;
+/* Resize Handles */
+.resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+  z-index: 20;
+  transition: background-color 0.2s ease;
+}
+
+.resize-handle:hover {
+  background: rgba(74, 144, 226, 0.15);
+}
+
+.resize-handle.resizing {
+  background: rgba(74, 144, 226, 0.3);
+}
+
+.resize-handle-right {
+  right: -5px;
+}
+
+.resize-handle-left {
+  left: -5px;
+}
+
+body.resizing {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+body.resizing * {
+  cursor: col-resize !important;
+  user-select: none;
 }
 
 /* Responsive Design */
 @media (max-width: 1024px) {
   .article-edit-dialog-content {
-    max-width: 750px;
+    width: 750px;
   }
 }
 
 @media (max-width: 768px) {
   .article-edit-dialog-content {
-    width: 95%;
-    padding: 1.5rem;
+    width: 95% !important;
+    min-width: 320px;
     max-height: 90vh;
+  }
+
+  .dialog-header,
+  .dialog-body,
+  .dialog-footer {
+    padding: 1rem 1.5rem;
   }
 
   .edit-dialog-title {
@@ -2859,6 +2936,11 @@ body.dark-mode .article-edit-dialog .dialog-actions {
   .edit-field input[type='text'],
   .edit-language-selector-wrapper {
     max-width: 100%;
+  }
+
+  /* Hide resize handles on mobile */
+  .resize-handle {
+    display: none;
   }
 }
 

@@ -681,6 +681,17 @@ let editDialogOriginalValues: {
   content: '',
 };
 
+// Resize state
+let dialogWidth = 900;
+let isResizing = false;
+let resizeStartX = 0;
+let resizeStartWidth = 0;
+let resizeDirection: 'left' | 'right' = 'right';
+
+const DIALOG_MIN_WIDTH = 600;
+const DIALOG_MAX_WIDTH = 1400;
+const DIALOG_WIDTH_STORAGE_KEY = 'articleEditDialogWidth';
+
 /**
  * Show article header edit dialog
  */
@@ -732,6 +743,12 @@ function showArticleHeaderEditDialog(): void {
 
   // Setup event listeners
   setupEditDialogEventListeners();
+
+  // Setup resize functionality
+  setupDialogResize();
+
+  // Load and apply saved width
+  loadDialogWidth();
 }
 
 /**
@@ -1237,6 +1254,262 @@ function handleEditDialogKeydown(event: KeyboardEvent): void {
   } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
     event.preventDefault();
     void saveArticleHeaderEdit();
+  }
+}
+
+// ============================================================================
+// Dialog Resize Functionality
+// ============================================================================
+
+/**
+ * Setup dialog resize functionality
+ */
+function setupDialogResize(): void {
+  const dialogContent = elements.editDialog.querySelector(
+    '.article-edit-dialog-content'
+  ) as HTMLElement;
+  if (!dialogContent) return;
+
+  const rightHandle = dialogContent.querySelector(
+    '.resize-handle-right'
+  ) as HTMLElement;
+  const leftHandle = dialogContent.querySelector(
+    '.resize-handle-left'
+  ) as HTMLElement;
+
+  if (rightHandle) {
+    rightHandle.addEventListener('mousedown', e =>
+      handleResizeStart(e as MouseEvent, 'right')
+    );
+    rightHandle.addEventListener('touchstart', e =>
+      handleResizeTouchStart(e as TouchEvent, 'right')
+    );
+  }
+
+  if (leftHandle) {
+    leftHandle.addEventListener('mousedown', e =>
+      handleResizeStart(e as MouseEvent, 'left')
+    );
+    leftHandle.addEventListener('touchstart', e =>
+      handleResizeTouchStart(e as TouchEvent, 'left')
+    );
+  }
+}
+
+/**
+ * Handle resize start (mouse)
+ */
+function handleResizeStart(e: MouseEvent, direction: 'left' | 'right'): void {
+  e.preventDefault();
+
+  const dialogContent = elements.editDialog.querySelector(
+    '.article-edit-dialog-content'
+  ) as HTMLElement;
+  if (!dialogContent) return;
+
+  isResizing = true;
+  resizeDirection = direction;
+  resizeStartX = e.clientX;
+  resizeStartWidth = dialogContent.offsetWidth;
+
+  // Add resizing class
+  document.body.classList.add('resizing');
+  const handle =
+    direction === 'right'
+      ? dialogContent.querySelector('.resize-handle-right')
+      : dialogContent.querySelector('.resize-handle-left');
+  handle?.classList.add('resizing');
+
+  // Add document-level listeners
+  document.addEventListener('mousemove', handleResizeMove);
+  document.addEventListener('mouseup', handleResizeEnd);
+}
+
+/**
+ * Handle resize start (touch)
+ */
+function handleResizeTouchStart(
+  e: TouchEvent,
+  direction: 'left' | 'right'
+): void {
+  e.preventDefault();
+
+  const dialogContent = elements.editDialog.querySelector(
+    '.article-edit-dialog-content'
+  ) as HTMLElement;
+  if (!dialogContent) return;
+
+  const touch = e.touches[0];
+  isResizing = true;
+  resizeDirection = direction;
+  resizeStartX = touch.clientX;
+  resizeStartWidth = dialogContent.offsetWidth;
+
+  // Add resizing class
+  document.body.classList.add('resizing');
+  const handle =
+    direction === 'right'
+      ? dialogContent.querySelector('.resize-handle-right')
+      : dialogContent.querySelector('.resize-handle-left');
+  handle?.classList.add('resizing');
+
+  // Add document-level listeners
+  document.addEventListener('touchmove', handleResizeTouchMove);
+  document.addEventListener('touchend', handleResizeTouchEnd);
+}
+
+/**
+ * Handle resize move (mouse)
+ */
+function handleResizeMove(e: MouseEvent): void {
+  if (!isResizing) return;
+
+  const dialogContent = elements.editDialog.querySelector(
+    '.article-edit-dialog-content'
+  ) as HTMLElement;
+  if (!dialogContent) return;
+
+  const delta = e.clientX - resizeStartX;
+  let newWidth: number;
+
+  if (resizeDirection === 'right') {
+    newWidth = resizeStartWidth + delta;
+  } else {
+    newWidth = resizeStartWidth - delta;
+  }
+
+  // Clamp width
+  newWidth = Math.max(DIALOG_MIN_WIDTH, Math.min(DIALOG_MAX_WIDTH, newWidth));
+
+  // Apply width
+  dialogContent.style.width = `${newWidth}px`;
+  dialogWidth = newWidth;
+}
+
+/**
+ * Handle resize move (touch)
+ */
+function handleResizeTouchMove(e: TouchEvent): void {
+  if (!isResizing) return;
+
+  const dialogContent = elements.editDialog.querySelector(
+    '.article-edit-dialog-content'
+  ) as HTMLElement;
+  if (!dialogContent) return;
+
+  const touch = e.touches[0];
+  const delta = touch.clientX - resizeStartX;
+  let newWidth: number;
+
+  if (resizeDirection === 'right') {
+    newWidth = resizeStartWidth + delta;
+  } else {
+    newWidth = resizeStartWidth - delta;
+  }
+
+  // Clamp width
+  newWidth = Math.max(DIALOG_MIN_WIDTH, Math.min(DIALOG_MAX_WIDTH, newWidth));
+
+  // Apply width
+  dialogContent.style.width = `${newWidth}px`;
+  dialogWidth = newWidth;
+}
+
+/**
+ * Handle resize end (mouse)
+ */
+function handleResizeEnd(): void {
+  if (!isResizing) return;
+
+  isResizing = false;
+
+  // Remove resizing class
+  document.body.classList.remove('resizing');
+  const dialogContent = elements.editDialog.querySelector(
+    '.article-edit-dialog-content'
+  ) as HTMLElement;
+  if (dialogContent) {
+    dialogContent
+      .querySelector('.resize-handle-right')
+      ?.classList.remove('resizing');
+    dialogContent
+      .querySelector('.resize-handle-left')
+      ?.classList.remove('resizing');
+  }
+
+  // Remove document-level listeners
+  document.removeEventListener('mousemove', handleResizeMove);
+  document.removeEventListener('mouseup', handleResizeEnd);
+
+  // Save width
+  saveDialogWidth(dialogWidth);
+}
+
+/**
+ * Handle resize end (touch)
+ */
+function handleResizeTouchEnd(): void {
+  if (!isResizing) return;
+
+  isResizing = false;
+
+  // Remove resizing class
+  document.body.classList.remove('resizing');
+  const dialogContent = elements.editDialog.querySelector(
+    '.article-edit-dialog-content'
+  ) as HTMLElement;
+  if (dialogContent) {
+    dialogContent
+      .querySelector('.resize-handle-right')
+      ?.classList.remove('resizing');
+    dialogContent
+      .querySelector('.resize-handle-left')
+      ?.classList.remove('resizing');
+  }
+
+  // Remove document-level listeners
+  document.removeEventListener('touchmove', handleResizeTouchMove);
+  document.removeEventListener('touchend', handleResizeTouchEnd);
+
+  // Save width
+  saveDialogWidth(dialogWidth);
+}
+
+/**
+ * Load dialog width from localStorage
+ */
+function loadDialogWidth(): void {
+  try {
+    const savedWidth = localStorage.getItem(DIALOG_WIDTH_STORAGE_KEY);
+    if (savedWidth) {
+      const width = parseInt(savedWidth, 10);
+      if (
+        !isNaN(width) &&
+        width >= DIALOG_MIN_WIDTH &&
+        width <= DIALOG_MAX_WIDTH
+      ) {
+        dialogWidth = width;
+        const dialogContent = elements.editDialog.querySelector(
+          '.article-edit-dialog-content'
+        ) as HTMLElement;
+        if (dialogContent) {
+          dialogContent.style.width = `${dialogWidth}px`;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error loading dialog width:', error);
+  }
+}
+
+/**
+ * Save dialog width to localStorage
+ */
+function saveDialogWidth(width: number): void {
+  try {
+    localStorage.setItem(DIALOG_WIDTH_STORAGE_KEY, width.toString());
+  } catch (error) {
+    console.error('Error saving dialog width:', error);
   }
 }
 

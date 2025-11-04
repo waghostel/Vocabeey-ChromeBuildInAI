@@ -259,92 +259,110 @@
     <div class="article-edit-dialog hidden">
       <div class="dialog-overlay"></div>
       <div class="dialog-content article-edit-dialog-content">
-        <button
-          class="dialog-close-btn"
-          aria-label="Close dialog"
-          title="Close"
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+        <!-- Fixed Header -->
+        <div class="dialog-header">
+          <button
+            class="dialog-close-btn"
+            aria-label="Close dialog"
+            title="Close"
           >
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-        <h3 class="edit-dialog-title">Edit Article Header</h3>
-
-        <!-- Article Title Field -->
-        <div class="edit-field">
-          <label for="edit-title-input">Article Title</label>
-          <input
-            type="text"
-            id="edit-title-input"
-            class="edit-title-input"
-            placeholder="Enter article title..."
-            maxlength="500"
-          />
-          <span class="field-error hidden"></span>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          <h3 class="edit-dialog-title">Edit Article Header</h3>
         </div>
 
-        <!-- Article URL Field -->
-        <div class="edit-field">
-          <label for="edit-url-input">Article URL</label>
-          <input
-            type="text"
-            id="edit-url-input"
-            class="edit-url-input"
-            placeholder="Enter article URL..."
-            maxlength="2000"
-          />
-          <span class="field-error hidden"></span>
-        </div>
-
-        <!-- Language Selector -->
-        <div class="edit-field">
-          <label for="edit-language-input">Detected Language</label>
-          <div class="edit-language-selector-wrapper">
+        <!-- Scrollable Body -->
+        <div class="dialog-body">
+          <!-- Article Title Field -->
+          <div class="edit-field">
+            <label for="edit-title-input">Article Title</label>
             <input
               type="text"
-              id="edit-language-input"
-              class="edit-language-input"
-              placeholder="Search language..."
-              autocomplete="off"
+              id="edit-title-input"
+              class="edit-title-input"
+              placeholder="Enter article title..."
+              maxlength="500"
             />
-            <div class="edit-language-dropdown">
-              <div class="edit-language-options"></div>
-            </div>
+            <span class="field-error hidden"></span>
           </div>
-          <span class="field-error hidden"></span>
+
+          <!-- Article URL Field -->
+          <div class="edit-field">
+            <label for="edit-url-input">Article URL</label>
+            <input
+              type="text"
+              id="edit-url-input"
+              class="edit-url-input"
+              placeholder="Enter article URL..."
+              maxlength="2000"
+            />
+            <span class="field-error hidden"></span>
+          </div>
+
+          <!-- Language Selector -->
+          <div class="edit-field">
+            <label for="edit-language-input">Detected Language</label>
+            <div class="edit-language-selector-wrapper">
+              <input
+                type="text"
+                id="edit-language-input"
+                class="edit-language-input"
+                placeholder="Search language..."
+                autocomplete="off"
+              />
+              <div class="edit-language-dropdown">
+                <div class="edit-language-options"></div>
+              </div>
+            </div>
+            <span class="field-error hidden"></span>
+          </div>
+
+          <!-- Paragraph Content Field -->
+          <div class="edit-field">
+            <label for="edit-paragraph-textarea">Article Content</label>
+            <textarea
+              id="edit-paragraph-textarea"
+              class="edit-paragraph-textarea"
+              placeholder="Enter article content... (Each paragraph should be separated by a blank line)"
+              rows="10"
+            ></textarea>
+            <span class="field-help"
+              >Separate paragraphs with blank lines. Each paragraph will be
+              displayed separately in the reading interface.</span
+            >
+            <span class="field-error hidden"></span>
+          </div>
         </div>
 
-        <!-- Paragraph Content Field -->
-        <div class="edit-field">
-          <label for="edit-paragraph-textarea">Article Content</label>
-          <textarea
-            id="edit-paragraph-textarea"
-            class="edit-paragraph-textarea"
-            placeholder="Enter article content... (Each paragraph should be separated by a blank line)"
-            rows="10"
-          ></textarea>
-          <span class="field-help"
-            >Separate paragraphs with blank lines. Each paragraph will be
-            displayed separately in the reading interface.</span
-          >
-          <span class="field-error hidden"></span>
+        <!-- Fixed Footer -->
+        <div class="dialog-footer">
+          <div class="dialog-actions">
+            <button class="dialog-btn dialog-btn-cancel">Cancel</button>
+            <button class="dialog-btn dialog-btn-save">Save Changes</button>
+          </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="dialog-actions">
-          <button class="dialog-btn dialog-btn-cancel">Cancel</button>
-          <button class="dialog-btn dialog-btn-save">Save Changes</button>
-        </div>
+        <!-- Resize Handles -->
+        <div
+          class="resize-handle resize-handle-right"
+          title="Drag to resize"
+        ></div>
+        <div
+          class="resize-handle resize-handle-left"
+          title="Drag to resize"
+        ></div>
       </div>
     </div>
 
