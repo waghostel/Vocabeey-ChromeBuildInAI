@@ -1521,6 +1521,15 @@ function saveDialogWidth(width: number): void {
 let editingCardId: string = '';
 let editingCardType: 'vocabulary' | 'sentence' = 'vocabulary';
 
+// Card dialog resize state
+let cardDialogWidth = 900;
+let isCardResizing = false;
+let cardResizeStartX = 0;
+let cardResizeStartWidth = 0;
+let cardResizeDirection: 'left' | 'right' = 'right';
+
+const CARD_DIALOG_WIDTH_STORAGE_KEY = 'cardEditDialogWidth';
+
 /**
  * Show card edit dialog
  */
@@ -1572,6 +1581,12 @@ async function showCardEditDialog(
 
   // Setup event listeners
   setupCardEditDialogEventListeners();
+
+  // Setup resize functionality
+  setupCardDialogResize();
+
+  // Load and apply saved width
+  loadCardDialogWidth();
 }
 
 /**
@@ -2080,6 +2095,291 @@ async function saveSentenceCardEdit(): Promise<void> {
 
   // Dispatch event for other components
   window.dispatchEvent(new CustomEvent('sentences-updated'));
+}
+
+// ============================================================================
+// Card Dialog Resize Functionality
+// ============================================================================
+
+/**
+ * Setup card dialog resize functionality
+ */
+function setupCardDialogResize(): void {
+  const dialog = document.querySelector('.card-edit-dialog') as HTMLElement;
+  if (!dialog) return;
+
+  const dialogContent = dialog.querySelector(
+    '.card-edit-dialog-content'
+  ) as HTMLElement;
+  if (!dialogContent) return;
+
+  const rightHandle = dialogContent.querySelector(
+    '.resize-handle-right'
+  ) as HTMLElement;
+  const leftHandle = dialogContent.querySelector(
+    '.resize-handle-left'
+  ) as HTMLElement;
+
+  if (rightHandle) {
+    rightHandle.addEventListener('mousedown', e =>
+      handleCardResizeStart(e as MouseEvent, 'right')
+    );
+    rightHandle.addEventListener('touchstart', e =>
+      handleCardResizeTouchStart(e as TouchEvent, 'right')
+    );
+  }
+
+  if (leftHandle) {
+    leftHandle.addEventListener('mousedown', e =>
+      handleCardResizeStart(e as MouseEvent, 'left')
+    );
+    leftHandle.addEventListener('touchstart', e =>
+      handleCardResizeTouchStart(e as TouchEvent, 'left')
+    );
+  }
+}
+
+/**
+ * Handle card resize start (mouse)
+ */
+function handleCardResizeStart(
+  e: MouseEvent,
+  direction: 'left' | 'right'
+): void {
+  e.preventDefault();
+
+  const dialog = document.querySelector('.card-edit-dialog') as HTMLElement;
+  if (!dialog) return;
+
+  const dialogContent = dialog.querySelector(
+    '.card-edit-dialog-content'
+  ) as HTMLElement;
+  if (!dialogContent) return;
+
+  isCardResizing = true;
+  cardResizeDirection = direction;
+  cardResizeStartX = e.clientX;
+  cardResizeStartWidth = dialogContent.offsetWidth;
+
+  // Add resizing class
+  document.body.classList.add('resizing');
+  const handle =
+    direction === 'right'
+      ? dialogContent.querySelector('.resize-handle-right')
+      : dialogContent.querySelector('.resize-handle-left');
+  handle?.classList.add('resizing');
+
+  // Add document-level listeners
+  document.addEventListener('mousemove', handleCardResizeMove);
+  document.addEventListener('mouseup', handleCardResizeEnd);
+}
+
+/**
+ * Handle card resize start (touch)
+ */
+function handleCardResizeTouchStart(
+  e: TouchEvent,
+  direction: 'left' | 'right'
+): void {
+  e.preventDefault();
+
+  const dialog = document.querySelector('.card-edit-dialog') as HTMLElement;
+  if (!dialog) return;
+
+  const dialogContent = dialog.querySelector(
+    '.card-edit-dialog-content'
+  ) as HTMLElement;
+  if (!dialogContent) return;
+
+  const touch = e.touches[0];
+  isCardResizing = true;
+  cardResizeDirection = direction;
+  cardResizeStartX = touch.clientX;
+  cardResizeStartWidth = dialogContent.offsetWidth;
+
+  // Add resizing class
+  document.body.classList.add('resizing');
+  const handle =
+    direction === 'right'
+      ? dialogContent.querySelector('.resize-handle-right')
+      : dialogContent.querySelector('.resize-handle-left');
+  handle?.classList.add('resizing');
+
+  // Add document-level listeners
+  document.addEventListener('touchmove', handleCardResizeTouchMove);
+  document.addEventListener('touchend', handleCardResizeTouchEnd);
+}
+
+/**
+ * Handle card resize move (mouse)
+ */
+function handleCardResizeMove(e: MouseEvent): void {
+  if (!isCardResizing) return;
+
+  const dialog = document.querySelector('.card-edit-dialog') as HTMLElement;
+  if (!dialog) return;
+
+  const dialogContent = dialog.querySelector(
+    '.card-edit-dialog-content'
+  ) as HTMLElement;
+  if (!dialogContent) return;
+
+  const delta = e.clientX - cardResizeStartX;
+  let newWidth: number;
+
+  if (cardResizeDirection === 'right') {
+    newWidth = cardResizeStartWidth + delta;
+  } else {
+    newWidth = cardResizeStartWidth - delta;
+  }
+
+  // Clamp width
+  newWidth = Math.max(DIALOG_MIN_WIDTH, Math.min(DIALOG_MAX_WIDTH, newWidth));
+
+  // Apply width
+  dialogContent.style.width = `${newWidth}px`;
+  cardDialogWidth = newWidth;
+}
+
+/**
+ * Handle card resize move (touch)
+ */
+function handleCardResizeTouchMove(e: TouchEvent): void {
+  if (!isCardResizing) return;
+
+  const dialog = document.querySelector('.card-edit-dialog') as HTMLElement;
+  if (!dialog) return;
+
+  const dialogContent = dialog.querySelector(
+    '.card-edit-dialog-content'
+  ) as HTMLElement;
+  if (!dialogContent) return;
+
+  const touch = e.touches[0];
+  const delta = touch.clientX - cardResizeStartX;
+  let newWidth: number;
+
+  if (cardResizeDirection === 'right') {
+    newWidth = cardResizeStartWidth + delta;
+  } else {
+    newWidth = cardResizeStartWidth - delta;
+  }
+
+  // Clamp width
+  newWidth = Math.max(DIALOG_MIN_WIDTH, Math.min(DIALOG_MAX_WIDTH, newWidth));
+
+  // Apply width
+  dialogContent.style.width = `${newWidth}px`;
+  cardDialogWidth = newWidth;
+}
+
+/**
+ * Handle card resize end (mouse)
+ */
+function handleCardResizeEnd(): void {
+  if (!isCardResizing) return;
+
+  isCardResizing = false;
+
+  // Remove resizing class
+  document.body.classList.remove('resizing');
+  const dialog = document.querySelector('.card-edit-dialog') as HTMLElement;
+  if (dialog) {
+    const dialogContent = dialog.querySelector(
+      '.card-edit-dialog-content'
+    ) as HTMLElement;
+    if (dialogContent) {
+      dialogContent
+        .querySelector('.resize-handle-right')
+        ?.classList.remove('resizing');
+      dialogContent
+        .querySelector('.resize-handle-left')
+        ?.classList.remove('resizing');
+    }
+  }
+
+  // Remove document-level listeners
+  document.removeEventListener('mousemove', handleCardResizeMove);
+  document.removeEventListener('mouseup', handleCardResizeEnd);
+
+  // Save width
+  saveCardDialogWidth(cardDialogWidth);
+}
+
+/**
+ * Handle card resize end (touch)
+ */
+function handleCardResizeTouchEnd(): void {
+  if (!isCardResizing) return;
+
+  isCardResizing = false;
+
+  // Remove resizing class
+  document.body.classList.remove('resizing');
+  const dialog = document.querySelector('.card-edit-dialog') as HTMLElement;
+  if (dialog) {
+    const dialogContent = dialog.querySelector(
+      '.card-edit-dialog-content'
+    ) as HTMLElement;
+    if (dialogContent) {
+      dialogContent
+        .querySelector('.resize-handle-right')
+        ?.classList.remove('resizing');
+      dialogContent
+        .querySelector('.resize-handle-left')
+        ?.classList.remove('resizing');
+    }
+  }
+
+  // Remove document-level listeners
+  document.removeEventListener('touchmove', handleCardResizeTouchMove);
+  document.removeEventListener('touchend', handleCardResizeTouchEnd);
+
+  // Save width
+  saveCardDialogWidth(cardDialogWidth);
+}
+
+/**
+ * Load card dialog width from localStorage
+ */
+function loadCardDialogWidth(): void {
+  try {
+    const savedWidth = localStorage.getItem(CARD_DIALOG_WIDTH_STORAGE_KEY);
+    if (savedWidth) {
+      const width = parseInt(savedWidth, 10);
+      if (
+        !isNaN(width) &&
+        width >= DIALOG_MIN_WIDTH &&
+        width <= DIALOG_MAX_WIDTH
+      ) {
+        cardDialogWidth = width;
+        const dialog = document.querySelector(
+          '.card-edit-dialog'
+        ) as HTMLElement;
+        if (dialog) {
+          const dialogContent = dialog.querySelector(
+            '.card-edit-dialog-content'
+          ) as HTMLElement;
+          if (dialogContent) {
+            dialogContent.style.width = `${cardDialogWidth}px`;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error loading card dialog width:', error);
+  }
+}
+
+/**
+ * Save card dialog width to localStorage
+ */
+function saveCardDialogWidth(width: number): void {
+  try {
+    localStorage.setItem(CARD_DIALOG_WIDTH_STORAGE_KEY, width.toString());
+  } catch (error) {
+    console.error('Error saving card dialog width:', error);
+  }
 }
 
 // ============================================================================
