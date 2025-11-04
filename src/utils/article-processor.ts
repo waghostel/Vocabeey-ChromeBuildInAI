@@ -185,13 +185,67 @@ function splitContentIntoParts(
   content: string,
   articleId: string
 ): ArticlePart[] {
-  const MAX_WORDS_PER_PART = 500;
+  const MAX_WORDS_PER_PART = 250; // Reduced from 500 to 250 for shorter, more manageable sections
   const parts: ArticlePart[] = [];
 
-  // Split by paragraphs first
-  const paragraphs = content.split(/\n\n+/).filter(p => p.trim());
+  console.log('🔪 === ARTICLE SEGMENTATION DIAGNOSTIC ===');
+  console.log('📊 Article Info:', {
+    articleId,
+    contentLength: content.length,
+    totalWords: countWords(content),
+    maxWordsPerPart: MAX_WORDS_PER_PART,
+  });
+
+  // Split by paragraphs first (try double newline)
+  let paragraphs = content.split(/\n\n+/).filter(p => p.trim());
+
+  console.log('📄 Paragraph Detection (\\n\\n):', {
+    paragraphsFound: paragraphs.length,
+    firstParagraphPreview: paragraphs[0]?.substring(0, 100) + '...',
+  });
+
+  // Fallback 1: Try single newline if double newline didn't work
+  if (paragraphs.length <= 1 && content.length > MAX_WORDS_PER_PART * 2) {
+    console.log('🔄 Fallback: Trying single newline (\\n) split...');
+    const singleNewlineParagraphs = content.split(/\n/).filter(p => p.trim());
+
+    // Only use single newline split if it gives us reasonable paragraphs
+    // Filter out very short lines (likely headers/metadata)
+    paragraphs = singleNewlineParagraphs.filter(p => {
+      const wordCount = countWords(p);
+      return wordCount >= 10; // At least 10 words to be considered a paragraph
+    });
+
+    console.log('📄 Paragraph Detection (\\n):', {
+      paragraphsFound: paragraphs.length,
+      filteredFrom: singleNewlineParagraphs.length,
+    });
+  }
+
+  // Fallback 2: Split by sentences if still no luck (preserve punctuation)
+  if (paragraphs.length <= 1 && content.length > MAX_WORDS_PER_PART * 2) {
+    console.log(
+      '🔄 Fallback: Trying sentence split (preserving punctuation)...'
+    );
+    paragraphs = smartSentenceSplit(content);
+    console.log('📄 Paragraph Detection (sentences):', {
+      paragraphsFound: paragraphs.length,
+    });
+  }
+
+  // Fallback 3: Force split by word count if still one big chunk
+  if (paragraphs.length <= 1 && countWords(content) > MAX_WORDS_PER_PART) {
+    console.log('🔄 Fallback: Force splitting by word count...');
+    paragraphs = forceSplitByWordCount(content, MAX_WORDS_PER_PART);
+    console.log('📄 Forced split result:', {
+      chunksCreated: paragraphs.length,
+    });
+  }
 
   if (paragraphs.length === 0) {
+    console.warn(
+      '⚠️ No paragraphs found! Creating single part with all content'
+    );
     // No paragraphs found, treat entire content as one part
     return [createArticlePart(content, content, articleId, 0)];
   }
@@ -200,14 +254,24 @@ function splitContentIntoParts(
   let currentWordCount = 0;
   let partIndex = 0;
 
-  for (const paragraph of paragraphs) {
+  for (let i = 0; i < paragraphs.length; i++) {
+    const paragraph = paragraphs[i];
     const paragraphWords = countWords(paragraph);
+
+    console.log(`📝 Processing paragraph ${i + 1}/${paragraphs.length}:`, {
+      words: paragraphWords,
+      currentPartWords: currentWordCount,
+      willExceedLimit: currentWordCount + paragraphWords > MAX_WORDS_PER_PART,
+    });
 
     // If adding this paragraph exceeds limit and we have content, create a part
     if (
       currentWordCount + paragraphWords > MAX_WORDS_PER_PART &&
       currentPart.length > 0
     ) {
+      console.log(
+        `✂️ Creating part ${partIndex + 1} (${currentWordCount} words)`
+      );
       parts.push(
         createArticlePart(
           currentPart.trim(),
@@ -228,6 +292,9 @@ function splitContentIntoParts(
 
   // Add remaining content as final part
   if (currentPart.trim()) {
+    console.log(
+      `✂️ Creating final part ${partIndex + 1} (${currentWordCount} words)`
+    );
     parts.push(
       createArticlePart(
         currentPart.trim(),
@@ -240,8 +307,20 @@ function splitContentIntoParts(
 
   // If no parts were created, create one with all content
   if (parts.length === 0) {
+    console.warn('⚠️ No parts created! Creating single part as fallback');
     parts.push(createArticlePart(content, content, articleId, 0));
   }
+
+  console.log('✅ Segmentation Complete:', {
+    totalParts: parts.length,
+    partsDetails: parts.map((p, i) => ({
+      partIndex: i + 1,
+      partId: p.id,
+      words: countWords(p.content),
+      contentPreview: p.content.substring(0, 50) + '...',
+    })),
+  });
+  console.log('🔪 === END SEGMENTATION DIAGNOSTIC ===\n');
 
   return parts;
 }
@@ -276,6 +355,84 @@ function countWords(text: string): number {
     .trim()
     .split(/\s+/)
     .filter(word => word.length > 0).length;
+}
+
+/**
+ * Smart sentence split that preserves punctuation and groups sentences
+ * Groups 3-5 sentences together to create natural reading chunks
+ */
+function smartSentenceSplit(content: string): string[] {
+  // Split by sentence boundaries while preserving the punctuation
+  // Match: period/question/exclamation followed by space and capital letter
+  const sentencePattern = /([.!?]+)\s+(?=[A-Z])/g;
+  const sentences: string[] = [];
+
+  let lastIndex = 0;
+  let match;
+
+  while ((match = sentencePattern.exec(content)) !== null) {
+    const sentence = content.substring(
+      lastIndex,
+      match.index + match[1].length
+    );
+    if (sentence.trim()) {
+      sentences.push(sentence.trim());
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining content
+  if (lastIndex < content.length) {
+    const remaining = content.substring(lastIndex).trim();
+    if (remaining) {
+      sentences.push(remaining);
+    }
+  }
+
+  // Group sentences into smaller chunks (2-3 sentences each for shorter sections)
+  const chunks: string[] = [];
+  const SENTENCES_PER_CHUNK = 2; // Reduced from 4 to 2 for shorter sections
+
+  for (let i = 0; i < sentences.length; i += SENTENCES_PER_CHUNK) {
+    const chunk = sentences.slice(i, i + SENTENCES_PER_CHUNK).join(' ');
+    if (chunk.trim()) {
+      chunks.push(chunk.trim());
+    }
+  }
+
+  return chunks.length > 0 ? chunks : [content];
+}
+
+/**
+ * Force split content by word count when paragraph detection fails
+ * This ensures long articles are always segmented, even without proper formatting
+ */
+function forceSplitByWordCount(
+  content: string,
+  maxWordsPerChunk: number
+): string[] {
+  const words = content.split(/\s+/);
+  const chunks: string[] = [];
+  let currentChunk: string[] = [];
+  let currentWordCount = 0;
+
+  for (const word of words) {
+    currentChunk.push(word);
+    currentWordCount++;
+
+    if (currentWordCount >= maxWordsPerChunk) {
+      chunks.push(currentChunk.join(' '));
+      currentChunk = [];
+      currentWordCount = 0;
+    }
+  }
+
+  // Add remaining words
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk.join(' '));
+  }
+
+  return chunks;
 }
 
 /**

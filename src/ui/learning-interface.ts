@@ -169,6 +169,75 @@ const elements = {
 };
 
 // ============================================================================
+// Diagnostic Functions (for debugging)
+// ============================================================================
+
+/**
+ * Diagnostic function to inspect current article structure
+ * Call from browser console: window.diagnoseArticle()
+ */
+function diagnoseArticle(): void {
+  console.log('🔍 === ARTICLE DIAGNOSTIC REPORT ===');
+
+  if (!state.currentArticle) {
+    console.error('❌ No article loaded');
+    return;
+  }
+
+  const article = state.currentArticle;
+
+  console.log('📊 Basic Info:', {
+    id: article.id,
+    title: article.title,
+    url: article.url,
+    language: article.originalLanguage,
+    confidence: article.detectedLanguageConfidence,
+    processedAt: article.processedAt,
+    status: article.processingStatus,
+  });
+
+  console.log('📄 Parts Structure:', {
+    hasParts: !!article.parts,
+    partsCount: article.parts?.length || 0,
+    currentPartIndex: state.currentPartIndex,
+    currentPartNumber: state.currentPartIndex + 1,
+  });
+
+  if (article.parts && article.parts.length > 0) {
+    console.log('📝 Parts Details:');
+    article.parts.forEach((part, i) => {
+      const wordCount = part.content
+        .split(/\s+/)
+        .filter(w => w.length > 0).length;
+      console.log(`  Part ${i + 1}:`, {
+        id: part.id,
+        partIndex: part.partIndex,
+        contentLength: part.content.length,
+        wordCount,
+        vocabularyCount: part.vocabulary?.length || 0,
+        sentencesCount: part.sentences?.length || 0,
+        preview: part.content.substring(0, 100) + '...',
+      });
+    });
+  } else {
+    console.error('❌ NO PARTS ARRAY FOUND!');
+  }
+
+  console.log('🎯 Current State:', {
+    mode: state.currentMode,
+    highlightMode: state.highlightMode,
+    displayMode: state.displayMode,
+    vocabularyItemsTotal: state.vocabularyItems.length,
+    sentenceItemsTotal: state.sentenceItems.length,
+  });
+
+  console.log('🔍 === END DIAGNOSTIC REPORT ===');
+}
+
+// Expose diagnostic function to window for console access
+(window as any).diagnoseArticle = diagnoseArticle;
+
+// ============================================================================
 // Initialization
 // ============================================================================
 
@@ -243,8 +312,45 @@ async function getArticleData(tabId: number): Promise<ProcessedArticle | null> {
  * Load and display article
  */
 async function loadArticle(article: ProcessedArticle): Promise<void> {
+  console.log('📖 === LOADING ARTICLE DIAGNOSTIC ===');
+  console.log('📊 Article Structure:', {
+    id: article.id,
+    title: article.title,
+    url: article.url,
+    language: article.originalLanguage,
+    hasParts: !!article.parts,
+    partsCount: article.parts?.length || 0,
+    processingStatus: article.processingStatus,
+    processedAt: article.processedAt,
+  });
+
+  if (article.parts && article.parts.length > 0) {
+    console.log(
+      '📄 Parts Details:',
+      article.parts.map((part, i) => ({
+        index: i + 1,
+        partId: part.id,
+        contentLength: part.content.length,
+        vocabularyCount: part.vocabulary?.length || 0,
+        sentencesCount: part.sentences?.length || 0,
+        contentPreview: part.content.substring(0, 100) + '...',
+      }))
+    );
+  } else {
+    console.error(
+      '❌ NO PARTS FOUND IN ARTICLE! This article needs re-segmentation.'
+    );
+  }
+
   state.currentArticle = article;
-  state.currentPartIndex = 0;
+
+  // Try to restore previous navigation position
+  const restoredPartIndex = await restoreNavigationState(article.id);
+  console.log('🔄 Navigation State:', {
+    restoredPartIndex,
+    willStartAt: restoredPartIndex + 1,
+  });
+  state.currentPartIndex = restoredPartIndex;
 
   // Store article language in local storage for translation to access
   await chrome.storage.local.set({
@@ -254,11 +360,14 @@ async function loadArticle(article: ProcessedArticle): Promise<void> {
   // Render article header
   renderArticleHeader(article);
 
-  // Render first article part
-  renderArticlePart(0);
+  // Render article part (restored position or first part)
+  renderArticlePart(state.currentPartIndex);
 
   // Load vocabulary and sentences for this article
   await loadVocabularyAndSentences(article.id);
+
+  console.log('✅ Article loaded successfully');
+  console.log('📖 === END LOADING DIAGNOSTIC ===\n');
 }
 
 /**
@@ -390,8 +499,11 @@ function renderArticlePart(partIndex: number): void {
   renderPartVocabularyCards(part);
   renderPartSentenceCards(part);
 
-  // Scroll to top
+  // Scroll to top smoothly
   window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Persist current part index to session storage
+  void persistNavigationState();
 }
 
 /**
@@ -3192,6 +3304,49 @@ function updateNavigation(): void {
   elements.nextButton.disabled = state.currentPartIndex === totalParts - 1;
 }
 
+/**
+ * Persist current navigation state to session storage
+ */
+async function persistNavigationState(): Promise<void> {
+  if (!state.currentArticle) return;
+
+  try {
+    const key = `article_nav_${state.currentArticle.id}`;
+    await chrome.storage.session.set({
+      [key]: {
+        partIndex: state.currentPartIndex,
+        timestamp: Date.now(),
+      },
+    });
+  } catch (error) {
+    console.error('Failed to persist navigation state:', error);
+  }
+}
+
+/**
+ * Restore navigation state from session storage
+ */
+async function restoreNavigationState(articleId: string): Promise<number> {
+  try {
+    const key = `article_nav_${articleId}`;
+    const data = await chrome.storage.session.get(key);
+    const navState = data[key];
+
+    if (navState && typeof navState.partIndex === 'number') {
+      // Check if the saved state is recent (within last hour)
+      const ONE_HOUR = 60 * 60 * 1000;
+      if (Date.now() - navState.timestamp < ONE_HOUR) {
+        return navState.partIndex;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to restore navigation state:', error);
+  }
+
+  // Default to first part
+  return 0;
+}
+
 // ============================================================================
 // Vocabulary and Sentence Cards
 // ============================================================================
@@ -3227,8 +3382,15 @@ function renderPartVocabularyCards(part: ArticlePart): void {
   const partVocab = state.vocabularyItems.filter(v => v.partId === part.id);
 
   if (partVocab.length === 0) {
-    elements.vocabularyCardsSection.innerHTML =
-      '<p class="text-secondary">No vocabulary items yet. Highlight words to add them.</p>';
+    const totalParts = state.currentArticle?.parts.length || 1;
+    const currentPartNum = state.currentPartIndex + 1;
+    elements.vocabularyCardsSection.innerHTML = `
+      <div class="empty-state">
+        <p class="text-secondary">No vocabulary items in this part yet.</p>
+        <p class="text-hint">Highlight words in the text above to add them as vocabulary.</p>
+        ${totalParts > 1 ? `<p class="text-hint-small">Part ${currentPartNum} of ${totalParts}</p>` : ''}
+      </div>
+    `;
     return;
   }
 
@@ -3330,8 +3492,15 @@ function renderPartSentenceCards(part: ArticlePart): void {
   const partSentences = state.sentenceItems.filter(s => s.partId === part.id);
 
   if (partSentences.length === 0) {
-    elements.sentenceCardsSection.innerHTML =
-      '<p class="text-secondary">No sentences yet. Highlight sentences to add them.</p>';
+    const totalParts = state.currentArticle?.parts.length || 1;
+    const currentPartNum = state.currentPartIndex + 1;
+    elements.sentenceCardsSection.innerHTML = `
+      <div class="empty-state">
+        <p class="text-secondary">No sentences in this part yet.</p>
+        <p class="text-hint">Highlight sentences in the text above to add them.</p>
+        ${totalParts > 1 ? `<p class="text-hint-small">Part ${currentPartNum} of ${totalParts}</p>` : ''}
+      </div>
+    `;
     return;
   }
 

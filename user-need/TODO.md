@@ -14,13 +14,13 @@
 [ ] Dark theme
 [ ] User can create blank page.
 [ ] The title, language, and url personal editing feature(Trigger by double click on it.)
-[ ] Divide the article into sections
 [ ] icon to copy all the article(include header, url, )
 
 ## done
 
 [x] Add delete context menu on vocabularary card
 [x] Add delete on sentence card
+[x] Divide the article into sections (Article Segmentation Feature)
 
 Summarizer API - Could create article summaries
 Rewriter API - Could adapt content to difficulty level (this is actually a core feature that's coded but not exposed!)

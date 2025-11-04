@@ -818,17 +818,34 @@ async function handleContentExtracted(
 
   try {
     // Process the extracted content into a structured article
-    console.log('Processing article...');
+    console.log('🔄 === PROCESSING ARTICLE ===');
+    console.log('📥 Extracted Content:', {
+      title: content.title,
+      url: content.url,
+      contentLength: content.content.length,
+      wordCount: content.wordCount,
+      paragraphCount: content.paragraphCount,
+      language: content.language,
+    });
+
     // Pass the language detection handler to avoid message passing to self
     const processedArticle = await processArticle(
       content,
       handleDetectLanguage
     );
-    console.log('Article processed successfully:', {
+
+    console.log('✅ Article processed successfully:', {
       id: processedArticle.id,
       parts: processedArticle.parts.length,
       language: processedArticle.originalLanguage,
+      confidence: processedArticle.detectedLanguageConfidence,
+      partsBreakdown: processedArticle.parts.map((p, i) => ({
+        index: i + 1,
+        id: p.id,
+        contentLength: p.content.length,
+      })),
     });
+    console.log('🔄 === END PROCESSING ===\n');
 
     // Store the processed article temporarily
     await chrome.storage.session.set({
