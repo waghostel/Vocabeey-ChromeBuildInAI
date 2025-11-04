@@ -3,6 +3,8 @@
  * Provides settings menu with theme switching functionality
  */
 
+import { showOnboardingWizard } from '../onboarding-wizard';
+
 export type Theme = 'light' | 'dark';
 
 interface MenuState {
@@ -54,6 +56,13 @@ function createMenuDropdown(): void {
   menuElement.className = 'hamburger-menu hidden';
   menuElement.innerHTML = `
     <div class="menu-section">
+      <h3 class="menu-section-title">Help</h3>
+      <button class="menu-item" data-action="replay-tutorial">
+        <span class="menu-item-icon">🎓</span>
+        <span class="menu-item-label">Replay Tutorial</span>
+      </button>
+    </div>
+    <div class="menu-section">
       <h3 class="menu-section-title">Theme</h3>
       <div class="theme-options">
         <button class="theme-option" data-theme="light">
@@ -94,6 +103,15 @@ function setupEventListeners(): void {
     }
   });
 
+  // Menu item clicks
+  const menuItems = menuElement?.querySelectorAll('.menu-item');
+  menuItems?.forEach(item => {
+    item.addEventListener('click', () => {
+      const action = (item as HTMLElement).dataset.action;
+      handleMenuAction(action);
+    });
+  });
+
   // Theme option clicks
   const themeOptions = menuElement?.querySelectorAll('.theme-option');
   themeOptions?.forEach(option => {
@@ -109,6 +127,22 @@ function setupEventListeners(): void {
       closeMenu();
     }
   });
+}
+
+/**
+ * Handle menu action
+ */
+function handleMenuAction(action: string | undefined): void {
+  if (!action) return;
+
+  switch (action) {
+    case 'replay-tutorial':
+      closeMenu();
+      void showOnboardingWizard();
+      break;
+    default:
+      console.warn('Unknown menu action:', action);
+  }
 }
 
 /**

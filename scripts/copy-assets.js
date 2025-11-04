@@ -12,6 +12,10 @@ const assets = [
     src: 'src/ui/learning-interface.css',
     dest: 'dist/ui/learning-interface.css',
   },
+  {
+    src: 'src/ui/onboarding-wizard.css',
+    dest: 'dist/ui/onboarding-wizard.css',
+  },
   { src: 'src/ui/setup-wizard.html', dest: 'dist/ui/setup-wizard.html' },
   { src: 'src/ui/setup-wizard.css', dest: 'dist/ui/setup-wizard.css' },
   { src: 'src/ui/settings.html', dest: 'dist/ui/settings.html' },

@@ -16,6 +16,7 @@ import {
 
 import { initializeHamburgerMenu } from './components/hamburger-menu';
 import { pronounceText } from './tts-handler';
+import { checkAndShowOnboarding } from './onboarding-wizard';
 
 import type {
   ProcessedArticle,
@@ -206,6 +207,9 @@ async function initialize(): Promise<void> {
     setupEventListeners();
 
     hideLoading();
+
+    // Check and show onboarding wizard for first-time users
+    await checkAndShowOnboarding();
   } catch (error) {
     console.error('Initialization error:', error);
     showError('Failed to load article');
