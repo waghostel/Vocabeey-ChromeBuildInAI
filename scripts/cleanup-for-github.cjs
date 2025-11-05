@@ -119,7 +119,10 @@ const devMarkdownFiles = [
   'vitest.config.js',
   'vitest.config.js.map',
   'vocabeey-user-flow.svg',
-  '.github-cleanup.md'
+  '.github-cleanup.md',
+  'FIRST_GITHUB_RELEASE.md',
+  'GITHUB_SETUP_COMPLETE.md',
+  'GITHUB_WORKFLOW.md'
 ];
 
 // Test/demo HTML files to remove
