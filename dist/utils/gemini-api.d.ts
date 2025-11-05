@@ -71,5 +71,5 @@ export declare class GeminiAPIClient implements AIProcessor {
      */
     private isAIError;
 }
-export {};
+
 //# sourceMappingURL=gemini-api.d.ts.map

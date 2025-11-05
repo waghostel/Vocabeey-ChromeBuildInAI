@@ -116,5 +116,5 @@ export declare function getAvailableVoices(): Promise<TTSVoice[]>;
  * Get voices for language
  */
 export declare function getVoicesForLanguage(language: string): Promise<TTSVoice[]>;
-export {};
+
 //# sourceMappingURL=tts-service.d.ts.map

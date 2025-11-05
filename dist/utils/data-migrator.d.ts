@@ -54,5 +54,5 @@ export declare class DataMigrator {
     }>;
 }
 export declare const dataMigrator: DataMigrator;
-export {};
+
 //# sourceMappingURL=data-migrator.d.ts.map
