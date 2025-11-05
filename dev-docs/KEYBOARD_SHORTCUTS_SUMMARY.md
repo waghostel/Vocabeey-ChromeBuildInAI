@@ -20,8 +20,8 @@
 
 ### Navigation
 
-- **← (Left Arrow)**: Navigate to previous article part
-- **→ (Right Arrow)**: Navigate to next article part
+- **← (Left Arrow)** or **D**: Navigate to previous article part
+- **→ (Right Arrow)** or **F**: Navigate to next article part
 
 ### Main Mode Switching (Tabs)
 

@@ -3,7 +3,6 @@ node_modules/
 .pnpm-store/
 
 # Build output
-dist/
 *.js.map
 *.d.ts.map
 
@@ -54,3 +53,5 @@ ignore/task-execute-reports/task-8-implementation-summary.md
 ignore/task-execute-reports/task-9-implementation-summary.md
 ignore/task-execute-reports/task-10-implementation-summary.md
 ignore/task-execute-reports/tts-test-analysis.md
+
+dev-docs/

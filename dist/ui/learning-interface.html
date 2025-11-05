@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Language Learning Interface</title>
+    <link rel="stylesheet" href="learning-interface.css" />
+    <link rel="stylesheet" href="onboarding-wizard.css" />
+  </head>
+  <body>
+    <!-- Navigation Tabs -->
+    <nav class="mode-tabs">
+      <button class="tab-button active" data-mode="reading">
+        <span class="tab-icon">📖</span>
+        Reading
+      </button>
+      <button class="tab-button" data-mode="vocabulary">
+        <span class="tab-icon">📝</span>
+        Vocabulary
+      </button>
+      <button class="tab-button" data-mode="sentences">
+        <span class="tab-icon">💬</span>
+        Sentences
+      </button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="content-container">
+      <!-- Reading Mode -->
+      <div class="mode-content active" data-mode="reading">
+        <!-- Article Header -->
+        <header class="article-header">
+          <h1 class="article-title"></h1>
+          <div class="article-meta">
+            <span class="article-url"></span>
+            <div class="language-badge" title="Detected language">
+              <span class="language-code"></span>
+              <span class="confidence-indicator"></span>
+            </div>
+          </div>
+          <div class="header-controls">
+            <div class="language-selector-container">
+              <label for="target-language-input">Translate to:</label>
+              <div class="language-selector-wrapper">
+                <input
+                  type="text"
+                  id="target-language-input"
+                  class="language-input"
+                  placeholder="Search language..."
+                  autocomplete="off"
+                />
+                <div class="language-dropdown">
+                  <div class="language-options"></div>
+                </div>
+              </div>
+            </div>
+            <div class="highlight-mode-selector">
+              <label>Highlight Mode:</label>
+              <div class="highlight-mode-buttons">
+                <button
+                  class="highlight-mode-btn active"
+                  data-highlight-mode="vocabulary"
+                  title="Switch to Vocabulary mode (Press 1)"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M2 3.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"
+                    />
+                  </svg>
+                  Vocabulary
+                </button>
+                <button
+                  class="highlight-mode-btn"
+                  data-highlight-mode="sentence"
+                  title="Switch to Sentence mode (Press 2)"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M2.5 3.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm0 3a.5.5 0 0 1 0-1h6a.5.5 0 0 1 0 1h-6zm0 3a.5.5 0 0 1 0-1h6a.5.5 0 0 1 0 1h-6zm0 3a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11z"
+                    />
+                    <path
+                      d="M12.354 8.854a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L11.293 8.5l-2.647 2.646a.5.5 0 0 0 .708.708l3-3z"
+                    />
+                  </svg>
+                  Sentences
+                </button>
+                <button
+                  class="highlight-mode-btn"
+                  data-highlight-mode="none"
+                  title="Disable highlighting (Press 0, 3, or Esc)"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854z"
+                    />
+                  </svg>
+                  None
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Article Part Display -->
+        <div class="article-part-container">
+          <div class="article-part-content"></div>
+
+          <!-- Vocabulary Cards Section -->
+          <div class="vocabulary-cards-section">
+            <h3 class="section-title">Vocabulary</h3>
+            <div class="vocabulary-cards"></div>
+          </div>
+
+          <!-- Sentence Cards Section -->
+          <div class="sentence-cards-section">
+            <h3 class="section-title">Sentences</h3>
+            <div class="sentence-cards"></div>
+          </div>
+        </div>
+
+        <!-- Navigation Controls -->
+        <div class="navigation-controls">
+          <button
+            class="nav-button"
+            id="prev-part"
+            title="Previous part (Press ← or Left Arrow)"
+          >
+            <span class="nav-icon">←</span>
+            Previous
+          </button>
+          <span class="part-indicator">
+            Part <span class="current-part">1</span> of
+            <span class="total-parts">1</span>
+          </span>
+          <button
+            class="nav-button"
+            id="next-part"
+            title="Next part (Press → or Right Arrow)"
+          >
+            Next
+            <span class="nav-icon">→</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Vocabulary Learning Mode -->
+      <div class="mode-content" data-mode="vocabulary">
+        <div class="learning-mode-header">
+          <h2>Vocabulary Learning</h2>
+          <div class="display-options">
+            <button class="display-option active" data-display="both">
+              A + B
+            </button>
+            <button class="display-option" data-display="learning_only">
+              A only
+            </button>
+            <button class="display-option" data-display="native_only">
+              B only
+            </button>
+          </div>
+        </div>
+        <div class="vocabulary-grid"></div>
+      </div>
+
+      <!-- Sentence Learning Mode -->
+      <div class="mode-content" data-mode="sentences">
+        <div class="learning-mode-header">
+          <h2>Sentence Learning</h2>
+        </div>
+        <div class="sentence-list"></div>
+      </div>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay hidden">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Loading article...</p>
+    </div>
+
+    <!-- Context Menu (for right-click on highlights) -->
+    <div class="context-menu hidden">
+      <button class="context-menu-item" data-action="copy">Copy</button>
+      <button class="context-menu-item" data-action="edit">Edit</button>
+      <button class="context-menu-item" data-action="remove">Remove</button>
+      <button class="context-menu-item" data-action="pronounce">
+        Pronounce
+      </button>
+      <button class="context-menu-item" data-action="change-to-sentence">
+        To sentence
+      </button>
+      <button class="context-menu-item" data-action="change-to-vocabulary">
+        To vocabulary
+      </button>
+      <button class="context-menu-item" data-action="add-vocabulary">
+        Add as Vocabulary
+      </button>
+      <button class="context-menu-item" data-action="add-sentence">
+        Add as Sentence
+      </button>
+    </div>
+
+    <!-- Edit Confirmation Dialog -->
+    <div class="edit-confirmation-dialog hidden">
+      <div class="dialog-overlay"></div>
+      <div class="dialog-content">
+        <h3>Edit Paragraph</h3>
+        <p class="dialog-message">
+          This paragraph contains <span class="highlight-count"></span>. Editing
+          will remove all highlights from this paragraph.
+        </p>
+        <p class="dialog-note">
+          You can re-highlight words and sentences after editing.
+        </p>
+        <div class="dialog-actions">
+          <button class="dialog-btn dialog-btn-cancel">Cancel</button>
+          <button class="dialog-btn dialog-btn-confirm">Edit Anyway</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Toolbar -->
+    <div class="edit-toolbar hidden">
+      <button class="edit-btn edit-btn-save" title="Save changes (Enter)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path
+            d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"
+          />
+        </svg>
+        Save
+      </button>
+      <button class="edit-btn edit-btn-cancel" title="Cancel editing (Esc)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path
+            d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"
+          />
+        </svg>
+        Cancel
+      </button>
+    </div>
+
+    <!-- Edit Mode Context Menu -->
+    <div class="edit-context-menu hidden">
+      <button class="context-menu-item" data-action="copy-selection">
+        Copy
+      </button>
+      <button class="context-menu-item" data-action="delete-selection">
+        Delete
+      </button>
+    </div>
+
+    <!-- Article Header Edit Dialog -->
+    <div class="article-edit-dialog hidden">
+      <div class="dialog-overlay"></div>
+      <div class="dialog-content article-edit-dialog-content">
+        <!-- Fixed Header -->
+        <div class="dialog-header">
+          <button
+            class="dialog-close-btn"
+            aria-label="Close dialog"
+            title="Close"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          <h3 class="edit-dialog-title">Edit Article</h3>
+        </div>
+
+        <!-- Scrollable Body -->
+        <div class="dialog-body">
+          <!-- Article Title Field -->
+          <div class="edit-field">
+            <label for="edit-title-input">Article Title</label>
+            <input
+              type="text"
+              id="edit-title-input"
+              class="edit-title-input"
+              placeholder="Enter article title..."
+              maxlength="500"
+            />
+            <span class="field-error hidden"></span>
+          </div>
+
+          <!-- Article URL Field -->
+          <div class="edit-field">
+            <label for="edit-url-input">Article URL</label>
+            <input
+              type="text"
+              id="edit-url-input"
+              class="edit-url-input"
+              placeholder="Enter article URL..."
+              maxlength="2000"
+            />
+            <span class="field-error hidden"></span>
+          </div>
+
+          <!-- Language Selector -->
+          <div class="edit-field">
+            <label for="edit-language-input">Detected Language</label>
+            <div class="edit-language-selector-wrapper">
+              <input
+                type="text"
+                id="edit-language-input"
+                class="edit-language-input"
+                placeholder="Search language..."
+                autocomplete="off"
+              />
+              <div class="edit-language-dropdown">
+                <div class="edit-language-options"></div>
+              </div>
+            </div>
+            <span class="field-error hidden"></span>
+          </div>
+
+          <!-- Paragraph Content Field -->
+          <div class="edit-field">
+            <label for="edit-paragraph-textarea">Article Content</label>
+            <textarea
+              id="edit-paragraph-textarea"
+              class="edit-paragraph-textarea"
+              placeholder="Enter article content... (Each paragraph should be separated by a blank line)"
+              rows="10"
+            ></textarea>
+            <span class="field-help"
+              >Separate paragraphs with blank lines. Each paragraph will be
+              displayed separately in the reading interface.</span
+            >
+            <span class="field-error hidden"></span>
+          </div>
+        </div>
+
+        <!-- Fixed Footer -->
+        <div class="dialog-footer">
+          <div class="dialog-actions">
+            <button class="dialog-btn dialog-btn-cancel">Cancel</button>
+            <button class="dialog-btn dialog-btn-save">Save Changes</button>
+          </div>
+        </div>
+
+        <!-- Resize Handles -->
+        <div
+          class="resize-handle resize-handle-right"
+          title="Drag to resize"
+        ></div>
+        <div
+          class="resize-handle resize-handle-left"
+          title="Drag to resize"
+        ></div>
+      </div>
+    </div>
+
+    <!-- Unsaved Changes Confirmation Dialog -->
+    <div class="unsaved-changes-dialog hidden">
+      <div class="dialog-overlay"></div>
+      <div class="dialog-content">
+        <h3>Unsaved Changes</h3>
+        <p class="dialog-message">
+          You have unsaved changes. Do you want to save them before closing?
+        </p>
+        <div class="dialog-actions">
+          <button class="dialog-btn dialog-btn-discard">Discard Changes</button>
+          <button class="dialog-btn dialog-btn-cancel">Cancel</button>
+          <button class="dialog-btn dialog-btn-save">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card Edit Dialog -->
+    <div class="card-edit-dialog hidden">
+      <div class="dialog-overlay"></div>
+      <div class="dialog-content card-edit-dialog-content">
+        <!-- Fixed Header -->
+        <div class="dialog-header">
+          <button
+            class="dialog-close-btn"
+            aria-label="Close dialog"
+            title="Close"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          <h3 class="edit-dialog-title">Edit Card</h3>
+        </div>
+
+        <!-- Scrollable Body -->
+        <div class="dialog-body">
+          <!-- Vocabulary Fields (shown for vocab cards) -->
+          <div class="vocab-edit-fields hidden">
+            <div class="edit-field">
+              <label for="edit-vocab-word">Word/Phrase</label>
+              <input
+                type="text"
+                id="edit-vocab-word"
+                class="edit-vocab-word"
+                placeholder="Enter word or phrase..."
+                maxlength="200"
+              />
+              <span class="field-error hidden"></span>
+            </div>
+
+            <div class="edit-field">
+              <label for="edit-vocab-translation">Translation</label>
+              <input
+                type="text"
+                id="edit-vocab-translation"
+                class="edit-vocab-translation"
+                placeholder="Enter translation..."
+                maxlength="500"
+              />
+              <span class="field-error hidden"></span>
+            </div>
+
+            <div class="edit-field">
+              <label for="edit-vocab-context">Context</label>
+              <textarea
+                id="edit-vocab-context"
+                class="edit-vocab-context"
+                placeholder="Enter context where this word appears..."
+                rows="3"
+                maxlength="1000"
+              ></textarea>
+              <span class="field-error hidden"></span>
+            </div>
+
+            <div class="edit-field">
+              <label for="edit-vocab-examples">Example Sentences</label>
+              <textarea
+                id="edit-vocab-examples"
+                class="edit-vocab-examples"
+                placeholder="Enter example sentences (one per line)..."
+                rows="4"
+              ></textarea>
+              <span class="field-help"
+                >Enter one example sentence per line</span
+              >
+              <span class="field-error hidden"></span>
+            </div>
+          </div>
+
+          <!-- Sentence Fields (shown for sentence cards) -->
+          <div class="sentence-edit-fields hidden">
+            <div class="edit-field">
+              <label for="edit-sentence-content">Sentence</label>
+              <textarea
+                id="edit-sentence-content"
+                class="edit-sentence-content"
+                placeholder="Enter sentence..."
+                rows="3"
+                maxlength="1000"
+              ></textarea>
+              <span class="field-error hidden"></span>
+            </div>
+
+            <div class="edit-field">
+              <label for="edit-sentence-translation">Translation</label>
+              <textarea
+                id="edit-sentence-translation"
+                class="edit-sentence-translation"
+                placeholder="Enter translation..."
+                rows="3"
+                maxlength="1000"
+              ></textarea>
+              <span class="field-error hidden"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fixed Footer -->
+        <div class="dialog-footer">
+          <div class="dialog-actions">
+            <button class="dialog-btn dialog-btn-cancel">Cancel</button>
+            <button class="dialog-btn dialog-btn-save">Save Changes</button>
+          </div>
+        </div>
+
+        <!-- Resize Handles -->
+        <div
+          class="resize-handle resize-handle-right"
+          title="Drag to resize"
+        ></div>
+        <div
+          class="resize-handle resize-handle-left"
+          title="Drag to resize"
+        ></div>
+      </div>
+    </div>
+
+    <script src="learning-interface.js" type="module"></script>
+  </body>
+</html>
