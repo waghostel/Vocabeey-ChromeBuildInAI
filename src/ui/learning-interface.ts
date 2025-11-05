@@ -3982,6 +3982,8 @@ function handleKeyboardShortcuts(event: KeyboardEvent): void {
 
   switch (event.key) {
     case 'ArrowLeft':
+    case 'd':
+    case 'D':
       if (isEditMode) return; // Ignore during edit mode
       event.preventDefault();
       if (state.currentPartIndex > 0) {
@@ -3990,6 +3992,8 @@ function handleKeyboardShortcuts(event: KeyboardEvent): void {
       break;
 
     case 'ArrowRight':
+    case 'f':
+    case 'F':
       if (isEditMode) return; // Ignore during edit mode
       event.preventDefault();
       if (

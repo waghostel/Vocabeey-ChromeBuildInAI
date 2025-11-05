@@ -24,8 +24,8 @@ At the bottom of the reading interface, you'll find navigation controls:
 
 For faster navigation, use these keyboard shortcuts:
 
-- **← (Left Arrow)**: Previous part
-- **→ (Right Arrow)**: Next part
+- **← (Left Arrow)** or **D**: Previous part
+- **→ (Right Arrow)** or **F**: Next part
 
 > **Tip**: These shortcuts work anywhere on the page, except when you're typing in an input field or editing text.
 

@@ -1,8 +1,8 @@
 /**
  * Helper script to manage .gitignore for different branches
  * Usage:
- *   node scripts/manage-gitignore.js add    - Add dev-docs/ to .gitignore (for main branch)
- *   node scripts/manage-gitignore.js remove - Remove dev-docs/ from .gitignore (for dev branch)
+ *   node scripts/manage-gitignore.cjs dev  - Configure for dev branch (track dist/, dev-docs/)
+ *   node scripts/manage-gitignore.cjs main - Configure for main branch (ignore dist/, dev-docs/)
  */
 
 const fs = require('fs');
@@ -10,45 +10,79 @@ const path = require('path');
 
 const gitignorePath = path.join(process.cwd(), '.gitignore');
 const devDocsLine = 'dev-docs/';
+const distLine = 'dist/';
 
 const action = process.argv[2];
 
-if (!action || !['add', 'remove'].includes(action)) {
+if (!action || !['dev', 'main'].includes(action)) {
   console.error('❌ Invalid usage!');
   console.log('\nUsage:');
-  console.log('  node scripts/manage-gitignore.js add    - Add dev-docs/ to .gitignore');
-  console.log('  node scripts/manage-gitignore.js remove - Remove dev-docs/ from .gitignore');
+  console.log('  node scripts/manage-gitignore.cjs dev  - Configure for dev branch');
+  console.log('  node scripts/manage-gitignore.cjs main - Configure for main branch');
   process.exit(1);
+}
+
+function toggleLine(lines, lineToToggle, shouldInclude) {
+  const hasLine = lines.some(line => line.trim() === lineToToggle);
+  
+  if (shouldInclude && !hasLine) {
+    lines.push(lineToToggle);
+    return true; // changed
+  } else if (!shouldInclude && hasLine) {
+    const index = lines.findIndex(line => line.trim() === lineToToggle);
+    lines.splice(index, 1);
+    return true; // changed
+  }
+  return false; // no change
 }
 
 try {
   let content = fs.readFileSync(gitignorePath, 'utf8');
-  const lines = content.split('\n');
-  const hasDevDocs = lines.some(line => line.trim() === devDocsLine);
+  let lines = content.split('\n');
+  let changes = [];
 
-  if (action === 'add') {
-    if (hasDevDocs) {
-      console.log('ℹ️  dev-docs/ is already in .gitignore');
-    } else {
-      // Add dev-docs/ at the end
-      if (!content.endsWith('\n')) {
-        content += '\n';
-      }
-      content += devDocsLine + '\n';
-      fs.writeFileSync(gitignorePath, content);
-      console.log('✅ Added dev-docs/ to .gitignore');
-      console.log('   (Use this on main branch to hide dev-docs from GitHub)');
+  if (action === 'dev') {
+    // Dev branch: Remove dist/ and dev-docs/ from .gitignore to track them
+    console.log('🔧 Configuring .gitignore for dev branch...\n');
+    
+    if (toggleLine(lines, distLine, false)) {
+      changes.push('✓ Removed dist/ from .gitignore (will track build output)');
     }
-  } else if (action === 'remove') {
-    if (!hasDevDocs) {
-      console.log('ℹ️  dev-docs/ is not in .gitignore');
+    if (toggleLine(lines, devDocsLine, false)) {
+      changes.push('✓ Removed dev-docs/ from .gitignore (will track dev docs)');
+    }
+    
+    if (changes.length === 0) {
+      console.log('ℹ️  .gitignore already configured for dev branch');
     } else {
-      // Remove dev-docs/ line
-      const newLines = lines.filter(line => line.trim() !== devDocsLine);
-      content = newLines.join('\n');
-      fs.writeFileSync(gitignorePath, content);
-      console.log('✅ Removed dev-docs/ from .gitignore');
-      console.log('   (Use this on dev branch to track dev-docs)');
+      fs.writeFileSync(gitignorePath, lines.join('\n'));
+      changes.forEach(msg => console.log(msg));
+      console.log('\n✅ Dev branch configuration complete!');
+      console.log('   dist/ and dev-docs/ will now be tracked in git');
+    }
+    
+  } else if (action === 'main') {
+    // Main branch: Keep dist/ tracked, only ignore dev-docs/
+    console.log('🔧 Configuring .gitignore for main branch...\n');
+    
+    // Remove dist/ from .gitignore if present (we want to track it on main)
+    if (toggleLine(lines, distLine, false)) {
+      changes.push('✓ Removed dist/ from .gitignore (will track for users)');
+    }
+    
+    // Add dev-docs/ to .gitignore
+    if (toggleLine(lines, devDocsLine, true)) {
+      changes.push('✓ Added dev-docs/ to .gitignore (will exclude dev docs)');
+    }
+    
+    if (changes.length === 0) {
+      console.log('ℹ️  .gitignore already configured for main branch');
+    } else {
+      fs.writeFileSync(gitignorePath, lines.join('\n'));
+      changes.forEach(msg => console.log(msg));
+      console.log('\n✅ Main branch configuration complete!');
+      console.log('   dist/ will be tracked (for easy user installation)');
+      console.log('   dev-docs/ will be excluded');
     }
   }
 } catch (err) {

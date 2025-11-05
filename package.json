@@ -26,7 +26,12 @@
     "test:coverage": "vitest --run --coverage",
     "validate:extension": "pnpm run lint:extension && pnpm run test && pnpm run build",
     "lint:switch": "node scripts/lint-switcher.js",
-    "preinstall": "npx only-allow pnpm"
+    "preinstall": "npx only-allow pnpm",
+    "gitignore:dev": "node scripts/manage-gitignore.cjs dev",
+    "gitignore:main": "node scripts/manage-gitignore.cjs main",
+    "cleanup:preview": "node scripts/preview-cleanup.cjs",
+    "cleanup:github": "node scripts/cleanup-for-github.cjs",
+    "release:prepare": "pnpm run validate:extension && pnpm run gitignore:main && pnpm run cleanup:github"
   },
   "lint-staged": {
     "*.{ts,js}": [

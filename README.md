@@ -112,7 +112,7 @@ Master Vocabeey with these time-saving shortcuts:
 
 ### Navigate Articles
 
-- **← / →** (Arrow Keys): Move between article sections
+- **← / →** (Arrow Keys) or **D / F**: Move between article sections
 
 ### Switch Learning Modes
 

@@ -94,3 +94,9 @@ dist/
 ├── ui/*.js
 └── manifest.json
 ```
+
+## Rules
+
+- Don't create Kiro Spec until user ask you to do
+- Don't create markdown file for task summary or question answering purpose ==> Report it back in chat directly
+- Only create markdown document when it is a guide for system, place it in a supdirectory in docs folder.

@@ -10,6 +10,7 @@ const path = require('path');
 // Development markdown files to move to dev-docs/
 const devMarkdownFiles = [
   'ARTICLE_SEGMENTATION_IMPLEMENTATION.md',
+  'ARTICLE_SEGMENTATION_USER_GUIDE.md',
   'BEFORE_AFTER_COMPARISON.md',
   'BUILD_FIX_SUMMARY.md',
   'CARD_CONTEXT_MENU_IMPLEMENTATION.md',
@@ -18,20 +19,29 @@ const devMarkdownFiles = [
   'CHROME_AI_API_FIX_SUMMARY.md',
   'CHROME_AI_API_NAMESPACES.md',
   'CHROME_AI_USAGE_ANALYSIS.md',
+  'CLEANUP_EXECUTION_SUMMARY.md',
   'CODE_CHANGES.md',
   'CONSOLE_LOGGING_FIX_SUMMARY.md',
   'content-flow-analysis.md',
   'CONTEXT_MENU_FIX.md',
   'CORRECT_API_NAMESPACES.md',
+  'D_F_HOTKEYS_IMPLEMENTATION.md',
   'diagnose-translation.md',
   'DIAGNOSTIC_IMPLEMENTATION_SUMMARY.md',
   'DISABLE_PARAGRAPH_CONTEXT_MENU_IN_EDIT_MODE.md',
   'DUAL_LANGUAGE_TTS_FEATURE.md',
   'DYNAMIC_TRANSLATION_POPUP_FIX.md',
+  'FEATURE_GUIDE.md',
+  'FINAL_CLEANUP_SUMMARY.md',
   'FINAL_FIX_AND_TEST_GUIDE.md',
   'FINAL_FIX_SUMMARY.md',
   'FINAL_IMPLEMENTATION_SUMMARY.md',
   'FIX_COMPLETE_SUMMARY.md',
+  'GIT_UPSTREAM_ISSUE_ANALYSIS.md',
+  'GIT_UPSTREAM_QUICK_FIX.md',
+  'GITHUB_CLEANUP_SUMMARY.md',
+  'GITHUB_DEPLOYMENT_STEPS.md',
+  'GITLAB_GITHUB_WORKFLOW.md',
   'HAMBURGER_MENU_IMPLEMENTATION.md',
   'HAMBURGER_MENU_VISUAL_GUIDE.md',
   'HIGHLIGHT_RESTORATION_IMPLEMENTATION.md',
@@ -61,6 +71,10 @@ const devMarkdownFiles = [
   'OVERLAPPING_HIGHLIGHTS_FEATURE.md',
   'PARAGRAPH_EDIT_FEATURE.md',
   'QUICK_DIAGNOSTIC_REFERENCE.md',
+  'QUICK_GITHUB_CLEANUP.md',
+  'QUICK_REFERENCE.md',
+  'QUICK_START_ONBOARDING.md',
+  'QUICK_WORKFLOW_REFERENCE.md',
   'README_DOCUMENTATION.md',
   'reload-extension.md',
   'REMOVE_EDIT_FROM_HIGHLIGHT_CONTEXT_MENU.md',
@@ -69,8 +83,11 @@ const devMarkdownFiles = [
   'SEGMENTATION_DIAGNOSTIC_GUIDE.md',
   'SENTENCE_CLICK_TO_PRONOUNCE_IMPLEMENTATION.md',
   'SERVICE_WORKER_IMPORT_FIX.md',
+  'SETUP_COMPLETE_SUMMARY.md',
   'SMART_CONTEXT_IMPLEMENTATION.md',
   'test-report.md',
+  'TESTING_CHECKLIST.md',
+  'TESTING_GUIDE.md',
   'TESTING_GUIDE_TRANSLATION_FIX.md',
   'TESTING_HAMBURGER_MENU.md',
   'TRANSLATION_API_COMPARISON_REPORT.md',
@@ -87,6 +104,7 @@ const devMarkdownFiles = [
   'TTS_CANCEL_BUTTON_FIX.md',
   'TTS_IMPORT_ERROR_ANALYSIS.md',
   'TTS_VOICE_CUSTOMIZATION_GUIDE.md',
+  'USER_GUIDE_PAGE_UPDATE.md',
   'VOCABULARY_TRANSLATION_CONTEXT_ANALYSIS.md',
   'VOCABULARY_TRANSLATION_UPDATE.md',
   'youtube transcript.md',
@@ -101,8 +119,7 @@ const devMarkdownFiles = [
   'vitest.config.js',
   'vitest.config.js.map',
   'vocabeey-user-flow.svg',
-  '.github-cleanup.md',
-  'QUICK_START_ONBOARDING.md'
+  '.github-cleanup.md'
 ];
 
 // Test/demo HTML files to remove
@@ -123,7 +140,7 @@ const configFilesToRemove = [
   'vitest.config.js.map'
 ];
 
-// Directories to remove
+// Directories to remove (dist/ is kept for users)
 const dirsToRemove = [
   '.kiro',
   '.amazonq',
@@ -131,7 +148,9 @@ const dirsToRemove = [
   'ignore',
   'demo-page',
   'prompt-api-test',
-  'coverage'
+  'coverage',
+  'user-need',
+  'assets'
 ];
 
 console.log('🧹 Starting GitHub cleanup...\n');

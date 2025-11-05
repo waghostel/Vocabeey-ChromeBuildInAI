@@ -1,92 +1,135 @@
-# Cleanup Scripts
+# Build and Deployment Scripts
 
-This directory contains scripts to prepare the repository for public GitHub release.
+This directory contains scripts for building the extension and preparing it for GitHub release.
 
-## Scripts Overview
+## Build Scripts
 
-### 1. preview-cleanup.js
+### copy-assets.js
+
+Copies static assets (HTML, CSS, manifest) to the `dist/` folder during build.
+
+### fix-imports.js
+
+Fixes import paths in compiled JavaScript files to ensure proper module resolution.
+
+### convert-icons.js / generate-icons.js
+
+Generate extension icons in various sizes from source images.
+
+### lint-switcher.js
+
+Switches between Oxlint and ESLint for linting.
+
+## GitHub Deployment Scripts
+
+### 1. preview-cleanup.cjs
 
 **Purpose**: Preview what will be moved/removed without making changes
 
 **Usage**:
 
 ```bash
-node scripts/preview-cleanup.js
+node scripts/preview-cleanup.cjs
+# Or via npm script:
+pnpm run cleanup:preview
 ```
 
 **Output**: Shows files to move, remove, and total size affected
 
 ---
 
-### 2. cleanup-for-github.js
+### 2. cleanup-for-github.cjs
 
-**Purpose**: Execute the cleanup process
+**Purpose**: Execute the cleanup process for GitHub release
 
 **Usage**:
 
 ```bash
-node scripts/cleanup-for-github.js
+node scripts/cleanup-for-github.cjs
+# Or via npm script:
+pnpm run cleanup:github
 ```
 
 **Actions**:
 
 1. Creates `dev-docs/` folder
-2. Moves 70+ development markdown files to `dev-docs/`
+2. Moves 100+ development markdown files to `dev-docs/`
 3. Removes test/demo HTML files
 4. Removes development config files
-5. Removes development tool directories (`.kiro/`, `.amazonq/`, etc.)
-
-**Important**: After running, you must add `dev-docs/` to `.gitignore`
+5. Removes development tool directories (`.kiro/`, `debug/`, `user-need/`, etc.)
+6. Removes `dist/` folder
 
 ---
 
-### 3. manage-gitignore.js
+### 3. manage-gitignore.cjs
 
-**Purpose**: Add or remove `dev-docs/` from `.gitignore`
+**Purpose**: Configure `.gitignore` for different branches
 
 **Usage**:
 
 ```bash
-# Add dev-docs/ to .gitignore (for main branch)
-node scripts/manage-gitignore.js add
+# Configure for dev branch (tracks dist/ and dev-docs/)
+node scripts/manage-gitignore.cjs dev
+# Or: pnpm run gitignore:dev
 
-# Remove dev-docs/ from .gitignore (for dev branch)
-node scripts/manage-gitignore.js remove
+# Configure for main branch (ignores dist/ and dev-docs/)
+node scripts/manage-gitignore.cjs main
+# Or: pnpm run gitignore:main
 ```
 
-**Why**: Allows `dev-docs/` to be hidden on main branch but tracked on dev branch
+**Why**: Allows different file tracking on dev vs main branches
 
 ---
 
-## Workflow
+## Quick Workflow
 
+### Using NPM Scripts (Recommended)
+
+```bash
+# 1. Preview what will be cleaned (optional)
+pnpm run cleanup:preview
+
+# 2. Switch to main and merge
+git checkout main
+git merge dev
+
+# 3. Prepare for GitHub (all-in-one)
+pnpm run release:prepare
+
+# 4. Commit and push
+git add -A
+git commit -m "chore: prepare v1.x.x release"
+git push origin main
+
+# 5. Return to dev
+git checkout dev
+pnpm run gitignore:dev
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    CLEANUP WORKFLOW                          │
-└─────────────────────────────────────────────────────────────┘
 
-1. Preview (Optional)
-   └─> node scripts/preview-cleanup.js
+### Manual Workflow
 
-2. Switch to main branch
-   └─> git checkout main
-   └─> git merge dev
+```bash
+# 1. Preview (optional)
+node scripts/preview-cleanup.cjs
 
-3. Run cleanup
-   └─> node scripts/cleanup-for-github.js
+# 2. Switch to main branch
+git checkout main
+git merge dev
 
-4. Update .gitignore
-   └─> node scripts/manage-gitignore.js add
+# 3. Configure gitignore
+node scripts/manage-gitignore.cjs main
 
-5. Commit and push
-   └─> git add -A
-   └─> git commit -m "chore: clean up for public release"
-   └─> git push origin main
+# 4. Run cleanup
+node scripts/cleanup-for-github.cjs
 
-6. Return to dev
-   └─> git checkout dev
-   └─> node scripts/manage-gitignore.js remove
-   └─> git commit -am "chore: keep dev-docs tracked"
+# 5. Commit and push
+git add -A
+git commit -m "chore: clean up for public release"
+git push origin main
+
+# 6. Return to dev
+git checkout dev
+node scripts/manage-gitignore.cjs dev
 ```
 
 ## What Gets Moved vs Removed
@@ -129,6 +172,7 @@ The key to this approach is having different `.gitignore` on each branch:
 
 ```gitignore
 # ... existing patterns ...
+dist/
 dev-docs/
 ```
 
@@ -136,13 +180,13 @@ dev-docs/
 
 ```gitignore
 # ... existing patterns ...
-# (no dev-docs/ line)
+# (no dist/ or dev-docs/ lines - these are tracked)
 ```
 
 This allows:
 
-- Main branch: `dev-docs/` is ignored (not pushed to GitHub)
-- Dev branch: `dev-docs/` is tracked (preserved in development)
+- **Main branch**: `dist/` and `dev-docs/` are ignored (not pushed to GitHub)
+- **Dev branch**: `dist/` and `dev-docs/` are tracked (preserved in development)
 
 ## Verification
 

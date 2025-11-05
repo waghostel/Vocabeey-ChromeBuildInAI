@@ -139,7 +139,7 @@ const WIZARD_STEPS: WizardStep[] = [
           <span>Turn off highlighting</span>
         </div>
         <div class="shortcut-row">
-          <kbd>←</kbd> <kbd>→</kbd>
+          <kbd>←</kbd> <kbd>→</kbd> or <kbd>D</kbd> <kbd>F</kbd>
           <span>Navigate between article parts</span>
         </div>
         <div class="shortcut-row">
